@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DockLiner{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/root.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Cormorant+Garamond:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    .nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:64px; background:var(--surface-soft); border-bottom:1px solid var(--hairline); position:sticky; top:0; z-index:50; }
+    .nav .brand { font-family:var(--font-display); font-size:22px; color:var(--ink); }
+    .nav .brand span { color:var(--primary); }
+    .nav-links { display:flex; gap:18px; align-items:center; }
+    .nav-links a { color:var(--muted); text-decoration:none; font-size:13px; font-weight:500; letter-spacing:0.5px; }
+    .nav-links a:hover, .nav-links a.active { color:var(--ink); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:var(--radius-md); font-size:13px; font-weight:500; border:none; text-decoration:none; }
+    .btn-primary { background:var(--primary); color:var(--on-primary); }
+    .btn-secondary { background:var(--surface-card); color:var(--ink); border:1px solid var(--hairline); }
+    .btn-sm { padding:6px 12px; font-size:12px; }
+    .layout { max-width:1200px; margin:0 auto; padding:24px; }
+    .card { background:var(--surface-card); border:1px solid var(--hairline); border-radius:var(--radius-lg); padding:24px; }
+    .card h2 { font-size:28px; margin-bottom:12px; }
+    .grid { display:grid; gap:16px; }
+    .grid-3 { grid-template-columns:repeat(3,1fr); }
+    .grid-2 { grid-template-columns:repeat(2,1fr); }
+    @media (max-width:900px){ .grid-3,.grid-2 { grid-template-columns:1fr; } }
+    table td, table th { font-size:13px; }
+    .status { display:inline-block; padding:2px 8px; border-radius:var(--radius-pill); font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
+    .status-running { background:rgba(93,184,114,0.12); color:var(--success); }
+    .status-stopped { background:rgba(160,157,150,0.12); color:var(--muted); }
+    .status-error { background:rgba(198,69,69,0.12); color:var(--error); }
+    .status-deploying { background:rgba(232,165,90,0.12); color:var(--warning); }
+    .tag { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500; background:var(--surface-soft); color:var(--muted); border:1px solid var(--hairline); }
+    .theme-toggle { cursor:pointer; padding:6px 10px; border-radius:var(--radius-md); background:var(--surface-card); color:var(--ink); border:1px solid var(--hairline); font-size:12px; }
+    .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:12px; }
+    .form-col { display:flex; flex-direction:column; gap:4px; }
+    .form-col label { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; }
+    pre.logs { background:var(--surface-dark); color:var(--on-dark); padding:16px; border-radius:var(--radius-lg); overflow:auto; max-height:60vh; font-family:var(--font-mono); font-size:12px; line-height:1.6; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="nav">
+    <div class="brand">Dock<span>Liner</span></div>
+    <div class="nav-links">
+      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+      <a href="/projects" class="{% if request.url.path.startswith('/projects') %}active{% endif %}">Projects</a>
+      <a href="/docker" class="{% if request.url.path == '/docker' %}active{% endif %}">Docker</a>
+      <a href="/settings" class="{% if request.url.path == '/settings' %}active{% endif %}">Settings</a>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">Theme</button>
+    </div>
+  </nav>
+  <main class="layout">
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('dockliner-theme', html.dataset.theme);
+    }
+    (function() {
+      const saved = localStorage.getItem('dockliner-theme');
+      if (saved) document.documentElement.dataset.theme = saved;
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

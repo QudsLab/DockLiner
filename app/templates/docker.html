@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Docker — DockLiner{% endblock %}
+{% block content %}
+<h1 style="font-size:48px; margin-bottom:8px;">Docker</h1>
+<p style="color:var(--muted); margin-bottom:24px;">Manage containers, images, networks, and volumes across hosts.</p>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Containers</h2>
+  {% if containers %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>State</th><th>Ports</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for c in containers %}
+      <tr>
+        <td>{{ c.ID[:12] }}</td>
+        <td>{{ c.Image }}</td>
+        <td>{{ c.Names }}</td>
+        <td>{{ c.Status }}</td>
+        <td>{{ c.State }}</td>
+        <td>{{ c.Ports or '-' }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Ports</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">No containers.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Images</h2>
+  {% if images %}
+  <table>
+    <thead>
+      <tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for i in images %}
+      <tr>
+        <td>{{ i.Repository }}</td>
+        <td>{{ i.Tag }}</td>
+        <td>{{ i.ID[:12] }}</td>
+        <td>{{ i.Size }}</td>
+        <td>{{ i.CreatedAt }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">No images.</p>
+  {% endif %}
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2 style="font-size:22px;">Networks</h2>
+    {% if networks %}
+    <table>
+      <thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead>
+      <tbody>
+      {% for n in networks %}
+        <tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 style="font-size:22px;">Volumes</h2>
+    {% if volumes %}
+    <table>
+      <thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead>
+      <tbody>
+      {% for v in volumes %}
+        <tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p style="color:var(--muted)">No volumes.</p>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+  <h2 style="font-size:22px;">Docker Hosts</h2>
+  {% if hosts %}
+  <table>
+    <thead><tr><th>Name</th><th>Host</th><th>Local</th><th>TLS</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for h in hosts %}
+      <tr>
+        <td>{{ h.name }}</td>
+        <td>{{ h.host }}</td>
+        <td>{% if h.is_local %}Yes{% else %}No{% endif %}</td>
+        <td>{% if h.tls %}Yes{% else %}No{% endif %}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete host?')) fetch('/api/docker-hosts/{{ h.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--muted)">No hosts configured.</p>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — DockLiner{% endblock %}
+{% block content %}
+<h1 style="font-size:48px; margin-bottom:8px;">Dashboard</h1>
+<p style="color:var(--muted); margin-bottom:24px;">Overview of projects, containers, and images.</p>
+
+<div class="grid grid-3" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="form-col">
+      <label>Projects</label>
+      <div style="font-size:36px; font-family:var(--font-display); color:var(--ink);">{{ projects|length }}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-col">
+      <label>Containers</label>
+      <div style="font-size:36px; font-family:var(--font-display); color:var(--ink);">{{ containers|length }}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="form-col">
+      <label>Images</label>
+      <div style="font-size:36px; font-family:var(--font-display); color:var(--ink);">{{ images|length }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Projects</h2>
+  {% if projects %}
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Status</th><th>Slot</th><th>Our Hosted</th><th>Last Deployed</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for p in projects %}
+      <tr>
+        <td><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
+        <td><span class="status status-{{ p.status }}">{{ p.status }}</span></td>
+        <td>{{ p.active_slot }}</td>
+        <td>{% if p.is_our_hosted %}Yes{% else %}No{% endif %}</td>
+        <td>{{ p.last_deployed.strftime('%Y-%m-%d %H:%M') if p.last_deployed else '-' }}</td>
+        <td>
+          <a class="btn btn-primary btn-sm" href="/api/projects/{{ p.id }}/deploy" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Deploy</a>
+          <a class="btn btn-secondary btn-sm" href="/api/projects/{{ p.id }}/stop" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Stop</a>
+          <a class="btn btn-secondary btn-sm" href="/projects/{{ p.id }}/logs">Logs</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">No projects yet. Go to <a href="/projects">Projects</a> to add one.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Running Containers</h2>
+  {% if containers %}
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>Ports</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for c in containers %}
+      <tr>
+        <td>{{ c.ID[:12] }}</td>
+        <td>{{ c.Image }}</td>
+        <td>{{ c.Names }}</td>
+        <td>{{ c.Status }}</td>
+        <td>{{ c.Ports or '-' }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">No containers running.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:22px;">Images</h2>
+  {% if images %}
+  <table>
+    <thead>
+      <tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for i in images %}
+      <tr>
+        <td>{{ i.Repository }}</td>
+        <td>{{ i.Tag }}</td>
+        <td>{{ i.ID[:12] }}</td>
+        <td>{{ i.Size }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">No images found.</p>
+  {% endif %}
+</div>
+{% endblock %}

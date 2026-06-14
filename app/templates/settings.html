@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Settings — DockLiner{% endblock %}
+{% block content %}
+<h1 style="font-size:48px; margin-bottom:8px;">Settings</h1>
+<p style="color:var(--muted); margin-bottom:24px;">Tokens, hosts, and preferences.</p>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Access Tokens</h2>
+  <p style="color:var(--muted); font-size:13px;">Multiple tokens supported. First token is used as default for deploys.</p>
+  <form onsubmit="return createToken(this)" style="margin-top:12px;">
+    <div class="form-row">
+      <div class="form-col"><label>Name</label><input name="name" required placeholder="github-pat-1"></div>
+      <div class="form-col"><label>Token</label><input name="token" required type="password" placeholder="ghp_..."></div>
+      <div class="form-col"><label>Provider</label>
+        <select name="provider">
+          <option value="github">GitHub</option>
+          <option value="gitlab">GitLab</option>
+          <option value="generic">Generic</option>
+        </select>
+      </div>
+      <div class="form-col" style="align-self:end;"><button class="btn btn-primary">Add Token</button></div>
+    </div>
+  </form>
+  {% if tokens %}
+  <table style="margin-top:16px;">
+    <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for t in tokens %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td>{{ t.provider }}</td>
+        <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete token?')) fetch('/api/tokens/{{ t.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted); margin-top:12px;">No tokens yet.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <h2 style="font-size:22px;">Docker Hosts</h2>
+  <form onsubmit="return createHost(this)" style="margin-top:12px;">
+    <div class="form-row">
+      <div class="form-col"><label>Name</label><input name="name" required placeholder="localhost"></div>
+      <div class="form-col"><label>Host</label><input name="host" value="localhost"></div>
+      <div class="form-col" style="align-self:end;">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" name="is_local" checked> Local</label>
+      </div>
+      <div class="form-col" style="align-self:end;">
+        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" name="tls"> TLS</label>
+      </div>
+      <div class="form-col" style="align-self:end;"><button class="btn btn-primary">Add Host</button></div>
+    </div>
+  </form>
+  {% if hosts %}
+  <table style="margin-top:16px;">
+    <thead><tr><th>Name</th><th>Host</th><th>Local</th><th>TLS</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for h in hosts %}
+      <tr>
+        <td>{{ h.name }}</td>
+        <td>{{ h.host }}</td>
+        <td>{% if h.is_local %}Yes{% else %}No{% endif %}</td>
+        <td>{% if h.tls %}Yes{% else %}No{% endif %}</td>
+        <td><button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete host?')) fetch('/api/docker-hosts/{{ h.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:var(--muted); margin-top:12px;">No hosts configured.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="font-size:22px;">About</h2>
+  <p style="color:var(--muted); font-size:13px;">DockLiner v0.1.0 — lightweight deployment manager. Dark mode default, light mode optional via theme toggle.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function createToken(form) {
+  const fd = new FormData(form);
+  fetch('/api/tokens', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: fd.get('name'), token: fd.get('token'), provider: fd.get('provider')})
+  }).then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
+  return false;
+}
+function createHost(form) {
+  const fd = new FormData(form);
+  fetch('/api/docker-hosts', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name: fd.get('name'), host: fd.get('host'), is_local: fd.has('is_local'), tls: fd.has('tls')})
+  }).then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
+  return false;
+}
+</script>
+{% endblock %}
