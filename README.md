@@ -1,4 +1,11 @@
-# DockLiner
+<div align="center">
+
+<img src="app/static/img/logo.svg" width="92%" alt="DockLiner Banner" />
+
+<br>
+
+</div>
+
 
 A lightweight, self-hosted deployment management system for personal Docker-based projects. DockLiner provides centralized management of multiple GitHub repositories, automated deployment via Docker Compose, and monitoring — all running natively on the host server alongside aaPanel.
 
