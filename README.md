@@ -2,21 +2,21 @@
 
 <img src="app/static/img/logo.svg" width="92%" alt="DockLiner Banner" />
 
-<br>
-
 </div>
 
+<br>
+<br>
 
-A lightweight, self-hosted deployment management system for personal Docker-based projects. DockLiner provides centralized management of multiple GitHub repositories, automated deployment via Docker Compose, and monitoring — all running natively on the host server alongside aaPanel.
+A lightweight, self-hosted deployment management system for personal Docker-based projects. DockLiner provides centralized management of multiple GitHub repositories, automated deployment via Docker Compose, and monitoring all running natively on the host server alongside aaPanel.
 
 ## Core Goals
 
-- **Single GitHub PAT** — One Personal Access Token to access all repositories.
-- **Clean, reproducible deployments** — Aggressive cleanup with no junk files left behind.
-- **Simple web dashboard** — One-click deploy, restart, stop, and view logs.
-- **SQLite-backed state management** — Lightweight, no external database required.
-- **High safety & minimal overhead** — Runs as non-root user with limited Docker socket access.
-- **Full aaPanel compatibility** — Works alongside existing aaPanel setup with reverse proxy support.
+- **Single GitHub PAT** - One Personal Access Token to access all repositories.
+- **Clean, reproducible deployments** - Aggressive cleanup with no junk files left behind.
+- **Simple web dashboard** - One-click deploy, restart, stop, and view logs.
+- **SQLite-backed state management** - Lightweight, no external database required.
+- **High safety & minimal overhead** - Runs as non-root user with limited Docker socket access.
+- **Full aaPanel compatibility** - Works alongside existing aaPanel setup with reverse proxy support.
 
 ## Technology Stack
 
@@ -113,19 +113,19 @@ A lightweight, self-hosted deployment management system for personal Docker-base
 
 ## Development Phases
 
-### Phase 1 — Foundation
+### Phase 1 - Foundation
 - Project structure, dependencies, SQLite models, Git/Docker services, basic API routes, systemd service.
 
-### Phase 2 — Core Deployment Engine
+### Phase 2 - Core Deployment Engine
 - Full deployment pipeline, aggressive cleanup, `.env` per project, deployment history, error handling & rollback.
 
-### Phase 3 — Web Dashboard
+### Phase 3 - Web Dashboard
 - Project list with status, one-click actions, add/edit forms, simple authentication, responsive UI.
 
-### Phase 4 — Polish & Safety
+### Phase 4 - Polish & Safety
 - Validation, background tasks, rate limiting, security headers, backup utility, monitoring endpoints.
 
-### Phase 5 — Advanced Features (Future)
+### Phase 5 - Advanced Features (Future)
 - GitHub webhook support, Portainer integration, resource monitoring, one-click templates, preview/staging environments.
 
 ## Quick Start
