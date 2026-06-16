@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Logs — {{ project.name if project else '?' }}{% endblock %}
 {% block content %}
-<h1 style="font-size:48px; margin-bottom:8px;">Logs</h1>
-<p style="color:var(--muted); margin-bottom:24px;">{{ project.name if project else 'Unknown' }} — compose logs (last 200 lines)</p>
+<h1 class="hero-title">Logs</h1>
+<p class="section-subtitle">{{ project.name if project else 'Unknown' }} — compose logs (last 200 lines)</p>
 <div class="card">
-  <pre class="logs">{{ logs or 'No logs.' }}</pre>
+  <pre class="log-window">{{ logs or 'No logs.' }}</pre>
 </div>
 <div style="margin-top:12px;">
   <a class="btn btn-secondary" href="/projects">Back to Projects</a>
