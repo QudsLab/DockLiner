@@ -1,1 +1,6 @@
 *.pyc
+/downloads
+/app/static/img/.backup
+/job
+docker-compose-explained.html
+dockliner.db
