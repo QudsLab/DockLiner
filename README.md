@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="app/static/img/logo.svg" width="92%" alt="DockLiner Banner" />
+<img src="app/static/img/logo_light.svg" width="50%" alt="DockLiner Banner" />
 
 </div>
 
