@@ -1,102 +1,180 @@
 {% extends "base.html" %}
 {% block title %}Settings — DockLiner{% endblock %}
 {% block content %}
-<h1 style="font-size:48px; margin-bottom:8px;">Settings</h1>
-<p style="color:var(--muted); margin-bottom:24px;">Tokens, hosts, and preferences.</p>
+<h1 class="hero-title">Settings</h1>
+<p class="section-subtitle">System configuration, tokens, Docker management, and updates.</p>
 
+<!-- Docker Install / Upgrade -->
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:22px;">Access Tokens</h2>
-  <p style="color:var(--muted); font-size:13px;">Multiple tokens supported. First token is used as default for deploys.</p>
+  <h2 class="section-title">Docker</h2>
+  <div class="grid grid-3" style="margin-bottom:16px;">
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Docker Engine</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">
+        {% if docker_installed and docker_running %}
+          {{ docker_version or info.ServerVersion or 'Running' }}
+        {% elif docker_installed and not docker_running %}
+          <span style="color:var(--error);">Daemon stopped</span>
+        {% else %}
+          <span style="color:var(--error);">Not installed</span>
+        {% endif %}
+      </div>
+      {% if docker_installed %}
+      <div style="margin-top:10px;">
+        {% if docker_running %}
+          <button class="btn btn-danger btn-sm" onclick="controlDaemon('stop')">Turn Off Daemon</button>
+        {% else %}
+          <button class="btn btn-success btn-sm" onclick="controlDaemon('start')">Turn On Daemon</button>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Containers</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ containers|length }}</div>
+    </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ images|length }}</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn btn-secondary btn-sm" href="/api/docker/security" onclick="event.preventDefault();fetch(this.href).then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Security Check</a>
+  </div>
+  {% if not docker_installed %}
+  <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
+    Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" style="color:var(--primary);">Install Docker</a>.
+  </div>
+  {% elif docker_installed and not docker_running %}
+  <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
+    Docker is installed but the daemon is not running. Start Docker Desktop or the docker service.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Containers table -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 class="section-title">Containers</h2>
+  {% if containers %}
+  <table class="table">
+    <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>State</th><th>Ports</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for c in containers %}
+      <tr>
+        <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.State }}</td><td>{{ c.Ports or '-' }}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
+          <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
+          <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Ports</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--muted)">No containers.</p>{% endif %}
+</div>
+
+<!-- Images table -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 class="section-title">Images</h2>
+  {% if images %}
+  <table class="table">
+    <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for i in images %}
+      <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td>{{ i.CreatedAt }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--muted)">No images.</p>{% endif %}
+</div>
+
+<!-- Networks & Volumes -->
+<div class="grid grid-2" style="margin-bottom:24px;">
+  <div class="card">
+    <h2 class="section-title">Networks</h2>
+    {% if networks %}
+    <table class="table"><thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
+      {% for n in networks %}<tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
+  </div>
+  <div class="card">
+    <h2 class="section-title">Volumes</h2>
+    {% if volumes %}
+    <table class="table"><thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
+      {% for v in volumes %}<tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">No volumes.</p>{% endif %}
+  </div>
+</div>
+
+<!-- Access Tokens -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 class="section-title">Access Tokens</h2>
   <form onsubmit="return createToken(this)" style="margin-top:12px;">
     <div class="form-row">
-      <div class="form-col"><label>Name</label><input name="name" required placeholder="github-pat-1"></div>
-      <div class="form-col"><label>Token</label><input name="token" required type="password" placeholder="ghp_..."></div>
-      <div class="form-col"><label>Provider</label>
-        <select name="provider">
-          <option value="github">GitHub</option>
-          <option value="gitlab">GitLab</option>
-          <option value="generic">Generic</option>
-        </select>
-      </div>
+      <div class="form-col"><label>Name</label><input class="input" name="name" required placeholder="github-pat-1"></div>
+      <div class="form-col"><label>Token</label><input class="input" name="token" required type="password" placeholder="ghp_..."></div>
       <div class="form-col" style="align-self:end;"><button class="btn btn-primary">Add Token</button></div>
     </div>
   </form>
   {% if tokens %}
-  <table style="margin-top:16px;">
+  <table class="table" style="margin-top:16px;">
     <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Actions</th></tr></thead>
     <tbody>
     {% for t in tokens %}
-      <tr>
-        <td>{{ t.name }}</td>
-        <td>{{ t.provider }}</td>
-        <td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete token?')) fetch('/api/tokens/{{ t.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td>
-      </tr>
+      <tr><td>{{ t.name }}</td><td>GitHub</td><td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><button class="btn btn-danger btn-sm" onclick="if(confirm('Delete token?')) fetch('/api/tokens/{{ t.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td></tr>
     {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <p style="color:var(--muted); margin-top:12px;">No tokens yet.</p>
-  {% endif %}
+  {% else %}<p style="color:var(--muted);margin-top:12px;">No tokens yet.</p>{% endif %}
 </div>
 
+<!-- Version / Update -->
 <div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:22px;">Docker Hosts</h2>
-  <form onsubmit="return createHost(this)" style="margin-top:12px;">
-    <div class="form-row">
-      <div class="form-col"><label>Name</label><input name="name" required placeholder="localhost"></div>
-      <div class="form-col"><label>Host</label><input name="host" value="localhost"></div>
-      <div class="form-col" style="align-self:end;">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" name="is_local" checked> Local</label>
-      </div>
-      <div class="form-col" style="align-self:end;">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;"><input type="checkbox" name="tls"> TLS</label>
-      </div>
-      <div class="form-col" style="align-self:end;"><button class="btn btn-primary">Add Host</button></div>
+  <h2 class="section-title">System Update</h2>
+  <div class="grid grid-3">
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Current</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ version.current }}</div>
     </div>
-  </form>
-  {% if hosts %}
-  <table style="margin-top:16px;">
-    <thead><tr><th>Name</th><th>Host</th><th>Local</th><th>TLS</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for h in hosts %}
-      <tr>
-        <td>{{ h.name }}</td>
-        <td>{{ h.host }}</td>
-        <td>{% if h.is_local %}Yes{% else %}No{% endif %}</td>
-        <td>{% if h.tls %}Yes{% else %}No{% endif %}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete host?')) fetch('/api/docker-hosts/{{ h.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p style="color:var(--muted); margin-top:12px;">No hosts configured.</p>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Latest</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ version.latest }}</div>
+    </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Update</label>
+      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">
+        {% if version.has_update %}<span style="color:var(--primary);">Available</span>{% else %}<span style="color:var(--muted);">Up to date</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% if version.url %}
+  <a class="btn btn-secondary" href="{{ version.url }}" target="_blank" style="margin-top:12px;">View Release</a>
   {% endif %}
 </div>
 
 <div class="card">
-  <h2 style="font-size:22px;">About</h2>
-  <p style="color:var(--muted); font-size:13px;">DockLiner v0.1.0 — lightweight deployment manager. Dark mode default, light mode optional via theme toggle.</p>
+  <h2 class="section-title">About</h2>
+  <p style="color:var(--muted);font-size:13px;">DockLiner — lightweight deployment manager. GitHub: <a href="https://github.com/QudsLab/DockLiner" target="_blank" style="color:var(--primary);">QudsLab/DockLiner</a></p>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
-function createToken(form) {
-  const fd = new FormData(form);
-  fetch('/api/tokens', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name: fd.get('name'), token: fd.get('token'), provider: fd.get('provider')})
-  }).then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
+function createToken(form){
+  const fd=new FormData(form);
+  fetch('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),token:fd.get('token'),provider:'github'})})
+    .then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
   return false;
 }
-function createHost(form) {
-  const fd = new FormData(form);
-  fetch('/api/docker-hosts', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name: fd.get('name'), host: fd.get('host'), is_local: fd.has('is_local'), tls: fd.has('tls')})
-  }).then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
-  return false;
+
+function controlDaemon(action){
+  if(!confirm((action==='stop'?'Stop':'Start')+' Docker daemon?')) return;
+  fetch('/api/docker/'+action+'-daemon',{method:'POST'}).then(r=>{
+    if(r.ok){ location.reload(); }
+    else{ r.json().then(d=>alert(d.detail||'Failed')); }
+  }).catch(e=>alert('Error: '+e.message));
 }
 </script>
 {% endblock %}
