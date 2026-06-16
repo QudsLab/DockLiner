@@ -1,0 +1,641 @@
+{% extends "base.html" %}
+{% block title %}Add Project — DockLiner{% endblock %}
+{% block content %}
+<style>
+.wizard-step{display:none;animation:fadeIn .18s ease}
+.wizard-step.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.stepper{display:flex;gap:6px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.stepper .step{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;border:1px solid var(--hairline);font-size:12px;font-weight:600;color:var(--muted);background:transparent}
+.stepper .step.active{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.stepper .arr{color:var(--muted);font-size:14px;margin:0 2px}
+.card-select{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-card);cursor:pointer;transition:.15s}
+.card-select:hover{border-color:var(--primary)}
+.card-select .avatar{width:36px;height:36px;border-radius:50%;background:var(--surface-soft);display:grid;place-items:center;font-size:14px;font-weight:700;color:var(--ink)}
+.card-select .name{font-weight:500;color:var(--ink);font-size:14px}
+.card-select .sub{font-size:12px;color:var(--muted)}
+.repo-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-card);margin-bottom:8px;cursor:pointer;transition:.15s}
+.repo-row:hover{border-color:var(--primary)}
+.repo-row .left{min-width:0}
+.repo-row .name{font-weight:500;color:var(--ink);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.repo-row .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.repo-row .right{flex-shrink:0}
+.loading{color:var(--muted);font-size:13px;padding:12px 0}
+.empty{text-align:center;color:var(--muted);padding:24px 0;font-size:13px}
+.review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13px}
+.review-row:last-child{border:none}
+.review-row .k{color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-size:11px}
+.review-row .v{color:var(--ink);font-weight:500}
+.mode-row{display:flex;gap:8px;margin:12px 0}
+.mode-btn{flex:1;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-card);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center}
+.mode-btn.active{border-color:var(--primary);background:rgba(144,206,0,.06);color:var(--on-primary)}
+/* editor */
+.editor-wrap{border:1px solid var(--hairline);border-radius:var(--radius-md);overflow:hidden;background:var(--surface-card)}
+.editor-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--hairline);background:var(--surface-soft);font-size:12px;color:var(--muted)}
+.editor-tabs{display:flex;gap:4px}
+.editor-tab{padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;color:var(--muted)}
+.editor-tab.active{background:var(--primary);color:var(--on-primary)}
+.editor-body{position:relative;min-height:180px;max-height:420px;overflow:auto}
+.editor-body textarea{width:100%;min-height:180px;border:none;outline:none;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:13px;line-height:1.5;padding:12px;resize:vertical}
+.editor-body pre{margin:0;padding:12px;font-family:var(--font-mono);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.file-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--hairline);font-size:12px;background:var(--surface-soft);color:var(--ink);margin:4px 4px 0 0}
+.file-chip.ok{border-color:var(--primary);background:rgba(144,206,0,.08);color:var(--on-primary)}
+.file-chip.warn{border-color:var(--error);background:rgba(198,69,69,.1);color:var(--error)}
+/* Syntax light colors */
+.syn-kw{color:#0066cc;font-weight:700}
+.syn-str{color:#008040}
+.syn-num{color:#b35900}
+.syn-com{color:#6a737d;font-style:italic}
+.syn-sec{color:#8250df;font-weight:700}
+.syn-key{color:#d1242f}
+.syn-arg{color:#0550ae}
+[data-theme="dark"] .syn-kw{color:#79c0ff}
+[data-theme="dark"] .syn-str{color:#a5d6ff}
+[data-theme="dark"] .syn-num{color:#fca}
+[data-theme="dark"] .syn-com{color:#8b949e}
+[data-theme="dark"] .syn-sec{color:#d2a8ff}
+[data-theme="dark"] .syn-key{color:#ff7b72}
+[data-theme="dark"] .syn-arg{color:#79c0ff}
+.editor-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.editor-toolbar .btn{font-size:11px;padding:5px 10px}
+.env-actions{display:flex;gap:8px;margin-top:8px}
+.copy-hint{font-size:11px;color:var(--muted);margin-top:6px}
+.advanced-card{margin-top:14px;padding:12px;border-radius:var(--radius-md);border:1px dashed var(--hairline);background:var(--surface-soft)}
+.advanced-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.advanced-body{display:none}
+.advanced-body.open{display:block}
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;gap:10px;margin:8px 0}
+.toggle-track{position:relative;width:40px;height:22px;border-radius:999px;background:var(--hairline);cursor:pointer;transition:.2s;flex-shrink:0}
+.toggle-track.on{background:var(--primary)}
+.toggle-track .thumb{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--canvas);transition:.2s}
+.toggle-track.on .thumb{transform:translateX(18px)}
+.toggle-label{font-size:13px;color:var(--ink);cursor:pointer}
+.file-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.file-pill{font-size:11px;padding:4px 8px;border-radius:var(--radius-sm);background:var(--surface-soft);color:var(--muted);border:1px solid var(--hairline)}
+</style>
+
+<h1 class="hero-title">Add Project</h1>
+<p class="section-subtitle">Step-by-step deployment wizard.</p>
+
+<div class="stepper" id="stepper">
+  <span class="step active" data-step="1">Token</span>
+  <span class="arr">→</span>
+  <span class="step" data-step="2">Org</span>
+  <span class="arr">→</span>
+  <span class="step" data-step="3">Repo</span>
+  <span class="arr">→</span>
+  <span class="step" data-step="4">Branch/Release</span>
+  <span class="arr">→</span>
+  <span class="step" data-step="5">Files</span>
+  <span class="arr">→</span>
+  <span class="step" data-step="6">Review</span>
+</div>
+
+<!-- Step 1 Token -->
+<div class="wizard-step active" id="step1">
+  <div class="card">
+    <h2 class="section-title">Select Token</h2>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:14px;">Choose a GitHub token to access repositories.</p>
+    {% if tokens %}
+    <div id="tokenList">
+      {% for t in tokens %}
+      <div class="card-select" onclick="pickToken({{ t.id }}, '{{ t.name }}')">
+        <div class="avatar">GH</div>
+        <div><div class="name">{{ t.name }}</div><div class="sub">GitHub token</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No tokens saved. <a href="/settings" style="color:var(--primary);">Add one first.</a></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Step 2 Org -->
+<div class="wizard-step" id="step2">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h2 class="section-title" style="margin:0;">Organization / User</h2>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(1)">← Back</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input class="input" id="orgInput" placeholder="e.g. nickjj" style="flex:1;" onkeydown="if(event.key==='Enter')searchUser()">
+      <button class="btn btn-primary" style="padding:8px 14px;font-size:12px;" onclick="searchUser()">Search</button>
+    </div>
+    <div id="searchResult"></div>
+    <p style="font-size:12px;color:var(--muted);margin:16px 0 8px;">Your orgs:</p>
+    <div id="orgLoading" class="loading">Loading...</div>
+    <div id="orgList"></div>
+  </div>
+</div>
+
+<!-- Step 3 Repo -->
+<div class="wizard-step" id="step3">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 class="section-title" style="margin:0;">Select Repository</h2>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(2)">← Back</button>
+    </div>
+    <input class="input" id="repoSearch" placeholder="Search repos..." oninput="filterRepos(this.value)" style="margin-bottom:12px;">
+    <div id="repoLoading" class="loading">Loading repos...</div>
+    <div id="repoList"></div>
+  </div>
+</div>
+
+<!-- Step 4 Branch/Release -->
+<div class="wizard-step" id="step4">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 class="section-title" style="margin:0;">Choose Source</h2>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(3)">← Back</button>
+    </div>
+    <div class="mode-row">
+      <button class="mode-btn active" id="modeBranch" onclick="setMode('branch')">Branch</button>
+      <button class="mode-btn" id="modeRelease" onclick="setMode('release')">Release</button>
+    </div>
+    <div id="branchPanel">
+      <label style="font-size:12px;color:var(--muted);">Branch</label>
+      <select class="select" id="branchSelect" style="margin-top:6px;"><option>main</option></select>
+    </div>
+    <div id="releasePanel" style="display:none;">
+      <div id="releaseLoading" class="loading">Loading releases...</div>
+      <div id="releaseList"></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="confirmSource()">Download source →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step 5 Files / Compose / Dockerfile / Env -->
+<div class="wizard-step" id="step5">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h2 class="section-title" style="margin:0;">Build Files</h2>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(4)">← Back</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;">Downloaded: <b id="filesSource">-</b></p>
+    <div id="fileChips" class="file-list" style="margin-bottom:12px;"></div>
+
+    <!-- Command mode tabs -->
+    <div class="mode-row" style="margin-bottom:14px;">
+      <button class="mode-btn active" id="cmdCompose" onclick="setCommandMode('compose')">Compose</button>
+      <button class="mode-btn" id="cmdDockerfile" onclick="setCommandMode('dockerfile')">Dockerfile</button>
+      <button class="mode-btn" id="cmdDirect" onclick="setCommandMode('direct')">Direct command</button>
+    </div>
+
+    <!-- Compose editor -->
+    <div id="composeEditor">
+      <div class="editor-wrap">
+        <div class="editor-header">
+          <div class="editor-toolbar">
+            <span class="editor-tab active" id="tabComposeDeco" onclick="setRaw('compose',false)">Decorated</span>
+            <span class="editor-tab" id="tabComposeRaw" onclick="setRaw('compose',true)">Raw YAML</span>
+          </div>
+          <div class="editor-toolbar">
+            <span class="copy-hint" id="composeStatus">No compose.yml found — create one below.</span>
+          </div>
+        </div>
+        <div class="editor-body" id="composeBody">
+          <textarea id="composeRaw" placeholder="version: '3'\nservices:\n  app:\n    build: .\n    ports:\n      - \"{{PORT}}:3000\""></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dockerfile editor -->
+    <div id="dockerfileEditor" style="display:none;">
+      <div class="editor-wrap">
+        <div class="editor-header">
+          <div class="editor-toolbar">
+            <span class="editor-tab active" id="tabDockerfileDeco" onclick="setRaw('dockerfile',false)">Decorated</span>
+            <span class="editor-tab" id="tabDockerfileRaw" onclick="setRaw('dockerfile',true)">Raw Dockerfile</span>
+          </div>
+          <div class="editor-toolbar">
+            <span class="copy-hint" id="dockerfileStatus">No Dockerfile found — create one below.</span>
+          </div>
+        </div>
+        <div class="editor-body" id="dockerfileBody">
+          <textarea id="dockerfileRaw" placeholder="FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"server.js\"]"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direct command -->
+    <div id="directEditor" style="display:none;">
+      <div class="editor-wrap">
+        <div class="editor-header">Direct run command</div>
+        <div class="editor-body">
+          <textarea id="directCommand" placeholder="docker run -d -p {{PORT}}:3000 --name {{NAME}} my-image"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Environment variables -->
+    <div class="editor-wrap" style="margin-top:14px;">
+      <div class="editor-header">Environment files</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;">
+        <div>
+          <label style="font-size:12px;color:var(--muted);">.env (used at runtime)</label>
+          <textarea id="envContent" style="width:100%;min-height:120px;border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:8px;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:12px;"></textarea>
+          <div class="env-actions">
+            <button class="btn btn-secondary btn-sm" onclick="copyExampleToEnv()">Copy from .env.example</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearEnv()">Clear</button>
+          </div>
+          <p class="copy-hint" id="envHint">No .env found; leave blank or fill manually.</p>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--muted);">.env.example (reference)</label>
+          <textarea id="exampleEnvContent" readonly style="width:100%;min-height:120px;border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:8px;background:var(--surface-soft);color:var(--muted);font-family:var(--font-mono);font-size:12px;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced -->
+    <div class="advanced-card">
+      <div class="advanced-title" onclick="toggleAdvanced()">
+        <span id="advArrow">▸</span> Advanced runtime options
+      </div>
+      <div class="advanced-body" id="advancedBody">
+        <div class="form-row">
+          <div class="form-col"><label>Project name</label><input class="input" id="projectName" placeholder="my-app"></div>
+          <div class="form-col"><label>Port</label><input class="input" id="projectPort" type="number" placeholder="auto"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-col">
+            <label>Docker build args</label>
+            <input class="input" id="buildArgs" placeholder="--no-cache">
+          </div>
+          <div class="form-col">
+            <label>Docker run options</label>
+            <input class="input" id="runOptions" placeholder="--restart unless-stopped">
+          </div>
+        </div>
+        <div class="toggle-wrap" onclick="togglePull()">
+          <div class="toggle-track on" id="pullToggle"><div class="thumb"></div></div>
+          <span class="toggle-label">Always pull base images on build</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="goReview()">Continue →</button>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(4)">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- Step 6 Review -->
+<div class="wizard-step" id="step6">
+  <div class="card">
+    <h2 class="section-title">Review</h2>
+    <div id="reviewCard">
+      <div class="review-row"><span class="k">Name</span><span class="v" id="rName">-</span></div>
+      <div class="review-row"><span class="k">Repository</span><span class="v" id="rRepo">-</span></div>
+      <div class="review-row"><span class="k">Org / Owner</span><span class="v" id="rOrg">-</span></div>
+      <div class="review-row"><span class="k">Source</span><span class="v" id="rSource">-</span></div>
+      <div class="review-row"><span class="k">Command mode</span><span class="v" id="rMode">-</span></div>
+      <div class="review-row"><span class="k">Editor mode</span><span class="v" id="rRaw">-</span></div>
+      <div class="review-row"><span class="k">Port</span><span class="v" id="rPort">Auto</span></div>
+      <div class="review-row"><span class="k">Token</span><span class="v" id="rToken">-</span></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="submitProject()">Create Project</button>
+      <button class="btn btn-ghost btn-sm" onclick="goStep(5)">← Back</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let state={
+  tokenId:null,tokenName:'',org:'',repo:{},mode:'branch',branch:'main',release:null,
+  commandMode:'compose',rawCompose:false,rawDockerfile:false,
+  downloaded:null,projectName:'',port:null,buildArgs:'',runOptions:'',pull:true
+};
+let orgsCache=[], reposCache=[], releasesCache=[];
+
+function goStep(n){
+  document.querySelectorAll('.wizard-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  document.querySelectorAll('.stepper .step').forEach(s=>s.classList.toggle('active', parseInt(s.dataset.step)===n));
+}
+
+function pickToken(id,name){ state.tokenId=id; state.tokenName=name; goStep(2); loadOrgs(); }
+
+async function loadOrgs(){
+  const list=document.getElementById('orgList'), loading=document.getElementById('orgLoading');
+  loading.style.display='block'; list.innerHTML='';
+  try{
+    const data=await fetch('/api/github/token/'+state.tokenId+'/orgs').then(r=>r.json());
+    orgsCache=data||[];
+    loading.style.display='none'; renderOrgs(orgsCache);
+  }catch(e){ loading.textContent='Error: '+e.message; }
+}
+
+function renderOrgs(items){
+  const list=document.getElementById('orgList');
+  if(!items.length){ list.innerHTML='<div class="empty">No orgs found.</div>'; return; }
+  list.innerHTML=items.map(o=>`
+    <div class="card-select" onclick="pickOrg('${o.login}','${o.type}')">
+      <div class="avatar">${o.avatar_url?`<img src="${o.avatar_url}" style="width:36px;height:36px;border-radius:50%">`:o.login.slice(0,2).toUpperCase()}</div>
+      <div><div class="name">${o.login}</div><div class="sub">${o.type}</div></div>
+    </div>`).join('');
+}
+
+async function searchUser(){
+  const username=document.getElementById('orgInput').value.trim();
+  if(!username){ alert('Enter a username'); return; }
+  const resultDiv=document.getElementById('searchResult');
+  resultDiv.innerHTML='<div class="loading">Searching...</div>';
+  try{
+    const data=await fetch('/api/github/users/'+encodeURIComponent(username)).then(r=>r.json());
+    if(!data.found){ resultDiv.innerHTML=`<div style="padding:12px;border-radius:var(--radius-md);background:rgba(198,69,69,.1);color:var(--error);font-size:13px;">User <b>${username}</b> not found.</div>`; return; }
+    resultDiv.innerHTML=`
+      <div class="card-select" onclick="pickOrg('${data.login}','${data.type}')">
+        <div class="avatar">${data.avatar_url?`<img src="${data.avatar_url}" style="width:36px;height:36px;border-radius:50%">`:data.login.slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0"><div class="name">${data.name||data.login}</div><div class="sub">${data.type} · ${data.public_repos} public repos</div></div>
+        <a href="${data.html_url}" target="_blank" onclick="event.stopPropagation()" class="btn btn-secondary btn-sm" style="text-decoration:none;flex-shrink:0;">GitHub →</a>
+      </div>`;
+  }catch(e){ resultDiv.innerHTML='<div class="empty">Error searching user.</div>'; }
+}
+
+function pickOrg(login,type){ state.org=login; goStep(3); loadRepos(); }
+
+async function loadRepos(){
+  const list=document.getElementById('repoList'), loading=document.getElementById('repoLoading');
+  loading.style.display='block'; list.innerHTML='';
+  try{
+    const data=await fetch('/api/github/token/'+state.tokenId+'/repos?org='+encodeURIComponent(state.org)).then(r=>r.json());
+    reposCache=data.repos||[];
+    loading.style.display='none';
+    let warn='';
+    if(data.count>0 && !data.has_private && !data.repo_scope_ok){
+      warn=`<div style="padding:10px 12px;border-radius:var(--radius-md);background:rgba(198,69,69,.1);color:var(--error);font-size:12px;margin-bottom:12px;"><b>No private repos found.</b> Scopes: ${(data.scopes||[]).join(', ')||'none'}.</div>`;
+    }
+    list.innerHTML=warn; renderRepos(reposCache);
+  }catch(e){ loading.textContent='Error: '+e.message; }
+}
+
+function renderRepos(items){
+  const list=document.getElementById('repoList');
+  if(!items.length){ list.innerHTML+='<div class="empty">No repos found.</div>'; return; }
+  list.innerHTML+=items.map(r=>`
+    <div class="repo-row" onclick="pickRepo(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+      <div class="left">
+        <div class="name">${r.name}</div>
+        <div class="meta">${r.description||''} · ⭐ ${r.stargazers_count||0}${r.language?' · '+r.language:''}${r.private?' · private':''}</div>
+      </div>
+      <div class="right"><span class="tag">Select</span></div>
+    </div>`).join('');
+}
+
+function filterRepos(q){
+  const low=q.toLowerCase();
+  renderRepos(reposCache.filter(r=>(r.name||'').toLowerCase().includes(low)||(r.description||'').toLowerCase().includes(low)));
+}
+
+function pickRepo(repo){
+  state.repo=repo;
+  goStep(4);
+  loadBranches(); preloadReleases();
+}
+
+async function loadBranches(){
+  const sel=document.getElementById('branchSelect');
+  sel.innerHTML='<option>Loading...</option>';
+  try{
+    const [owner,name]=state.repo.full_name.split('/');
+    const data=await fetch('/api/github/repos/'+owner+'/'+name+'/branches').then(r=>r.json());
+    sel.innerHTML=data.map(b=>`<option value="${b.name}">${b.name}</option>`).join('');
+    state.branch=data[0]?data[0].name:'main';
+  }catch(e){ sel.innerHTML='<option>main</option>'; }
+}
+
+function setMode(mode){
+  state.mode=mode;
+  document.getElementById('modeBranch').classList.toggle('active', mode==='branch');
+  document.getElementById('modeRelease').classList.toggle('active', mode==='release');
+  document.getElementById('branchPanel').style.display=mode==='branch'?'block':'none';
+  document.getElementById('releasePanel').style.display=mode==='release'?'block':'none';
+  if(mode==='release'){ if(releasesCache.length) renderReleases(releasesCache); else loadReleases(); }
+}
+
+async function preloadReleases(){
+  const [owner,name]=state.repo.full_name.split('/');
+  try{
+    const data=await fetch('/api/github/repos/'+owner+'/'+name+'/releases').then(r=>r.json());
+    releasesCache=data||[];
+    const btn=document.getElementById('modeRelease');
+    if(!releasesCache.length){ btn.style.opacity='0.4'; btn.style.pointerEvents='none'; btn.title='No releases'; if(state.mode==='release') setMode('branch'); }
+    else{ btn.style.opacity=''; btn.style.pointerEvents=''; btn.title=''; }
+  }catch(e){ releasesCache=[]; document.getElementById('modeRelease').style.opacity='0.4'; }
+}
+
+function renderReleases(items){
+  const list=document.getElementById('releaseList'), loading=document.getElementById('releaseLoading');
+  loading.style.display='none';
+  if(!items.length){ list.innerHTML='<div class="empty">No releases found. Use Branch mode.</div>'; return; }
+  list.innerHTML=items.map(rel=>`
+    <div class="repo-row" onclick="pickRelease(${JSON.stringify(rel).replace(/"/g,'&quot;')})">
+      <div class="left">
+        <div class="name">${rel.tag_name}</div>
+        <div class="meta">${rel.name||''} · ${rel.published_at?rel.published_at.slice(0,10):''}${rel.prerelease?' · pre-release':''}${rel.draft?' · draft':''}</div>
+      </div>
+      <div class="right"><span class="tag">Select</span></div>
+    </div>`).join('');
+}
+
+async function loadReleases(){
+  const list=document.getElementById('releaseList'), loading=document.getElementById('releaseLoading');
+  loading.style.display='block'; list.innerHTML='';
+  try{
+    const [owner,name]=state.repo.full_name.split('/');
+    const data=await fetch('/api/github/repos/'+owner+'/'+name+'/releases').then(r=>r.json());
+    releasesCache=data||[]; renderReleases(releasesCache);
+  }catch(e){ releasesCache=[]; loading.style.display='none'; list.innerHTML='<div class="empty">Error loading releases.</div>'; }
+}
+
+function pickRelease(rel){ state.release=rel; document.querySelectorAll('#releaseList .repo-row').forEach(r=>r.style.borderColor=''); event.currentTarget.style.borderColor='var(--primary)'; }
+
+async function confirmSource(){
+  if(state.mode==='branch') state.branch=document.getElementById('branchSelect').value;
+  else if(!state.release){ alert('Select a release'); return; }
+  goStep(5);
+  const ref = state.mode==='branch'?state.branch:state.release.tag_name;
+  document.getElementById('filesSource').textContent = state.repo.full_name+' @ '+ref;
+  const btn = event.target;
+  btn.disabled=true; btn.textContent='Downloading…';
+  try{
+    const [owner,name]=state.repo.full_name.split('/');
+    const res=await fetch('/api/github/download',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token_id:state.tokenId, owner, repo:name, ref})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.detail||'Download failed');
+    state.downloaded=data;
+    btn.disabled=false; btn.textContent='Download source →';
+    renderFileChips(data);
+    // populate editors
+    document.getElementById('composeRaw').value = data.compose || defaultCompose();
+    setRaw('compose', state.rawCompose);
+    document.getElementById('dockerfileRaw').value = data.dockerfile || defaultDockerfile();
+    setRaw('dockerfile', state.rawDockerfile);
+    document.getElementById('envContent').value = data.env || '';
+    document.getElementById('exampleEnvContent').value = data.example_env || '';
+    document.getElementById('composeStatus').textContent = data.compose_exists ? 'compose.yml loaded' : 'No compose.yml found — template created.';
+    document.getElementById('dockerfileStatus').textContent = data.dockerfile_exists ? 'Dockerfile loaded' : 'No Dockerfile found — template created.';
+    document.getElementById('envHint').textContent = data.env ? '.env loaded from repo.' : 'No .env found; copy from example or fill manually.';
+    // suggest name
+    document.getElementById('projectName').value = state.repo.name;
+  }catch(e){
+    btn.disabled=false; btn.textContent='Retry download →';
+    alert('Download failed: '+e.message);
+  }
+}
+
+function renderFileChips(data){
+  const div=document.getElementById('fileChips');
+  let html='';
+  if(data.compose_exists) html+='<span class="file-chip ok">compose.yml</span>';
+  else html+='<span class="file-chip warn">compose.yml missing</span>';
+  if(data.dockerfile_exists) html+='<span class="file-chip ok">Dockerfile</span>';
+  else html+='<span class="file-chip warn">Dockerfile missing</span>';
+  if(data.env) html+='<span class="file-chip ok">.env</span>';
+  else html+='<span class="file-chip">.env missing</span>';
+  if(data.example_env) html+='<span class="file-chip ok">.env.example</span>';
+  div.innerHTML=html;
+}
+
+function defaultCompose(){
+  return `version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: {{NAME}}
+    ports:
+      - "{{PORT}}:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
+`;
+}
+
+function defaultDockerfile(){
+  return `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+`;
+}
+
+function setCommandMode(mode){
+  state.commandMode=mode;
+  ['compose','dockerfile','direct'].forEach(m=>{
+    document.getElementById('cmd'+cap(m)).classList.toggle('active', m===mode);
+  });
+  document.getElementById('composeEditor').style.display=mode==='compose'?'block':'none';
+  document.getElementById('dockerfileEditor').style.display=mode==='dockerfile'?'block':'none';
+  document.getElementById('directEditor').style.display=mode==='direct'?'block':'none';
+}
+
+function cap(s){ return s[0].toUpperCase()+s.slice(1); }
+
+function setRaw(which, raw){
+  if(which==='compose') state.rawCompose=raw;
+  else state.rawDockerfile=raw;
+  const body=document.getElementById(which+'Body');
+  const ta=document.getElementById(which+'Raw');
+  const decoTab=document.getElementById('tab'+cap(which)+'Deco');
+  const rawTab=document.getElementById('tab'+cap(which)+'Raw');
+  if(raw){
+    decoTab.classList.remove('active'); rawTab.classList.add('active');
+    body.innerHTML=''; body.appendChild(ta); ta.style.display='block';
+  }else{
+    rawTab.classList.remove('active'); decoTab.classList.add('active');
+    body.innerHTML='<pre>'+highlight(which, ta.value)+'</pre>';
+  }
+}
+
+function highlight(which, text){
+  if(which==='compose'){
+    return escapeHtml(text)
+      .replace(/\b(version|services|networks|volumes|configs|secrets)\b/g,'<span class="syn-sec">$1</span>')
+      .replace(/\b(build|image|container_name|ports|env_file|environment|depends_on|volumes|restart|command|entrypoint|expose)\b/g,'<span class="syn-key">$1</span>')
+      .replace(/(\s*#.*$)/gm,'<span class="syn-com">$1</span>')
+      .replace(/'[^']*'/g,'<span class="syn-str">$1</span>')
+      .replace(/"[^"]*"/g,'<span class="syn-str">$1</span>')
+      .replace(/\b\d+\b/g,'<span class="syn-num">$1</span>');
+  }else{
+    return escapeHtml(text)
+      .replace(/\b(FROM|RUN|CMD|ENTRYPOINT|COPY|ADD|WORKDIR|ENV|EXPOSE|LABEL|ARG|USER|VOLUME)\b/g,'<span class="syn-kw">$1</span>')
+      .replace(/(\s*#.*$)/gm,'<span class="syn-com">$1</span>')
+      .replace(/\b\d+\b/g,'<span class="syn-num">$1</span>')
+      .replace(/"[^"]*"/g,'<span class="syn-str">$1</span>')
+      .replace(/\[([^\]]*)\]/g,'<span class="syn-arg">[$1]</span>');
+  }
+}
+
+function escapeHtml(t){
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyExampleToEnv(){
+  const ex=document.getElementById('exampleEnvContent').value;
+  if(!ex){ alert('No .env.example available'); return; }
+  if(!document.getElementById('envContent').value.trim() || confirm('Overwrite current .env with example content?')){
+    document.getElementById('envContent').value=ex;
+  }
+}
+
+function clearEnv(){ if(confirm('Clear .env?')) document.getElementById('envContent').value=''; }
+function toggleAdvanced(){ document.getElementById('advancedBody').classList.toggle('open'); document.getElementById('advArrow').textContent=document.getElementById('advancedBody').classList.contains('open')?'▾':'▸'; }
+function togglePull(){ document.getElementById('pullToggle').classList.toggle('on'); state.pull=document.getElementById('pullToggle').classList.contains('on'); }
+
+function goReview(){
+  state.projectName = document.getElementById('projectName').value.trim() || state.repo.name;
+  state.port = document.getElementById('projectPort').value ? parseInt(document.getElementById('projectPort').value) : null;
+  state.buildArgs = document.getElementById('buildArgs').value;
+  state.runOptions = document.getElementById('runOptions').value;
+  // ensure decorated view values are captured in textarea
+  document.getElementById('rName').textContent=state.projectName;
+  document.getElementById('rRepo').textContent=state.repo.name;
+  document.getElementById('rOrg').textContent=state.org;
+  document.getElementById('rSource').textContent=state.mode==='branch'?'Branch: '+state.branch:'Release: '+state.release.tag_name;
+  document.getElementById('rMode').textContent=state.commandMode;
+  document.getElementById('rRaw').textContent=(state.commandMode==='compose'?state.rawCompose:state.rawDockerfile)?'Raw':'Decorated';
+  document.getElementById('rPort').textContent=state.port||'Auto';
+  document.getElementById('rToken').textContent=state.tokenName;
+  goStep(6);
+}
+
+async function submitProject(){
+  const payload={
+    name: state.projectName,
+    github_repo_url: state.repo.clone_url,
+    branch: state.mode==='branch'?state.branch:null,
+    compose_file: 'docker-compose.yml',
+    env_vars: {},
+    env_content: document.getElementById('envContent').value,
+    example_env_content: document.getElementById('exampleEnvContent').value,
+    dockerfile_content: state.commandMode==='dockerfile'?document.getElementById('dockerfileRaw').value:'',
+    compose_content: state.commandMode==='compose'?document.getElementById('composeRaw').value:'',
+    token_id: state.tokenId,
+    deploy_method: state.commandMode==='compose'?'compose':'build',
+    release_tag: state.mode==='release'?state.release.tag_name:null,
+    port: state.port||null,
+    command_mode: state.commandMode,
+    raw_mode: state.commandMode==='compose'?state.rawCompose:state.rawDockerfile
+  };
+  try{
+    const r=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.ok) location.href='/projects';
+    else{ const d=await r.json(); alert(d.detail||'Failed'); }
+  }catch(e){ alert('Error: '+e.message); }
+}
+</script>
+{% endblock %}
