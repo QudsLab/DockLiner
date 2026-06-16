@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login — DockLiner</title>
+  <link rel="stylesheet" href="/static/css/root.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Cormorant+Garamond:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .login-card { width:360px; }
+    .login-card .nav-brand { justify-content:center; margin-bottom:24px; }
+  </style>
+</head>
+<body>
+  <div class="card login-card">
+    <div class="nav-brand">
+      <img src="/static/img/icon.svg" alt="" width="28" height="28">
+      <span class="brand-text">Dock<span>Liner</span></span>
+    </div>
+    <form onsubmit="return doLogin(this)">
+      <div class="form-col" style="margin-bottom:12px;">
+        <label>Username</label>
+        <input class="input" name="user" required autofocus>
+      </div>
+      <div class="form-col" style="margin-bottom:16px;">
+        <label>Password</label>
+        <input class="input" name="pass" type="password" required>
+      </div>
+      <button class="btn btn-primary" style="width:100%;">Login</button>
+      <p id="err" style="color:var(--error); font-size:13px; margin-top:10px; display:none;">Invalid credentials</p>
+    </form>
+  </div>
+  <script>
+    function doLogin(form) {
+      const fd = new FormData(form);
+      fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({user: fd.get('user'), pass: fd.get('pass')})})
+        .then(r => { if (r.ok) { location.href = '/'; } else { document.getElementById('err').style.display='block'; } });
+      return false;
+    }
+  </script>
+</body>
+</html>
