@@ -1,0 +1,1 @@
+docker run -d --name test-direct-2 -p 25600:3000 nginx:alpine

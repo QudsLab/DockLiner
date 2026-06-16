@@ -1,5 +1,4 @@
-# this script will clean the cache files befor any nessassary build
-
+# this script will clean the cache files before any necessary build
 # clean __pycache__ folder from NextSSL folder and its subfolders
 import os
 import shutil
@@ -10,4 +9,5 @@ def clean_pycache():
             shutil.rmtree(pycache_dir)
             print(f"Removed: {pycache_dir}")
 
-clean_pycache()
+if __name__ == "__main__":
+    clean_pycache()

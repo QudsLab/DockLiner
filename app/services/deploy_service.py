@@ -55,7 +55,11 @@ class DeployService:
             logs.append("Wrote .env")
 
         # 4. Build
-        if project.deploy_method == "compose":
+        method = str(project.command_mode or project.deploy_method or "compose")
+        if method == "direct":
+            logs.append("Running direct command...")
+            rc, out = DockerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
+        elif method == "compose":
             logs.append("Building compose...")
             rc, out = DockerService.compose_up(str(deploy_path), project.compose_file)
         else:
@@ -97,8 +101,12 @@ class DeployService:
     @staticmethod
     def stop_project(project) -> str:
         deploy_path = Path(project.deploy_path)
-        if project.deploy_method == "compose":
+        method = str(project.command_mode or project.deploy_method or "compose")
+        if method == "compose":
             rc, out = DockerService.compose_down(str(deploy_path), project.compose_file)
+        elif method == "direct":
+            r = DockerService._run(["docker", "stop", project.name], timeout=10)
+            rc, out = r.returncode, r.stdout + r.stderr
         else:
             rc, out = DockerService.stop_container_by_project(project.name)
         project.status = "stopped"
@@ -107,8 +115,11 @@ class DeployService:
     @staticmethod
     def start_project(project) -> str:
         deploy_path = Path(project.deploy_path)
-        if project.deploy_method == "compose":
+        method = str(project.command_mode or project.deploy_method or "compose")
+        if method == "compose":
             rc, out = DockerService.compose_up(str(deploy_path), project.compose_file)
+        elif method == "direct":
+            rc, out = DockerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
         else:
             rc, out = DockerService.run_image(project.name, project.port or 8080)
         project.status = "running"

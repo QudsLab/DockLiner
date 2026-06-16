@@ -36,7 +36,8 @@
 .editor-tab{padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;color:var(--muted)}
 .editor-tab.active{background:var(--primary);color:var(--on-primary)}
 .editor-body{position:relative;min-height:180px;max-height:420px;overflow:auto}
-.editor-body textarea{width:100%;min-height:180px;border:none;outline:none;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:13px;line-height:1.5;padding:12px;resize:vertical}
+.editor-body pre{white-space:pre;overflow:auto}
+.editor-body textarea{width:100%;min-height:180px;border:none;outline:none;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:13px;line-height:1.5;padding:12px;resize:vertical;box-sizing:border-box}
 .editor-body pre{margin:0;padding:12px;font-family:var(--font-mono);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .file-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--hairline);font-size:12px;background:var(--surface-soft);color:var(--ink);margin:4px 4px 0 0}
 .file-chip.ok{border-color:var(--primary);background:rgba(144,206,0,.08);color:var(--on-primary)}
@@ -100,7 +101,7 @@
     {% if tokens %}
     <div id="tokenList">
       {% for t in tokens %}
-      <div class="card-select" onclick="pickToken({{ t.id }}, '{{ t.name }}')">
+      <div class="card-select token-item" data-id="{{ t.id }}" data-name="{{ t.name | e }}">
         <div class="avatar">GH</div>
         <div><div class="name">{{ t.name }}</div><div class="sub">GitHub token</div></div>
       </div>
@@ -143,7 +144,7 @@
   </div>
 </div>
 
-<!-- Step 4 Branch/Release -->
+<!-- Step 4 Branch/Release + Download -->
 <div class="wizard-step" id="step4">
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -163,20 +164,62 @@
       <div id="releaseList"></div>
     </div>
     <div style="margin-top:16px;">
-      <button class="btn btn-primary" onclick="confirmSource()">Download source →</button>
+      <button class="btn btn-primary" id="downloadBtn" onclick="startDownload()">Download source →</button>
+    </div>
+    <div id="downloadCard" style="display:none;margin-top:16px;padding:14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-soft);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--ink);" id="dlTitle">-</div>
+          <div style="font-size:11px;color:var(--muted);" id="dlStatus">Initializing...</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-xs" id="dlRetryBtn" onclick="retryDownload()" style="display:none;">Retry</button>
+          <button class="btn btn-ghost btn-xs" id="dlCancelBtn" onclick="cancelDownload()">Cancel</button>
+        </div>
+      </div>
+      <div style="width:100%;height:8px;background:var(--hairline);border-radius:999px;overflow:hidden;">
+        <div id="dlProgress" style="width:0%;height:100%;background:var(--primary);transition:width .2s;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;">
+        <span id="dlSize">0 B / --</span>
+        <span id="dlPercent">0%</span>
+      </div>
+      <div id="dlError" style="display:none;margin-top:10px;padding:10px;border-radius:var(--radius-md);background:rgba(198,69,69,.1);color:var(--error);font-size:12px;"></div>
     </div>
   </div>
 </div>
 
-<!-- Step 5 Files / Compose / Dockerfile / Env -->
+<!-- Step 5 Files -->
 <div class="wizard-step" id="step5">
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
       <h2 class="section-title" style="margin:0;">Build Files</h2>
       <button class="btn btn-ghost btn-sm" onclick="goStep(4)">← Back</button>
     </div>
     <p style="color:var(--muted);font-size:13px;">Downloaded: <b id="filesSource">-</b></p>
     <div id="fileChips" class="file-list" style="margin-bottom:12px;"></div>
+
+    <!-- Global settings -->
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px;">
+      <div class="form-col" style="min-width:160px;flex:1;">
+        <label style="font-size:12px;color:var(--muted);">Project name</label>
+        <input class="input" id="projectName" placeholder="my-app" style="margin-top:6px;">
+      </div>
+      <div class="form-col" style="min-width:120px;flex:0;">
+        <label style="font-size:12px;color:var(--muted);">Port</label>
+        <input class="input" id="projectPort" type="number" placeholder="Auto" style="margin-top:6px;min-width:100px;">
+      </div>
+      <div class="form-col" style="min-width:140px;flex:1;">
+        <label style="font-size:12px;color:var(--muted);">Template</label>
+        <select class="select" id="templateSelect" onchange="applyTemplate(this.value)" style="margin-top:6px;">
+          <option value="">Custom</option>
+          <option value="node">Node.js</option>
+          <option value="python">Python</option>
+          <option value="static">Static HTML</option>
+          <option value="php">PHP Apache</option>
+        </select>
+      </div>
+    </div>
 
     <!-- Command mode tabs -->
     <div class="mode-row" style="margin-bottom:14px;">
@@ -185,95 +228,115 @@
       <button class="mode-btn" id="cmdDirect" onclick="setCommandMode('direct')">Direct command</button>
     </div>
 
-    <!-- Compose editor -->
-    <div id="composeEditor">
-      <div class="editor-wrap">
+    <div id="fileBuilder">
+      <!-- Compose editor -->
+      <div id="composeEditor" class="editor-wrap" style="margin-bottom:14px;">
         <div class="editor-header">
-          <div class="editor-toolbar">
+          <span>docker-compose.yml</span>
+          <div class="editor-tabs">
             <span class="editor-tab active" id="tabComposeDeco" onclick="setRaw('compose',false)">Decorated</span>
-            <span class="editor-tab" id="tabComposeRaw" onclick="setRaw('compose',true)">Raw YAML</span>
-          </div>
-          <div class="editor-toolbar">
-            <span class="copy-hint" id="composeStatus">No compose.yml found — create one below.</span>
+            <span class="editor-tab" id="tabComposeRaw" onclick="setRaw('compose',true)">Raw</span>
           </div>
         </div>
         <div class="editor-body" id="composeBody">
-          <textarea id="composeRaw" placeholder="version: '3'\nservices:\n  app:\n    build: .\n    ports:\n      - \"{{PORT}}:3000\""></textarea>
+          <textarea id="composeRaw" style="display:none;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--hairline);">
+          <button class="btn btn-ghost btn-xs" onclick="loadExampleCompose()">Load example</button>
+          <button class="btn btn-ghost btn-xs" onclick="clearCompose()">Clear</button>
         </div>
       </div>
-    </div>
 
-    <!-- Dockerfile editor -->
-    <div id="dockerfileEditor" style="display:none;">
-      <div class="editor-wrap">
+      <!-- Dockerfile editor -->
+      <div id="dockerfileEditor" class="editor-wrap" style="display:none;margin-bottom:14px;">
         <div class="editor-header">
-          <div class="editor-toolbar">
+          <span>Dockerfile</span>
+          <div class="editor-tabs">
             <span class="editor-tab active" id="tabDockerfileDeco" onclick="setRaw('dockerfile',false)">Decorated</span>
-            <span class="editor-tab" id="tabDockerfileRaw" onclick="setRaw('dockerfile',true)">Raw Dockerfile</span>
-          </div>
-          <div class="editor-toolbar">
-            <span class="copy-hint" id="dockerfileStatus">No Dockerfile found — create one below.</span>
+            <span class="editor-tab" id="tabDockerfileRaw" onclick="setRaw('dockerfile',true)">Raw</span>
           </div>
         </div>
         <div class="editor-body" id="dockerfileBody">
-          <textarea id="dockerfileRaw" placeholder="FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nEXPOSE 3000\nCMD [\"node\", \"server.js\"]"></textarea>
+          <textarea id="dockerfileRaw" style="display:none;"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--hairline);">
+          <button class="btn btn-ghost btn-xs" onclick="loadExampleDockerfile()">Load example</button>
+          <button class="btn btn-ghost btn-xs" onclick="clearDockerfile()">Clear</button>
         </div>
       </div>
-    </div>
 
-    <!-- Direct command -->
-    <div id="directEditor" style="display:none;">
-      <div class="editor-wrap">
-        <div class="editor-header">Direct run command</div>
-        <div class="editor-body">
-          <textarea id="directCommand" placeholder="docker run -d -p {{PORT}}:3000 --name {{NAME}} my-image"></textarea>
+      <!-- Direct command generator -->
+      <div id="directEditor" class="editor-wrap" style="display:none;margin-bottom:14px;">
+        <div class="editor-header"><span>Direct Docker command</span></div>
+        <div style="padding:12px;">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+            <div class="form-col" style="flex:1;min-width:140px;">
+              <label style="font-size:12px;color:var(--muted);">Image / Build context</label>
+              <input class="input" id="directImage" placeholder="myimage:latest" style="margin-top:6px;">
+            </div>
+            <div class="form-col" style="flex:1;min-width:120px;">
+              <label style="font-size:12px;color:var(--muted);">Container name</label>
+              <input class="input" id="directName" placeholder="NAME" style="margin-top:6px;">
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+            <div class="form-col" style="flex:1;min-width:100px;">
+              <label style="font-size:12px;color:var(--muted);">Host port</label>
+              <input class="input" id="directHostPort" type="number" placeholder="PORT" style="margin-top:6px;">
+            </div>
+            <div class="form-col" style="flex:1;min-width:100px;">
+              <label style="font-size:12px;color:var(--muted);">Container port</label>
+              <input class="input" id="directContainerPort" type="number" placeholder="3000" style="margin-top:6px;">
+            </div>
+            <div class="toggle-wrap" style="margin-top:20px;flex:1;min-width:120px;">
+              <div class="toggle-track on" id="directBuildToggle" onclick="this.classList.toggle('on'); setTimeout(updateDirectCommand,50)" style="margin-right:8px;"><div class="thumb"></div></div>
+              <span class="toggle-label" onclick="document.getElementById('directBuildToggle').classList.toggle('on'); setTimeout(updateDirectCommand,50)">Build context .</span>
+            </div>
+          </div>
+          <div class="editor-body" id="directBody" style="min-height:60px;background:var(--surface-soft);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-family:var(--font-mono);font-size:13px;white-space:pre-wrap;word-break:break-word;"></div>
+          <p class="copy-hint">This command will be stored as the deployment command. Edit inputs above to update.</p>
         </div>
       </div>
-    </div>
 
-    <!-- Environment variables -->
-    <div class="editor-wrap" style="margin-top:14px;">
-      <div class="editor-header">Environment files</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;">
-        <div>
-          <label style="font-size:12px;color:var(--muted);">.env (used at runtime)</label>
-          <textarea id="envContent" style="width:100%;min-height:120px;border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:8px;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:12px;"></textarea>
+      <!-- .env editor -->
+      <div class="editor-wrap" style="margin-bottom:14px;">
+        <div class="editor-header">
+          <span>.env</span>
           <div class="env-actions">
-            <button class="btn btn-secondary btn-sm" onclick="copyExampleToEnv()">Copy from .env.example</button>
-            <button class="btn btn-ghost btn-sm" onclick="clearEnv()">Clear</button>
+            <button class="btn btn-ghost btn-xs" id="copyExampleBtn" onclick="copyExampleToEnv()">Copy from .env.example</button>
+            <button class="btn btn-ghost btn-xs" onclick="clearEnv()">Clear</button>
           </div>
-          <p class="copy-hint" id="envHint">No .env found; leave blank or fill manually.</p>
         </div>
-        <div>
-          <label style="font-size:12px;color:var(--muted);">.env.example (reference)</label>
-          <textarea id="exampleEnvContent" readonly style="width:100%;min-height:120px;border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:8px;background:var(--surface-soft);color:var(--muted);font-family:var(--font-mono);font-size:12px;"></textarea>
+        <div class="editor-body">
+          <textarea id="envContent" placeholder="# Environment variables"></textarea>
         </div>
       </div>
-    </div>
 
-    <!-- Advanced -->
-    <div class="advanced-card">
-      <div class="advanced-title" onclick="toggleAdvanced()">
-        <span id="advArrow">▸</span> Advanced runtime options
-      </div>
-      <div class="advanced-body" id="advancedBody">
-        <div class="form-row">
-          <div class="form-col"><label>Project name</label><input class="input" id="projectName" placeholder="my-app"></div>
-          <div class="form-col"><label>Port</label><input class="input" id="projectPort" type="number" placeholder="auto"></div>
+      <!-- Hidden .env.example -->
+      <textarea id="exampleEnvContent" style="display:none;"></textarea>
+
+      <!-- Advanced -->
+      <div class="advanced-card">
+        <div class="advanced-title" onclick="toggleAdvanced()">
+          <span id="advArrow">▸</span> Advanced runtime options
         </div>
-        <div class="form-row">
-          <div class="form-col">
-            <label>Docker build args</label>
-            <input class="input" id="buildArgs" placeholder="--no-cache">
+        <div class="advanced-body" id="advancedBody">
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <div class="form-col" style="flex:1;min-width:200px;">
+              <label style="font-size:12px;color:var(--muted);">Build args (one per line)</label>
+              <textarea class="input" id="buildArgs" rows="3" placeholder="--no-cache
+--pull" style="margin-top:6px;font-family:var(--font-mono);font-size:12px;"></textarea>
+            </div>
+            <div class="form-col" style="flex:1;min-width:200px;">
+              <label style="font-size:12px;color:var(--muted);">Run options (one per line)</label>
+              <textarea class="input" id="runOptions" rows="3" placeholder="--detach
+--remove-orphans" style="margin-top:6px;font-family:var(--font-mono);font-size:12px;"></textarea>
+            </div>
           </div>
-          <div class="form-col">
-            <label>Docker run options</label>
-            <input class="input" id="runOptions" placeholder="--restart unless-stopped">
+          <div class="toggle-wrap" style="margin-top:10px;">
+            <div class="toggle-track on" id="pullToggle" onclick="togglePull()"><div class="thumb"></div></div>
+            <span class="toggle-label" onclick="togglePull()">Pull latest base images on build</span>
           </div>
-        </div>
-        <div class="toggle-wrap" onclick="togglePull()">
-          <div class="toggle-track on" id="pullToggle"><div class="thumb"></div></div>
-          <span class="toggle-label">Always pull base images on build</span>
         </div>
       </div>
     </div>
@@ -321,6 +384,17 @@ function goStep(n){
 }
 
 function pickToken(id,name){ state.tokenId=id; state.tokenName=name; goStep(2); loadOrgs(); }
+
+function bindTokenList(){
+  const list=document.getElementById('tokenList');
+  if(list && !list.dataset.bound){ list.dataset.bound='1'; list.addEventListener('click', function(e){
+    const item=e.target.closest('.token-item');
+    if(!item) return;
+    const id=parseInt(item.dataset.id);
+    const name=item.dataset.name || '';
+    pickToken(id,name);
+  }); }
+}
 
 async function loadOrgs(){
   const list=document.getElementById('orgList'), loading=document.getElementById('orgLoading');
@@ -457,41 +531,133 @@ async function loadReleases(){
 
 function pickRelease(rel){ state.release=rel; document.querySelectorAll('#releaseList .repo-row').forEach(r=>r.style.borderColor=''); event.currentTarget.style.borderColor='var(--primary)'; }
 
-async function confirmSource(){
+let currentDownloadId=null;
+let pollTimer=null;
+
+function resetDownloadUI(){
+  document.getElementById('downloadCard').style.display='none';
+  document.getElementById('downloadBtn').disabled=false;
+  document.getElementById('downloadBtn').textContent='Download source →';
+  document.getElementById('dlProgress').style.width='0%';
+  document.getElementById('dlSize').textContent='0 B / --';
+  document.getElementById('dlPercent').textContent='0%';
+  document.getElementById('dlStatus').textContent='Initializing...';
+  document.getElementById('dlError').style.display='none';
+  document.getElementById('dlRetryBtn').style.display='none';
+  document.getElementById('dlCancelBtn').style.display='inline-flex';
+}
+
+function updateProgressUI(data){
+  const size = data.size_bytes || 0;
+  const total = data.total_bytes;
+  const pct = total ? Math.min(100, Math.round((size/total)*100)) : (data.status==='done'?100:0);
+  document.getElementById('dlProgress').style.width=pct+'%';
+  document.getElementById('dlSize').textContent=humanSize(size)+' / '+(total?humanSize(total):'--');
+  document.getElementById('dlPercent').textContent=pct+'%';
+  document.getElementById('dlStatus').textContent=data.status==='downloading'?'Downloading...':data.status;
+}
+
+async function startDownload(){
   if(state.mode==='branch') state.branch=document.getElementById('branchSelect').value;
   else if(!state.release){ alert('Select a release'); return; }
-  goStep(5);
   const ref = state.mode==='branch'?state.branch:state.release.tag_name;
-  document.getElementById('filesSource').textContent = state.repo.full_name+' @ '+ref;
-  const btn = event.target;
-  btn.disabled=true; btn.textContent='Downloading…';
+  const [owner,name]=state.repo.full_name.split('/');
+  const btn=document.getElementById('downloadBtn');
+  btn.disabled=true; btn.textContent='Starting download...';
+  document.getElementById('downloadCard').style.display='block';
+  document.getElementById('dlTitle').textContent=state.repo.full_name+' @ '+ref;
+  resetDownloadUI();
   try{
-    const [owner,name]=state.repo.full_name.split('/');
     const res=await fetch('/api/github/download',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({token_id:state.tokenId, owner, repo:name, ref})
     });
     const data=await res.json();
     if(!res.ok) throw new Error(data.detail||'Download failed');
-    state.downloaded=data;
-    btn.disabled=false; btn.textContent='Download source →';
-    renderFileChips(data);
-    // populate editors
-    document.getElementById('composeRaw').value = data.compose || defaultCompose();
-    setRaw('compose', state.rawCompose);
-    document.getElementById('dockerfileRaw').value = data.dockerfile || defaultDockerfile();
-    setRaw('dockerfile', state.rawDockerfile);
-    document.getElementById('envContent').value = data.env || '';
-    document.getElementById('exampleEnvContent').value = data.example_env || '';
-    document.getElementById('composeStatus').textContent = data.compose_exists ? 'compose.yml loaded' : 'No compose.yml found — template created.';
-    document.getElementById('dockerfileStatus').textContent = data.dockerfile_exists ? 'Dockerfile loaded' : 'No Dockerfile found — template created.';
-    document.getElementById('envHint').textContent = data.env ? '.env loaded from repo.' : 'No .env found; copy from example or fill manually.';
-    // suggest name
-    document.getElementById('projectName').value = state.repo.name;
+    currentDownloadId=data.download_id;
+    // start polling
+    pollTimer=setInterval(pollDownload,800);
   }catch(e){
     btn.disabled=false; btn.textContent='Retry download →';
-    alert('Download failed: '+e.message);
+    document.getElementById('dlError').textContent=e.message;
+    document.getElementById('dlError').style.display='block';
+    document.getElementById('dlRetryBtn').style.display='inline-flex';
+    document.getElementById('dlCancelBtn').style.display='none';
   }
+}
+
+async function pollDownload(){
+  if(!currentDownloadId) return;
+  try{
+    const data=await fetch('/api/github/download/'+currentDownloadId).then(r=>r.json());
+    updateProgressUI(data);
+    if(data.status==='done'){
+      clearInterval(pollTimer);
+      showToast('Download complete','success');
+      state.downloaded=data;
+      document.getElementById('downloadBtn').textContent='Download complete';
+      document.getElementById('dlCancelBtn').style.display='none';
+      setTimeout(()=>{
+        goStep(5);
+        renderFileBuilder(data);
+      },400);
+    }else if(data.status==='error'){
+      clearInterval(pollTimer);
+      document.getElementById('dlError').textContent=data.error_message||'Download failed';
+      document.getElementById('dlError').style.display='block';
+      document.getElementById('dlRetryBtn').style.display='inline-flex';
+      document.getElementById('downloadBtn').disabled=false;
+      document.getElementById('downloadBtn').textContent='Retry download →';
+    }
+  }catch(e){
+    clearInterval(pollTimer);
+  }
+}
+
+function retryDownload(){
+  document.getElementById('dlError').style.display='none';
+  startDownload();
+}
+
+async function cancelDownload(){
+  if(!currentDownloadId) return;
+  clearInterval(pollTimer);
+  try{
+    await fetch('/api/github/download/'+currentDownloadId,{method:'DELETE'});
+    showToast('Download cancelled','warn');
+  }catch(e){}
+  currentDownloadId=null;
+  resetDownloadUI();
+  document.getElementById('downloadBtn').disabled=false;
+  document.getElementById('downloadBtn').textContent='Download source →';
+}
+
+function renderFileBuilder(data){
+  document.getElementById('filesSource').textContent = data.owner+'/'+data.repo+' @ '+data.ref;
+  renderFileChips(data);
+  const compose = data.compose || '';
+  const dockerfile = data.dockerfile || '';
+  const env = data.env || '';
+  const example = data.example_env || '';
+  // Default values when files missing
+  state.composeDefault = compose || defaultCompose().replace(/__NAME__/g, state.projectName||state.repo.name).replace(/__PORT__/g, state.port||'25600');
+  state.dockerfileDefault = dockerfile || defaultDockerfile();
+  state.envDefault = env || example || '';
+  // Wire hidden textarea and decorated view
+  const cr=document.getElementById('composeRaw');
+  const dr=document.getElementById('dockerfileRaw');
+  const er=document.getElementById('envContent');
+  const exr=document.getElementById('exampleEnvContent');
+  if(cr){ cr.value = state.composeDefault; setRaw('compose', state.rawCompose); }
+  if(dr){ dr.value = state.dockerfileDefault; setRaw('dockerfile', state.rawDockerfile); }
+  if(er) er.value = state.envDefault;
+  if(exr) exr.value = example;
+  const copyBtn = document.getElementById('copyExampleBtn');
+  if(copyBtn) copyBtn.style.display = example ? 'inline-flex' : 'none';
+  document.getElementById('projectName').value = state.projectName || state.repo.name;
+  const portEl=document.getElementById('projectPort'); if(portEl) portEl.value=state.port||'';
+  setCommandMode(state.commandMode);
+  initDirectListeners(); updateDirectCommand();
 }
 
 function renderFileChips(data){
@@ -513,9 +679,9 @@ function defaultCompose(){
 services:
   app:
     build: .
-    container_name: {{NAME}}
+    container_name: __NAME__
     ports:
-      - "{{PORT}}:3000"
+      - "__PORT__:3000"
     env_file:
       - .env
     restart: unless-stopped
@@ -532,15 +698,176 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 `;
 }
+function fillDefaults(){
+  const cr=document.getElementById('composeRaw');
+  const dr=document.getElementById('dockerfileRaw');
+  const name=state.projectName||state.repo.name;
+  const port=state.port||'25600';
+  if(cr && !cr.value.trim()){ cr.value=defaultCompose().replace(/__NAME__/g, name).replace(/__PORT__/g, port); setRaw('compose', state.rawCompose); }
+  if(dr && !dr.value.trim()){ dr.value=defaultDockerfile(); setRaw('dockerfile', state.rawDockerfile); }
+}
+
+function templates(){
+  const name=state.projectName || state.repo.name;
+  const port=state.port || '25600';
+  return {
+    node: {
+      compose: `version: '3.8'
+
+services:
+  app:
+    build: .
+    image: node-app
+    container_name: ${name}
+    ports:
+      - "${port}:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
+`,
+      dockerfile: `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+`
+    },
+    python: {
+      compose: `version: '3.8'
+
+services:
+  app:
+    build: .
+    image: python-app
+    container_name: ${name}
+    ports:
+      - "${port}:8000"
+    env_file:
+      - .env
+    restart: unless-stopped
+`,
+      dockerfile: `FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["python", "app.py"]
+`
+    },
+    static: {
+      compose: `version: '3.8'
+
+services:
+  app:
+    image: nginx:alpine
+    container_name: ${name}
+    ports:
+      - "${port}:80"
+    volumes:
+      - ./:/usr/share/nginx/html:ro
+    restart: unless-stopped
+`,
+      dockerfile: `FROM nginx:alpine
+COPY . /usr/share/nginx/html
+EXPOSE 80
+`
+    },
+    php: {
+      compose: `version: '3.8'
+
+services:
+  app:
+    image: php:8.2-apache
+    container_name: ${name}
+    ports:
+      - "${port}:80"
+    env_file:
+      - .env
+    restart: unless-stopped
+`,
+      dockerfile: `FROM php:8.2-apache
+COPY . /var/www/html
+EXPOSE 80
+`
+    }
+  };
+}
+
+function applyTemplate(key){
+  if(!key) return;
+  const t=templates()[key];
+  if(!t) return;
+  if(state.commandMode==='compose'){
+    const el=document.getElementById('composeRaw');
+    if(el){ el.value=t.compose; setRaw('compose', state.rawCompose); }
+  }else{
+    const el=document.getElementById('dockerfileRaw');
+    if(el){ el.value=t.dockerfile; setRaw('dockerfile', state.rawDockerfile); }
+  }
+  showToast('Template applied','success');
+}
+function loadExampleCompose(){ const el=document.getElementById('composeRaw'); if(el){ const name=state.projectName||state.repo.name; const port=state.port||'25600'; el.value=defaultCompose().replace(/__NAME__/g, name).replace(/__PORT__/g, port); setRaw('compose', state.rawCompose); } }
+function loadExampleDockerfile(){ const el=document.getElementById('dockerfileRaw'); if(el){ el.value=defaultDockerfile(); setRaw('dockerfile', state.rawDockerfile); } }
+function clearCompose(){ if(confirm('Clear docker-compose.yml?')){ const el=document.getElementById('composeRaw'); if(el){ el.value=''; setRaw('compose', state.rawCompose); } } }
+function clearDockerfile(){ if(confirm('Clear Dockerfile?')){ const el=document.getElementById('dockerfileRaw'); if(el){ el.value=''; setRaw('dockerfile', state.rawDockerfile); } } }
+function updateDirectCommand(){
+  const nameEl=document.getElementById('directName');
+  const hostPortEl=document.getElementById('directHostPort');
+  const containerPortEl=document.getElementById('directContainerPort');
+  const imageEl=document.getElementById('directImage');
+  const buildEl=document.getElementById('directBuildToggle');
+  const name=(nameEl && nameEl.value.trim()) || state.projectName || state.repo.name;
+  const hostPort=(hostPortEl && hostPortEl.value) || state.port || '25600';
+  const containerPort=(containerPortEl && containerPortEl.value) || '3000';
+  const image=(imageEl && imageEl.value.trim()) || state.repo.name;
+  const build=buildEl && buildEl.classList.contains('on');
+  let cmd = build ? `docker build -t ${image} .\n` : '';
+  cmd += `docker run -d --name ${name} -p ${hostPort}:${containerPort} --env-file .env --restart unless-stopped ${image}`;
+  const body=document.getElementById('directBody');
+  if(body) body.textContent=cmd;
+  state.directCommand = cmd;
+}
+function initDirectListeners(){
+  const projectNameEl=document.getElementById('projectName');
+  const projectPortEl=document.getElementById('projectPort');
+  if(projectNameEl) projectNameEl.addEventListener('input', ()=>{ state.projectName=projectNameEl.value.trim()||state.repo.name; updateDirectCommand(); });
+  if(projectPortEl) projectPortEl.addEventListener('input', ()=>{ state.port=projectPortEl.value?parseInt(projectPortEl.value):null; updateDirectCommand(); });
+  ['directName','directHostPort','directContainerPort','directImage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input', updateDirectCommand);
+  });
+  const t=document.getElementById('directBuildToggle');
+  if(t){ t.addEventListener('click', ()=>setTimeout(updateDirectCommand, 50)); }
+}
+
+function _unused(){
+  ['directName','directHostPort','directContainerPort','directImage'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input', updateDirectCommand);
+  });
+  const t=document.getElementById('directBuildToggle');
+  if(t){ t.addEventListener('click', ()=>setTimeout(updateDirectCommand, 50)); }
+  const projectNameEl=document.getElementById('projectName');
+  const projectPortEl=document.getElementById('projectPort');
+  if(projectNameEl) projectNameEl.addEventListener('input', ()=>setTimeout(updateDirectCommand, 50));
+  if(projectPortEl) projectPortEl.addEventListener('input', ()=>setTimeout(updateDirectCommand, 50));
+}
 
 function setCommandMode(mode){
   state.commandMode=mode;
   ['compose','dockerfile','direct'].forEach(m=>{
-    document.getElementById('cmd'+cap(m)).classList.toggle('active', m===mode);
+    const btn=document.getElementById('cmd'+cap(m));
+    if(btn) btn.classList.toggle('active', m===mode);
   });
-  document.getElementById('composeEditor').style.display=mode==='compose'?'block':'none';
-  document.getElementById('dockerfileEditor').style.display=mode==='dockerfile'?'block':'none';
-  document.getElementById('directEditor').style.display=mode==='direct'?'block':'none';
+  const composeEditor=document.getElementById('composeEditor');
+  const dockerfileEditor=document.getElementById('dockerfileEditor');
+  const directEditor=document.getElementById('directEditor');
+  if(composeEditor) composeEditor.style.display=mode==='compose'?'block':'none';
+  if(dockerfileEditor) dockerfileEditor.style.display=mode==='dockerfile'?'block':'none';
+  if(directEditor) directEditor.style.display=mode==='direct'?'block':'none';
+  if(mode!=='direct') fillDefaults();
+  if(mode==='direct'){ updateDirectCommand(); initDirectListeners(); }
 }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
@@ -552,6 +879,7 @@ function setRaw(which, raw){
   const ta=document.getElementById(which+'Raw');
   const decoTab=document.getElementById('tab'+cap(which)+'Deco');
   const rawTab=document.getElementById('tab'+cap(which)+'Raw');
+  if(!body || !ta || !decoTab || !rawTab) return;
   if(raw){
     decoTab.classList.remove('active'); rawTab.classList.add('active');
     body.innerHTML=''; body.appendChild(ta); ta.style.display='block';
@@ -560,6 +888,20 @@ function setRaw(which, raw){
     body.innerHTML='<pre>'+highlight(which, ta.value)+'</pre>';
   }
 }
+
+function copyExampleToEnv(){
+  const ex=document.getElementById('exampleEnvContent');
+  const env=document.getElementById('envContent');
+  if(!ex || !env){ alert('No .env editor available'); return; }
+  if(!ex.value){ alert('No .env.example available'); return; }
+  if(!env.value.trim() || confirm('Overwrite current .env with example content?')){
+    env.value=ex.value;
+  }
+}
+
+function clearEnv(){ if(confirm('Clear .env?')){ const el=document.getElementById('envContent'); if(el) el.value=''; } }
+function toggleAdvanced(){ const body=document.getElementById('advancedBody'); const arrow=document.getElementById('advArrow'); if(!body || !arrow) return; body.classList.toggle('open'); arrow.textContent=body.classList.contains('open')?'▾':'▸'; }
+function togglePull(){ const t=document.getElementById('pullToggle'); if(!t) return; t.classList.toggle('on'); state.pull=t.classList.contains('on'); }
 
 function highlight(which, text){
   if(which==='compose'){
@@ -581,55 +923,53 @@ function highlight(which, text){
 }
 
 function escapeHtml(t){
-  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\u003e/g,'&gt;');
 }
-
-function copyExampleToEnv(){
-  const ex=document.getElementById('exampleEnvContent').value;
-  if(!ex){ alert('No .env.example available'); return; }
-  if(!document.getElementById('envContent').value.trim() || confirm('Overwrite current .env with example content?')){
-    document.getElementById('envContent').value=ex;
-  }
-}
-
-function clearEnv(){ if(confirm('Clear .env?')) document.getElementById('envContent').value=''; }
-function toggleAdvanced(){ document.getElementById('advancedBody').classList.toggle('open'); document.getElementById('advArrow').textContent=document.getElementById('advancedBody').classList.contains('open')?'▾':'▸'; }
-function togglePull(){ document.getElementById('pullToggle').classList.toggle('on'); state.pull=document.getElementById('pullToggle').classList.contains('on'); }
 
 function goReview(){
-  state.projectName = document.getElementById('projectName').value.trim() || state.repo.name;
-  state.port = document.getElementById('projectPort').value ? parseInt(document.getElementById('projectPort').value) : null;
-  state.buildArgs = document.getElementById('buildArgs').value;
-  state.runOptions = document.getElementById('runOptions').value;
-  // ensure decorated view values are captured in textarea
-  document.getElementById('rName').textContent=state.projectName;
-  document.getElementById('rRepo').textContent=state.repo.name;
-  document.getElementById('rOrg').textContent=state.org;
-  document.getElementById('rSource').textContent=state.mode==='branch'?'Branch: '+state.branch:'Release: '+state.release.tag_name;
-  document.getElementById('rMode').textContent=state.commandMode;
-  document.getElementById('rRaw').textContent=(state.commandMode==='compose'?state.rawCompose:state.rawDockerfile)?'Raw':'Decorated';
-  document.getElementById('rPort').textContent=state.port||'Auto';
-  document.getElementById('rToken').textContent=state.tokenName;
+  const projectNameEl = document.getElementById('projectName');
+  const projectPortEl = document.getElementById('projectPort');
+  const buildArgsEl = document.getElementById('buildArgs');
+  const runOptionsEl = document.getElementById('runOptions');
+  state.projectName = projectNameEl ? projectNameEl.value.trim() || state.repo.name : state.repo.name;
+  state.port = projectPortEl && projectPortEl.value ? parseInt(projectPortEl.value) : null;
+  state.buildArgs = buildArgsEl ? buildArgsEl.value : '';
+  state.runOptions = runOptionsEl ? runOptionsEl.value : '';
+  const ids={rName:state.projectName,rRepo:state.repo.name,rOrg:state.org,rSource:(state.mode==='branch'?'Branch: '+state.branch:'Release: '+state.release.tag_name),rMode:state.commandMode,rRaw:(state.commandMode==='compose'?state.rawCompose:state.rawDockerfile)?'Raw':'Decorated',rPort:state.port||'Auto',rToken:state.tokenName};
+  for(const [id,val] of Object.entries(ids)){ const el=document.getElementById(id); if(el) el.textContent=val; }
   goStep(6);
 }
 
 async function submitProject(){
+  // Phase B fields may not exist yet; guard them
+  const envEl = document.getElementById('envContent');
+  const exampleEl = document.getElementById('exampleEnvContent');
+  const composeEl = document.getElementById('composeRaw');
+  const dockerfileEl = document.getElementById('dockerfileRaw');
+  let dockerfilePayload = dockerfileEl ? dockerfileEl.value : '';
+  let composePayload = composeEl ? composeEl.value : '';
+  let directPayload = '';
+  if(state.commandMode==='direct'){
+    updateDirectCommand();
+    directPayload = state.directCommand || document.getElementById('directBody').textContent || '';
+  }
   const payload={
     name: state.projectName,
     github_repo_url: state.repo.clone_url,
     branch: state.mode==='branch'?state.branch:null,
     compose_file: 'docker-compose.yml',
     env_vars: {},
-    env_content: document.getElementById('envContent').value,
-    example_env_content: document.getElementById('exampleEnvContent').value,
-    dockerfile_content: state.commandMode==='dockerfile'?document.getElementById('dockerfileRaw').value:'',
-    compose_content: state.commandMode==='compose'?document.getElementById('composeRaw').value:'',
+    env_content: envEl ? envEl.value : (state.downloaded && state.downloaded.env ? state.downloaded.env : ''),
+    example_env_content: exampleEl ? exampleEl.value : (state.downloaded && state.downloaded.example_env ? state.downloaded.example_env : ''),
+    dockerfile_content: dockerfilePayload,
+    compose_content: composePayload,
+    direct_command: directPayload,
     token_id: state.tokenId,
-    deploy_method: state.commandMode==='compose'?'compose':'build',
+    deploy_method: state.commandMode==='compose'?'compose':(state.commandMode==='direct'?'direct':'build'),
     release_tag: state.mode==='release'?state.release.tag_name:null,
     port: state.port||null,
     command_mode: state.commandMode,
-    raw_mode: state.commandMode==='compose'?state.rawCompose:state.rawDockerfile
+    raw_mode: state.commandMode==='compose'?state.rawCompose:(state.commandMode==='dockerfile'?state.rawDockerfile:false)
   };
   try{
     const r=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -637,5 +977,6 @@ async function submitProject(){
     else{ const d=await r.json(); alert(d.detail||'Failed'); }
   }catch(e){ alert('Error: '+e.message); }
 }
+bindTokenList();
 </script>
 {% endblock %}

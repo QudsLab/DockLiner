@@ -11,8 +11,12 @@ from app.core.config import settings
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
 from app.core.utils import find_free_ports
 from app.models.project import (
-    Project, Deployment, AccessToken, GithubCache, SavedOrg,
+    Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
     HealthCheck, Metric, AuditLog, Webhook, Notification
+)
+from app.models.project import (
+    Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
+    HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog
 )
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectOut,
@@ -27,7 +31,8 @@ from app.services.docker_service import DockerService
 from app.services.github_download_service import GitHubDownloadService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
 from app.services.file_scanner import scan_downloaded_repo
-import yaml, urllib.parse
+from app.services.error_log_service import ErrorLogService
+import yaml, urllib.parse, shutil
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -92,6 +97,7 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
         release_tag=data.release_tag,
         command_mode=data.command_mode or "compose",
         raw_mode=data.raw_mode or False,
+        direct_command=data.direct_command or "",
     )
     db.add(p)
     db.commit()
@@ -107,6 +113,8 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
         (ppath / str(p.compose_file)).write_text(str(p.compose_content), encoding="utf-8")
     if compose_mode == "dockerfile" and len(str(p.dockerfile_content or "")):
         (ppath / "Dockerfile").write_text(str(p.dockerfile_content), encoding="utf-8")
+    if compose_mode == "direct" and len(str(p.direct_command or "")):
+        (ppath / "run.sh").write_text(str(p.direct_command), encoding="utf-8")
     AuditService.log(db, "project_create", target=p.name, user=user)
     return p
 
@@ -483,9 +491,58 @@ def github_download(body: dict, db: Session = Depends(get_db), user: str = Depen
     tok = db.query(AccessToken).filter(AccessToken.id == token_id).first()
     if not tok:
         raise HTTPException(status_code=404, detail="Token not found")
-    token_str = str(tok.token)
-    result = GitHubDownloadService.download_repo(owner, repo, ref, token_str)
-    return result
+    dl = GitHubDownloadService.create_download(db, token_id, owner, repo, ref)
+    try:
+        GitHubDownloadService.run_download(dl.id, str(tok.token), db)
+    except Exception as e:
+        db.refresh(dl)
+        raise HTTPException(status_code=500, detail=dl.error_message or str(e))
+    return GitHubDownloadService.scan(dl)
+
+@router.get("/github/download/{dl_id}")
+def github_download_status(dl_id, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    dl = db.query(Download).filter(Download.id == dl_id).first()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Download not found")
+    return GitHubDownloadService.scan(dl)
+
+@router.get("/github/downloads")
+def github_download_list(limit: int = 50, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    rows = db.query(Download).order_by(Download.created_at.desc()).limit(limit).all()
+    out = []
+    for dl in rows:
+        out.append({
+            "id": dl.id,
+            "owner": dl.owner,
+            "repo": dl.repo,
+            "ref": dl.ref,
+            "status": dl.status,
+            "size_bytes": dl.size_bytes,
+            "total_bytes": dl.total_bytes,
+            "created_at": dl.created_at,
+            "updated_at": dl.updated_at,
+        })
+    return out
+
+@router.delete("/github/download/{dl_id}")
+def github_download_delete(dl_id, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    dl = db.query(Download).filter(Download.id == dl_id).first()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Download not found")
+    GitHubDownloadService.delete_download(dl, db)
+    return {"ok": True}
+
+@router.post("/github/downloads/cleanup")
+def github_download_cleanup(db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    rows = db.query(Download).all()
+    removed = 0
+    for dl in rows:
+        try:
+            GitHubDownloadService.delete_download(dl, db)
+            removed += 1
+        except Exception:
+            pass
+    return {"removed": removed}
 
 # ---------- Tokens ----------
 
@@ -609,6 +666,54 @@ def backup(db: Session = Depends(get_db), user: str = Depends(require_auth)):
     buf.seek(0)
     AuditService.log(db, "backup", user=user)
     return StreamingResponse(buf, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=dockliner-backup.zip"})
+
+# ---------- System / Docker info ----------
+
+@router.get("/docker/info")
+def docker_info(user: str = Depends(require_auth)):
+    return {
+        "installed": DockerService.is_installed(),
+        "running": DockerService.is_running(),
+        "version": DockerService.installed_version(),
+    }
+
+@router.get("/docker/stats")
+def docker_stats(user: str = Depends(require_auth)):
+    return DockerService.system_stats()
+
+@router.get("/system/version")
+def system_version(user: str = Depends(require_auth)):
+    from app.services.version_service import VersionService
+    return VersionService.check()
+
+# ---------- Error logs ----------
+
+class JsErrorBody(BaseModel):
+    message: str
+    stack: Optional[str] = ""
+    url: Optional[str] = None
+    level: Optional[str] = "error"
+
+@router.post("/error-log")
+def log_js_error(data: JsErrorBody, request: Request, db: Session = Depends(get_db)):
+    # Do NOT require_auth here; endpoint is hit by frontend error reporter before/after auth.
+    # We still accept a user cookie if present.
+    user = get_session_user(request)
+    ErrorLogService.log(
+        db,
+        source="js",
+        message=data.message,
+        level=data.level or "error",
+        stack=data.stack or "",
+        url=data.url,
+        user=user,
+        user_agent=request.headers.get("user-agent", "")[:500],
+    )
+    return {"ok": True}
+
+@router.get("/error-logs")
+def list_error_logs(source: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    return ErrorLogService.list(db, limit=limit, source=source)
 
 # ---------- Poll trigger ----------
 

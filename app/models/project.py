@@ -29,6 +29,7 @@ class Project(Base):
     release_tag = Column(String, nullable=True)
     command_mode = Column(String, default="compose")  # compose|dockerfile|direct
     raw_mode = Column(Boolean, default=False)
+    direct_command = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Deployment(Base):
@@ -63,6 +64,27 @@ class SavedOrg(Base):
     display_name = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     saved_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class Download(Base):
+    __tablename__ = "downloads"
+    id = Column(Integer, primary_key=True, index=True)
+    token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=False)
+    owner = Column(String, nullable=False)
+    repo = Column(String, nullable=False)
+    ref = Column(String, nullable=False)
+    status = Column(String, default="pending")
+    download_path = Column(String, nullable=True)
+    extracted_path = Column(String, nullable=True)
+    size_bytes = Column(Integer, default=0)
+    total_bytes = Column(Integer, nullable=True)
+    error_message = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if getattr(self, 'size_bytes', None) is None:
+            self.size_bytes = 0
 
 class HealthCheck(Base):
     __tablename__ = "health_checks"
@@ -116,4 +138,16 @@ class Notification(Base):
     title = Column(String, nullable=False)
     body = Column(Text, default="")
     read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class ErrorLog(Base):
+    __tablename__ = "error_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    source = Column(String, nullable=False)  # python|js
+    level = Column(String, default="error")  # error|warn|info
+    message = Column(Text, default="")
+    stack = Column(Text, default="")
+    url = Column(String, nullable=True)
+    user = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

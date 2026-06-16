@@ -42,6 +42,13 @@ class DockerService:
         return (1, "Could not stop Docker daemon automatically.")
 
     @staticmethod
+    def run_shell_command(project_path: str, command: str) -> tuple:
+        if not command.strip():
+            return (1, "No direct command provided")
+        r = DockerService._run(["bash", "-c", command], cwd=project_path)
+        return (r.returncode, r.stdout + r.stderr)
+
+    @staticmethod
     def docker_build(project_path: str, image_name: str) -> tuple:
         cmd = ["docker", "build", "-t", image_name, "."]
         r = DockerService._run(cmd, cwd=project_path)

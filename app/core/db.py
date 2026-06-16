@@ -15,5 +15,5 @@ def get_db():
 
 def init_db():
     # Import all models so they register with Base metadata before create_all
-    from app.models.project import Project, Deployment, AccessToken, HealthCheck, Metric, AuditLog, Webhook, Notification, GithubCache, SavedOrg  # noqa
+    from app.models.project import Project, Deployment, AccessToken, HealthCheck, Metric, AuditLog, Webhook, Notification, GithubCache, SavedOrg, Download, ErrorLog  # noqa
     Base.metadata.create_all(bind=engine)

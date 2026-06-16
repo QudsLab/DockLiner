@@ -19,6 +19,7 @@ class ProjectCreate(BaseModel):
     release_tag: Optional[str] = None
     command_mode: Optional[str] = "compose"  # compose|dockerfile|direct
     raw_mode: Optional[bool] = False
+    direct_command: Optional[str] = None
 
 class ProjectUpdate(BaseModel):
     github_repo_url: Optional[str] = None
@@ -36,6 +37,7 @@ class ProjectUpdate(BaseModel):
     release_tag: Optional[str] = None
     command_mode: Optional[str] = None
     raw_mode: Optional[bool] = None
+    direct_command: Optional[str] = None
 
 class ProjectOut(BaseModel):
     id: int
@@ -52,6 +54,9 @@ class ProjectOut(BaseModel):
     port: Optional[int]
     deploy_method: Optional[str]
     release_tag: Optional[str]
+    command_mode: Optional[str]
+    raw_mode: Optional[bool]
+    direct_command: Optional[str]
     created_at: datetime
     class Config:
         from_attributes = True
