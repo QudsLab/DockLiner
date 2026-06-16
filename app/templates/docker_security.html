@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Docker Security — DockLiner{% endblock %}
+{% block content %}
+<h1 class="hero-title">Security Check</h1>
+<p class="section-subtitle">Quick security overview of your Docker daemon.</p>
+<div class="card">
+  <div class="grid grid-3" style="margin-bottom:16px;">
+    <div class="card"><label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Live Restore</label><div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{% if sec.live_restore %}Yes{% else %}No{% endif %}</div></div>
+    <div class="card"><label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Userns Remap</label><div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ sec.userns_remap or 'Disabled' }}</div></div>
+    <div class="card"><label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Seccomp</label><div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{% if sec.seccomp %}Enabled{% else %}No{% endif %}</div></div>
+  </div>
+  {% if sec.docker_scout_available %}
+    <span class="badge-coral">Docker Scout available</span>
+  {% else %}
+    <span class="tag">Docker Scout not installed</span>
+  {% endif %}
+  {% if sec.output %}
+    <pre class="log-window" style="margin-top:12px;">{{ sec.output }}</pre>
+  {% endif %}
+</div>
+<a class="btn btn-secondary" href="/docker">Back to Docker</a>
+{% endblock %}

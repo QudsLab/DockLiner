@@ -4,65 +4,144 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}DockLiner{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
   <link rel="stylesheet" href="/static/css/root.css">
+  <link rel="stylesheet" href="/static/css/components.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Cormorant+Garamond:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
-    .nav { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:64px; background:var(--surface-soft); border-bottom:1px solid var(--hairline); position:sticky; top:0; z-index:50; }
-    .nav .brand { font-family:var(--font-display); font-size:22px; color:var(--ink); }
-    .nav .brand span { color:var(--primary); }
-    .nav-links { display:flex; gap:18px; align-items:center; }
-    .nav-links a { color:var(--muted); text-decoration:none; font-size:13px; font-weight:500; letter-spacing:0.5px; }
-    .nav-links a:hover, .nav-links a.active { color:var(--ink); }
-    .btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 18px; border-radius:var(--radius-md); font-size:13px; font-weight:500; border:none; text-decoration:none; }
-    .btn-primary { background:var(--primary); color:var(--on-primary); }
-    .btn-secondary { background:var(--surface-card); color:var(--ink); border:1px solid var(--hairline); }
-    .btn-sm { padding:6px 12px; font-size:12px; }
-    .layout { max-width:1200px; margin:0 auto; padding:24px; }
-    .card { background:var(--surface-card); border:1px solid var(--hairline); border-radius:var(--radius-lg); padding:24px; }
-    .card h2 { font-size:28px; margin-bottom:12px; }
+    .layout { max-width:1200px; margin:0 auto; padding:24px; padding-bottom:80px; }
     .grid { display:grid; gap:16px; }
     .grid-3 { grid-template-columns:repeat(3,1fr); }
     .grid-2 { grid-template-columns:repeat(2,1fr); }
     @media (max-width:900px){ .grid-3,.grid-2 { grid-template-columns:1fr; } }
-    table td, table th { font-size:13px; }
-    .status { display:inline-block; padding:2px 8px; border-radius:var(--radius-pill); font-size:11px; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
-    .status-running { background:rgba(93,184,114,0.12); color:var(--success); }
-    .status-stopped { background:rgba(160,157,150,0.12); color:var(--muted); }
-    .status-error { background:rgba(198,69,69,0.12); color:var(--error); }
-    .status-deploying { background:rgba(232,165,90,0.12); color:var(--warning); }
-    .tag { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:500; background:var(--surface-soft); color:var(--muted); border:1px solid var(--hairline); }
-    .theme-toggle { cursor:pointer; padding:6px 10px; border-radius:var(--radius-md); background:var(--surface-card); color:var(--ink); border:1px solid var(--hairline); font-size:12px; }
-    .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:end; margin-bottom:12px; }
-    .form-col { display:flex; flex-direction:column; gap:4px; }
-    .form-col label { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; }
-    pre.logs { background:var(--surface-dark); color:var(--on-dark); padding:16px; border-radius:var(--radius-lg); overflow:auto; max-height:60vh; font-family:var(--font-mono); font-size:12px; line-height:1.6; }
+    .logo-wrap { display:flex; align-items:center; }
+    .logo-wrap img.logo { height:28px; width:auto; display:block; }
+    /* No forced dark background — the SVG itself should handle contrast */
+
+    /* Theme toggle switch */
+    .theme-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
+    .theme-switch input { opacity:0; width:0; height:0; }
+    .theme-slider { position:absolute; cursor:pointer; inset:0; background:var(--surface-card); border:1px solid var(--hairline); border-radius:12px; transition:.3s; }
+    .theme-slider::before { content:"☀"; position:absolute; left:3px; top:2px; width:18px; height:18px; border-radius:50%; background:var(--canvas); display:flex; align-items:center; justify-content:center; font-size:11px; transition:.3s; }
+    .theme-switch input:checked + .theme-slider { background:var(--primary); border-color:var(--primary); }
+    .theme-switch input:checked + .theme-slider::before { content:"☾"; transform:translateX(20px); }
+
+    /* Bottom mobile nav */
+    .bottom-nav { display:none; position:fixed; bottom:0; left:0; right:0; height:64px; background:var(--surface-soft); border-top:1px solid var(--hairline); z-index:50; justify-content:space-around; align-items:center; padding:0 8px; }
+    .bottom-nav a { display:flex; flex-direction:column; align-items:center; gap:2px; color:var(--muted); text-decoration:none; font-size:10px; font-weight:500; padding:6px 10px; border-radius:var(--radius-md); transition:.15s; }
+    .bottom-nav a svg { width:22px; height:22px; fill:currentColor; }
+    .bottom-nav a:hover, .bottom-nav a.active { color:var(--ink); background:var(--surface-card); }
+    .bottom-nav a.active svg { color:var(--primary); }
+
+    /* Desktop nav with icons */
+    .nav-link { display:flex; align-items:center; gap:6px; }
+    .nav-link svg { width:16px; height:16px; fill:currentColor; }
+
+    /* Mobile top bar */
+    .mobile-top-bar { display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--hairline); background:var(--surface-soft); }
+    .mobile-top-bar .logo-m { height:24px; width:auto; }
+    .mobile-top-bar .theme-btn { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px; }
+
+    @media (max-width:768px) {
+      .nav-bar { display:none; }
+      .bottom-nav { display:flex; }
+      .mobile-top-bar { display:flex; }
+      .layout { padding:16px; padding-bottom:80px; }
+      .hero-title { font-size:32px !important; }
+      .section-title { font-size:22px !important; }
+      .logo-mobile { display:block !important; }
+      .logo-desktop { display:none !important; }
+    }
+    @media (min-width:769px) {
+      .logo-mobile { display:none !important; }
+      .logo-desktop { display:block !important; }
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
 <body>
-  <nav class="nav">
-    <div class="brand">Dock<span>Liner</span></div>
+  <!-- Mobile top bar: logo + theme toggle -->
+  <div class="mobile-top-bar">
+    <img src="/static/img/icon.svg" alt="" class="logo-m" id="mobileLogo">
+    <button class="theme-btn" id="mobileThemeBtn" onclick="toggleTheme(document.documentElement.dataset.theme==='dark')" title="Toggle theme">☾</button>
+  </div>
+
+  <!-- Desktop nav -->
+  <nav class="nav-bar">
+    <div class="nav-brand logo-wrap">
+      <img src="/static/img/icon.svg" alt="" class="logo logo-mobile" style="display:none;" width="28" height="28">
+      <img src="/static/img/logo_dark.svg" alt="" class="logo logo-desktop" id="desktopLogo" style="display:none;" height="28">
+    </div>
     <div class="nav-links">
-      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
-      <a href="/projects" class="{% if request.url.path.startswith('/projects') %}active{% endif %}">Projects</a>
-      <a href="/docker" class="{% if request.url.path == '/docker' %}active{% endif %}">Docker</a>
-      <a href="/settings" class="{% if request.url.path == '/settings' %}active{% endif %}">Settings</a>
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">Theme</button>
+      <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard
+      </a>
+      <a href="/projects" class="nav-link {% if request.url.path.startswith('/projects') %}nav-link-active{% endif %}">
+        <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>Projects
+      </a>
+      <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}nav-link-active{% endif %}">
+        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings
+      </a>
+      <a href="/logout" class="nav-link">
+        <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Logout
+      </a>
+      <label class="theme-switch" title="Toggle theme">
+        <input type="checkbox" id="themeCheckbox" onchange="toggleTheme(this.checked)">
+        <span class="theme-slider"></span>
+      </label>
     </div>
   </nav>
+
+  <!-- Bottom mobile nav -->
+  <div class="bottom-nav">
+    <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="/projects" class="{% if request.url.path.startswith('/projects') %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+      <span>Projects</span>
+    </a>
+    <a href="/settings" class="{% if request.url.path == '/settings' %}active{% endif %}">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>Settings</span>
+    </a>
+    <a href="/logout">
+      <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      <span>Logout</span>
+    </a>
+  </div>
+
   <main class="layout">
     {% block content %}{% endblock %}
   </main>
   <script>
-    function toggleTheme() {
+    function toggleTheme(checked) {
       const html = document.documentElement;
-      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      html.dataset.theme = checked ? 'light' : 'dark';
       localStorage.setItem('dockliner-theme', html.dataset.theme);
+      swapLogo(html.dataset.theme);
+      syncMobileTheme(html.dataset.theme);
+    }
+    function swapLogo(theme) {
+      const logo = document.getElementById('desktopLogo');
+      if (!logo) return;
+      logo.src = theme === 'light' ? '/static/img/logo_light.svg' : '/static/img/logo_dark.svg';
+    }
+    function syncMobileTheme(theme) {
+      const btn = document.getElementById('mobileThemeBtn');
+      if (!btn) return;
+      btn.textContent = theme === 'light' ? '☀' : '☾';
     }
     (function() {
       const saved = localStorage.getItem('dockliner-theme');
-      if (saved) document.documentElement.dataset.theme = saved;
+      const theme = saved || 'dark';
+      document.documentElement.dataset.theme = theme;
+      const cb = document.getElementById('themeCheckbox');
+      if (cb) cb.checked = theme === 'light';
+      swapLogo(theme);
+      syncMobileTheme(theme);
     })();
   </script>
   {% block scripts %}{% endblock %}

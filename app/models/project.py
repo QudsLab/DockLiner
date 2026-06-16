@@ -1,26 +1,34 @@
 import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, ForeignKey, Boolean, Enum
+import enum
 from app.core.db import Base
+
+class DeployMethod(str, enum.Enum):
+    compose = "compose"
+    build = "build"
 
 class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, nullable=False)
     github_repo_url = Column(String, nullable=True)
-    branch = Column(String, default="main")
+    branch = Column(String, nullable=True)
     deploy_path = Column(String, nullable=False)
     compose_file = Column(String, default="docker-compose.yml")
-    status = Column(String, default="idle")  # idle/running/stopped/error/deploying
+    status = Column(String, default="idle")
     last_deployed = Column(DateTime, nullable=True)
     env_vars = Column(JSON, default=dict)
+    env_content = Column(Text, default="")
+    example_env_content = Column(Text, default="")
+    dockerfile_content = Column(Text, default="")
+    compose_content = Column(Text, default="")
     labels = Column(String, default="")
-    is_our_hosted = Column(Boolean, default=False)
-    # Blue-green fields
-    active_slot = Column(String, default="blue")  # blue or green
-    blue_path = Column(String, nullable=True)
-    green_path = Column(String, nullable=True)
-    blue_port = Column(Integer, nullable=True)
-    green_port = Column(Integer, nullable=True)
+    token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=True)
+    port = Column(Integer, nullable=True)
+    deploy_method = Column(String, default="compose")
+    release_tag = Column(String, nullable=True)
+    command_mode = Column(String, default="compose")  # compose|dockerfile|direct
+    raw_mode = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Deployment(Base):
@@ -30,21 +38,82 @@ class Deployment(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     status = Column(String, default="started")  # started/success/error
     logs = Column(Text, default="")
-    slot = Column(String, nullable=True)
 
 class AccessToken(Base):
     __tablename__ = "access_tokens"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     token = Column(String, nullable=False)
-    provider = Column(String, default="github")  # github / gitlab / generic
+    provider = Column(String, default="github")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
-class DockerHost(Base):
-    __tablename__ = "docker_hosts"
+class GithubCache(Base):
+    __tablename__ = "github_cache"
+    id = Column(Integer, primary_key=True, index=True)
+    token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=False)
+    endpoint = Column(String, nullable=False)
+    payload_json = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class SavedOrg(Base):
+    __tablename__ = "saved_orgs"
+    id = Column(Integer, primary_key=True, index=True)
+    token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=False)
+    org_login = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    saved_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class HealthCheck(Base):
+    __tablename__ = "health_checks"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    enabled = Column(Boolean, default=False)
+    protocol = Column(String, default="http")
+    host = Column(String, default="localhost")
+    port = Column(Integer, nullable=True)
+    path = Column(String, default="/")
+    interval_seconds = Column(Integer, default=60)
+    last_check = Column(DateTime, nullable=True)
+    last_status = Column(String, default="unknown")
+    last_latency_ms = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class Metric(Base):
+    __tablename__ = "metrics"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    container_id = Column(String, nullable=True)
+    container_name = Column(String, nullable=True)
+    metric_type = Column(String, nullable=False)
+    value = Column(String, nullable=False)
+    recorded_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user = Column(String, nullable=True)
+    action = Column(String, nullable=False)
+    target = Column(String, nullable=True)
+    ip = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    details = Column(Text, default="")
+
+class Webhook(Base):
+    __tablename__ = "webhooks"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
-    host = Column(String, default="localhost")
-    is_local = Column(Boolean, default=True)
-    tls = Column(Boolean, default=False)
+    url = Column(String, nullable=False)
+    events = Column(String, default="deploy,health_fail")
+    enabled = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    level = Column(String, default="info")
+    title = Column(String, nullable=False)
+    body = Column(Text, default="")
+    read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

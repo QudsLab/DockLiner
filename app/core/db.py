@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
@@ -14,4 +14,6 @@ def get_db():
         db.close()
 
 def init_db():
+    # Import all models so they register with Base metadata before create_all
+    from app.models.project import Project, Deployment, AccessToken, HealthCheck, Metric, AuditLog, Webhook, Notification, GithubCache, SavedOrg  # noqa
     Base.metadata.create_all(bind=engine)
