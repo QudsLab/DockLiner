@@ -1,87 +1,46 @@
 {% extends "base.html" %}
 {% block title %}Projects — DockLiner{% endblock %}
 {% block content %}
-<h1 style="font-size:48px; margin-bottom:8px;">Projects</h1>
-<p style="color:var(--muted); margin-bottom:24px;">Add, edit, and manage deployments.</p>
-
-<div class="card" style="margin-bottom:24px;">
-  <h2 style="font-size:22px;">New Project</h2>
-  <form onsubmit="return createProject(this)">
-    <div class="form-row">
-      <div class="form-col"><label>Name</label><input name="name" required placeholder="my-app"></div>
-      <div class="form-col"><label>Repo URL</label><input name="github_repo_url" placeholder="https://github.com/user/repo"></div>
-      <div class="form-col"><label>Branch</label><input name="branch" value="main"></div>
-      <div class="form-col"><label>Compose file</label><input name="compose_file" value="docker-compose.yml"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-col"><label>Labels</label><input name="labels" placeholder="prod, api"></div>
-      <div class="form-col"><label>Blue port</label><input name="blue_port" type="number" placeholder="8081"></div>
-      <div class="form-col"><label>Green port</label><input name="green_port" type="number" placeholder="8082"></div>
-      <div class="form-col" style="align-self:end;">
-        <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
-          <input type="checkbox" name="is_our_hosted"> Our hosted
-        </label>
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-col"><label>Env vars (JSON)</label><textarea name="env_vars" rows="3" placeholder='{"KEY":"value"}'></textarea></div>
-    </div>
-    <button class="btn btn-primary">Create Project</button>
-  </form>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+  <h1 class="hero-title" style="margin:0;">Projects</h1>
+  <a class="btn btn-primary" href="/projects/add">+ Add Project</a>
 </div>
+<p class="section-subtitle">Manage your deployments.</p>
 
 <div class="card">
-  <h2 style="font-size:22px;">All Projects</h2>
   {% if projects %}
-  <table>
+  <table class="table">
     <thead>
-      <tr><th>Name</th><th>Repo</th><th>Branch</th><th>Status</th><th>Slot</th><th>Hosted</th><th>Actions</th></tr>
+      <tr><th>Name</th><th>Repo</th><th>Branch</th><th>Status</th><th>Port</th><th>Actions</th></tr>
     </thead>
     <tbody>
     {% for p in projects %}
       <tr>
-        <td><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">{{ p.github_repo_url or '-' }}</td>
-        <td>{{ p.branch }}</td>
-        <td><span class="status status-{{ p.status }}">{{ p.status }}</span></td>
-        <td>{{ p.active_slot }}</td>
-        <td>{% if p.is_our_hosted %}Yes{% else %}No{% endif %}</td>
-        <td>
-          <a class="btn btn-primary btn-sm" href="/api/projects/{{ p.id }}/deploy" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Deploy</a>
-          <a class="btn btn-secondary btn-sm" href="/api/projects/{{ p.id }}/restart" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Restart</a>
-          <a class="btn btn-secondary btn-sm" href="/api/projects/{{ p.id }}/stop" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Stop</a>
-          <a class="btn btn-secondary btn-sm" href="/projects/{{ p.id }}/logs">Logs</a>
-          <button class="btn btn-secondary btn-sm" onclick="if(confirm('Delete {{ p.name }}?')) fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button>
+        <td data-label="Name"><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
+        <td data-label="Repo" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">{{ p.github_repo_url or '-' }}</td>
+        <td data-label="Branch">{{ p.branch or 'default' }}</td>
+        <td data-label="Status"><span class="status-pill status-{{ p.status }}">{{ p.status }}</span></td>
+        <td data-label="Port">{{ p.port or '-' }}</td>
+        <td data-label="Actions">
+          <a class="btn btn-primary btn-xs" href="/api/projects/{{ p.id }}/build" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Build</a>
+          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/start" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Start</a>
+          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/restart" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Restart</a>
+          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/stop" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Stop</a>
+          <a class="btn btn-secondary btn-xs" href="/projects/{{ p.id }}/logs">Logs</a>
+          <button class="btn btn-danger btn-xs" onclick="if(confirm('Delete {{ p.name }}?')) fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button>
         </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted)">No projects yet.</p>
+  <div style="text-align:center;padding:48px 20px;">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="opacity:.6;margin-bottom:12px;">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/><circle cx="17" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.5" r=".8" fill="currentColor"/>
+    </svg>
+    <p style="color:var(--muted);margin:0 0 18px;font-size:14px;">No projects yet.</p>
+    <a class="btn btn-primary" href="/projects/add" style="text-decoration:none;display:inline-block;">+ Add Project</a>
+  </div>
   {% endif %}
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-function createProject(form) {
-  const fd = new FormData(form);
-  const payload = {
-    name: fd.get('name'),
-    github_repo_url: fd.get('github_repo_url'),
-    branch: fd.get('branch'),
-    compose_file: fd.get('compose_file'),
-    labels: fd.get('labels'),
-    is_our_hosted: fd.has('is_our_hosted'),
-    blue_port: fd.get('blue_port') ? parseInt(fd.get('blue_port')) : null,
-    green_port: fd.get('green_port') ? parseInt(fd.get('green_port')) : null,
-    env_vars: {}
-  };
-  try { const ev = JSON.parse(fd.get('env_vars')||'{}'); payload.env_vars = ev; } catch(e){}
-  fetch('/api/projects', {
-    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
-  }).then(r=>{ if(r.ok) location.reload(); else alert('Failed to create project'); });
-  return false;
-}
-</script>
 {% endblock %}
