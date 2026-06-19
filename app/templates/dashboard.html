@@ -33,7 +33,19 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted)">No projects yet. <a href="/projects">Add one</a>.</p>
+  <div style="text-align:center;padding:48px 20px;">
+    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="opacity:.6;margin-bottom:12px;">
+      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/><circle cx="17" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.5" r=".8" fill="currentColor"/>
+    </svg>
+    <p style="color:var(--muted);margin:0 0 18px;font-size:14px;">No projects yet.</p>
+    <a class="btn btn-primary" href="/projects/add" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Add Project
+    </a>
+  </div>
   {% endif %}
 </div>
 
