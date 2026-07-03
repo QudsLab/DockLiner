@@ -1,7 +1,7 @@
 import datetime, json, sqlite3, subprocess, re, socket
 from typing import Dict, Any, Optional, List
 from app.core.config import settings
-from app.services.docker_service import DockerService
+from app.services.dockliner_service import DockLinerService
 
 class MonitoringService:
     @staticmethod
@@ -52,7 +52,7 @@ class MonitoringService:
     @staticmethod
     def record_docker_stats(db) -> None:
         from app.models.project import Metric, Project
-        stats = DockerService.system_stats()
+        stats = DockLinerService.container_stats()
         # Map containers to projects by name heuristic
         projects = {p.name: p.id for p in db.query(Project).all()}
         for s in stats:

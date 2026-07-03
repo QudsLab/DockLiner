@@ -4,14 +4,42 @@ from typing import List, Dict, Any, Optional
 from app.core.config import settings
 
 class DockerService:
+    _docker_exe: Optional[str] = None
+
+    @staticmethod
+    def _find_docker() -> Optional[str]:
+        if DockerService._docker_exe is None:
+            exe = shutil.which("docker")
+            if not exe and os.name == "nt":
+                # Common Docker Desktop locations on Windows
+                for candidate in [
+                    Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / "Docker" / "Docker" / "resources" / "bin" / "docker.exe",
+                    Path(os.environ.get("ProgramFiles", "C:\\Program Files")) / "Docker" / "Docker" / "resources" / "docker.exe",
+                ]:
+                    if candidate.exists():
+                        exe = str(candidate)
+                        break
+            DockerService._docker_exe = exe
+        return DockerService._docker_exe
+
     @staticmethod
     def _run(cmd: List[str], cwd: Optional[str] = None, timeout: int = 300) -> subprocess.CompletedProcess:
+        docker = DockerService._find_docker()
+        if docker is None:
+            # Return a synthetic failed result so callers that parse stdout/stderr stay safe
+            class _FakeResult:
+                returncode = 1
+                stdout = ""
+                stderr = "Docker CLI not found in PATH"
+            return _FakeResult()  # type: ignore[return-value]
+        if cmd and cmd[0] == "docker":
+            cmd[0] = docker
         return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
 
     @staticmethod
     def is_installed() -> bool:
         """Check if docker CLI exists in PATH"""
-        return shutil.which("docker") is not None
+        return DockerService._find_docker() is not None
 
     @staticmethod
     def is_running() -> bool:

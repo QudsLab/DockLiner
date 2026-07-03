@@ -1,0 +1,17 @@
+[Unit]
+Description=DockLiner daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/dockliner
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 /root/dockliner/main.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

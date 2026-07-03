@@ -20,6 +20,8 @@ class ProjectCreate(BaseModel):
     command_mode: Optional[str] = "compose"  # compose|dockerfile|direct
     raw_mode: Optional[bool] = False
     direct_command: Optional[str] = None
+    source_type: Optional[str] = "github"  # github|local|download
+    source_path: Optional[str] = None
 
 class ProjectUpdate(BaseModel):
     github_repo_url: Optional[str] = None
@@ -38,6 +40,8 @@ class ProjectUpdate(BaseModel):
     command_mode: Optional[str] = None
     raw_mode: Optional[bool] = None
     direct_command: Optional[str] = None
+    source_type: Optional[str] = None
+    source_path: Optional[str] = None
 
 class ProjectOut(BaseModel):
     id: int
@@ -57,6 +61,8 @@ class ProjectOut(BaseModel):
     command_mode: Optional[str]
     raw_mode: Optional[bool]
     direct_command: Optional[str]
+    source_type: Optional[str]
+    source_path: Optional[str]
     created_at: datetime
     class Config:
         from_attributes = True

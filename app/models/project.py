@@ -30,6 +30,8 @@ class Project(Base):
     command_mode = Column(String, default="compose")  # compose|dockerfile|direct
     raw_mode = Column(Boolean, default=False)
     direct_command = Column(Text, default="")
+    source_type = Column(String, default="github")  # github|local|download
+    source_path = Column(String, nullable=True)  # local path or download_id
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Deployment(Base):
@@ -72,11 +74,13 @@ class Download(Base):
     owner = Column(String, nullable=False)
     repo = Column(String, nullable=False)
     ref = Column(String, nullable=False)
-    status = Column(String, default="pending")
+    status = Column(String, default="pending")  # pending/downloading/done/error
     download_path = Column(String, nullable=True)
     extracted_path = Column(String, nullable=True)
     size_bytes = Column(Integer, default=0)
     total_bytes = Column(Integer, nullable=True)
+    md5_hash = Column(String, nullable=True)
+    sha256_hash = Column(String, nullable=True)
     error_message = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -85,6 +89,25 @@ class Download(Base):
         super().__init__(*args, **kwargs)
         if getattr(self, 'size_bytes', None) is None:
             self.size_bytes = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "token_id": self.token_id,
+            "owner": self.owner,
+            "repo": self.repo,
+            "ref": self.ref,
+            "status": self.status,
+            "size_bytes": self.size_bytes,
+            "total_bytes": self.total_bytes,
+            "error_message": self.error_message,
+            "download_path": self.download_path,
+            "extracted_path": self.extracted_path,
+            "md5_hash": self.md5_hash,
+            "sha256_hash": self.sha256_hash,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
 
 class HealthCheck(Base):
     __tablename__ = "health_checks"

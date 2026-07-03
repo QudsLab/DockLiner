@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+.dl-card{padding:14px 16px;border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--surface-card);margin-bottom:12px;animation:slideIn .35s ease-out both}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.dl-fab{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom));right:16px;width:56px;height:56px;border-radius:50%;background:var(--primary);color:#fff;border:none;box-shadow:0 4px 12px rgba(0,0,0,0.25);display:none;align-items:center;justify-content:center;font-size:24px;z-index:40;cursor:pointer;transition:transform .15s}
+.dl-fab:active{transform:scale(0.92)}
+@media (min-width:769px){ .dl-fab{display:none} }
+.pull-hint{display:none;text-align:center;color:var(--muted);font-size:11px;margin:-8px 0 12px}
+@media (max-width:768px){ .pull-hint{display:block} }
+.dl-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.dl-header .name{font-weight:600;color:var(--ink);font-size:15px;word-break:break-word;flex:1;min-width:0}
+.dl-header .actions{display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.dl-body{margin-top:8px}
+.dl-card .meta{font-size:12px;color:var(--muted);line-height:1.5}
+.dl-card .error-message{font-size:12px;color:var(--error);background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-sm);padding:8px 10px;word-break:break-word;line-height:1.4;margin-top:10px}
+.dl-card .hashes{display:grid;grid-template-columns:1fr;gap:6px;margin-top:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px}
+.dl-card .hash-row{display:flex;gap:8px;align-items:flex-start;word-break:break-all;line-height:1.4;padding:6px 8px;border-radius:var(--radius-sm);background:var(--surface-soft)}
+.dl-card .hash-row.md5{color:#38bdf8}
+.dl-card .hash-row.sha256{color:#a78bfa}
+.dl-card .hash-label{flex-shrink:0;font-weight:600;color:var(--muted);user-select:none;min-width:52px}
+.dl-progress{height:6px;background:var(--surface-soft);border-radius:999px;overflow:hidden;margin-top:8px;max-width:320px}
+.dl-progress .bar{height:100%;background:var(--primary);width:0;transition:width .2s}
+.empty{text-align:center;color:var(--muted);padding:40px 0;font-size:14px}
+.status-done{color:var(--success)}
+.status-error{color:var(--error)}
+.status-pending,.status-downloading,.status-running{color:var(--primary)}
+.tag{font-size:11px;background:var(--surface-soft);color:var(--ink);padding:2px 6px;border-radius:var(--radius-sm);white-space:nowrap}
+</style>
+
+<h1 class="hero-title">Download Center</h1>
+<p class="section-subtitle">Track, manage and promote downloaded repositories.</p>
+
+<div class="pull-hint">↓ pull down to refresh ↓</div>
+
+<div id="downloads-list">
+  <div class="empty">Loading downloads...</div>
+</div>
+
+<button class="dl-fab" onclick="location.href='/projects/add'" title="Add project">+</button>
+
+<script>
+function escapeHtml(s){ return String(s).replace(/[<>"']/g, c => ({'<':'\u0026lt;','>':'\u0026gt;','"':'\u0026quot;',"'":'\u0026#39;'}[c])); }
+function fmtBytes(n){ if(!n && n!==0) return '-'; const units=['B','KB','MB','GB']; let i=0; while(n>=1024 && i<units.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+units[i]; }
+function fmtDate(d){ if(!d) return '-'; return new Date(d+'Z').toLocaleString(); }
+function fmtHash(h){ return h || '-'; }
+
+async function loadDownloads(){
+  const res = await fetch('/api/downloads');
+  if(!res.ok){ document.getElementById('downloads-list').innerHTML='<div class="empty">Could not load downloads.</div>'; return; }
+  const data = await res.json();
+  const list = document.getElementById('downloads-list');
+  if(!data.downloads || data.downloads.length===0){
+    if(list.dataset.state !== 'empty'){
+      list.innerHTML='<div class="empty">No downloads yet. Start one from Add Project.</div>';
+      list.dataset.state = 'empty';
+    }
+    return;
+  }
+  list.dataset.state = 'list';
+  updateDownloadList(data.downloads);
+}
+
+let lastDownloadsJson = '';
+function updateDownloadList(downloads){
+  const list = document.getElementById('downloads-list');
+  const json = JSON.stringify(downloads.map(d => ({id:d.id,status:d.status,size_bytes:d.size_bytes,total_bytes:d.total_bytes,md5_hash:d.md5_hash,sha256_hash:d.sha256_hash,error_message:d.error_message})));
+  if(json === lastDownloadsJson) return;
+  lastDownloadsJson = json;
+
+  const existing = new Map();
+  list.querySelectorAll('.dl-card').forEach(el => existing.set(parseInt(el.dataset.id), el));
+
+  downloads.forEach((d, index) => {
+    const id = d.id;
+    let el = existing.get(id);
+    if(!el){
+      el = document.createElement('div');
+      el.className = 'dl-card';
+      el.dataset.id = id;
+      el.style.animationDelay = (index * 0.05) + 's';
+      list.appendChild(el);
+      existing.delete(id);
+    } else {
+      existing.delete(id);
+    }
+    renderCard(el, d);
+  });
+
+  existing.forEach(el => el.remove());
+}
+
+function renderCard(el, d){
+  const statusClass = d.status==='done'?'status-done':d.status==='error'?'status-error':'status-'+d.status;
+  let progress = '';
+  if(d.total_bytes && d.total_bytes > 0){
+    const pct = Math.min(100, Math.round((d.size_bytes||0)/d.total_bytes*100));
+    progress = `<div class="dl-progress"><div class="bar" style="width:${pct}%"></div></div>
+                    <div class="meta">${pct}% · ${fmtBytes(d.size_bytes)} / ${fmtBytes(d.total_bytes)}</div>`;
+  }
+  let buttons = '';
+  if(d.status==='done'){
+    buttons += `<a href="/projects/setup?source=download&download_id=${d.id}" class="btn btn-primary btn-sm" style="text-decoration:none;">Create project</a>`;
+    if(d.compose_file || d.dockerfile_exists){
+      const tags = [d.compose_file?'compose':'', d.dockerfile_exists?'dockerfile':''].filter(Boolean).join(', ');
+      buttons += ` <span class="tag">${tags}</span>`;
+    }
+  }
+  buttons += ` <button class="btn btn-danger btn-sm" onclick="deleteDownload(${d.id})">Delete</button>`;
+  const hashes = (d.md5_hash || d.sha256_hash) ? `<div class="hashes">
+    <div class="hash-row md5" title="MD5"><span class="hash-label">MD5:</span> ${escapeHtml(d.md5_hash||'-')}</div>
+    <div class="hash-row sha256" title="SHA256"><span class="hash-label">SHA256:</span> ${escapeHtml(d.sha256_hash||'-')}</div>
+  </div>` : '';
+  const errorBlock = d.error_message ? `<div class="error-message">${escapeHtml(d.error_message)}</div>` : '';
+  el.innerHTML = `
+    <div class="dl-header">
+      <div class="name">${escapeHtml(d.owner||'-')}/${escapeHtml(d.repo||'-')} @ ${escapeHtml(d.ref||'-')}</div>
+      <div class="actions">${buttons}</div>
+    </div>
+    <div class="dl-body">
+      <div class="meta">Status: <span class="${statusClass}">${d.status}</span> · ${fmtDate(d.updated_at||d.created_at)} · ${fmtBytes(d.size_bytes)}</div>
+      ${hashes}
+      ${progress}
+      ${errorBlock}
+    </div>`;
+}
+
+async function deleteDownload(id){
+  if(!confirm('Delete this download and its extracted files?')) return;
+  const res = await fetch(`/api/downloads/${id}`, {method:'DELETE'});
+  if(res.ok){ loadDownloads(); }
+  else { alert('Delete failed'); }
+}
+
+loadDownloads();
+setInterval(loadDownloads, 3000);
+
+// Pull-to-refresh gesture for mobile
+let startY = 0;
+document.addEventListener('touchstart', e => { startY = e.touches[0].clientY; }, {passive:true});
+document.addEventListener('touchend', e => {
+  const endY = e.changedTouches[0].clientY;
+  if (window.scrollY <= 0 && endY - startY > 80) {
+    loadDownloads();
+  }
+}, {passive:true});
+</script>
+
+{% endblock %}

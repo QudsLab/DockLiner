@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.auth import require_auth
-from app.models.project import Project, Deployment, AccessToken
-from app.services.docker_service import DockerService
+from app.models.project import Project, Deployment, AccessToken, Download
+from app.services.dockliner_service import DockLinerService
+from app.services.file_scanner import scan_local_dir
 from pathlib import Path
 import json
+import urllib.parse
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -19,8 +21,8 @@ def login_page(request: Request):
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     projects = db.query(Project).all()
-    containers = DockerService.list_containers()
-    images = DockerService.list_images()
+    containers = DockLinerService.list_containers()
+    images = DockLinerService.list_images()
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request, "projects": projects, "containers": containers,
@@ -38,16 +40,64 @@ def projects_add_page(request: Request, db: Session = Depends(get_db), user: str
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "project_add.html", {"request": request, "tokens": tokens})
 
+@router.get("/projects/setup", response_class=HTMLResponse)
+def projects_setup_page(
+    request: Request,
+    source: str = "github",
+    path: str = "",
+    download_id: int = 0,
+    db: Session = Depends(get_db),
+    user: str = Depends(require_auth),
+):
+    if source not in ("github", "local", "download"):
+        raise HTTPException(status_code=400, detail="Invalid source")
+
+    scan_data = {}
+    tokens = db.query(AccessToken).all()
+
+    if source == "download":
+        dl = db.query(Download).filter(Download.id == download_id).first() if download_id else None
+        if not dl or not dl.extracted_path:
+            raise HTTPException(status_code=404, detail="Download not ready")
+        scan_data = scan_local_dir(dl.extracted_path)
+        scan_data["clone_url"] = f"https://github.com/{dl.owner}/{dl.repo}.git"
+    elif source == "local":
+        decoded_path = urllib.parse.unquote(path)
+        if not decoded_path:
+            raise HTTPException(status_code=400, detail="Path required")
+        if not Path(decoded_path).exists():
+            raise HTTPException(status_code=400, detail="Directory does not exist")
+        scan_data = scan_local_dir(decoded_path)
+    else:
+        # github source requires a download_id in this flow too; otherwise just show empty builder
+        if download_id:
+            dl = db.query(Download).filter(Download.id == download_id).first()
+            if dl and dl.extracted_path:
+                scan_data = scan_local_dir(dl.extracted_path)
+                scan_data["clone_url"] = f"https://github.com/{dl.owner}/{dl.repo}.git"
+
+    return templates.TemplateResponse(request, "project_setup.html", {
+        "request": request,
+        "source": source,
+        "path": urllib.parse.unquote(path),
+        "download_id": download_id,
+        "scan_json": json.dumps(scan_data),
+        "tokens": tokens,
+    })
+
+@router.get("/downloads", response_class=HTMLResponse)
+def downloads_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    items = DockLinerService.list_downloads(db)
+    return templates.TemplateResponse(request, "downloads.html", {"request": request, "downloads": items})
+
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     tokens = db.query(AccessToken).all()
-    containers = DockerService.list_containers()
-    images = DockerService.list_images()
-    networks = DockerService.list_networks()
-    volumes = DockerService.list_volumes()
-    info = DockerService.docker_info()
-    sec = DockerService.security_summary()
-    # Read version from VERSION file
+    containers = DockLinerService.list_containers()
+    images = DockLinerService.list_images()
+    networks = DockLinerService.list_networks()
+    volumes = DockLinerService.list_volumes()
+    sec = DockLinerService.security_summary()
     version = {"current": "dev", "latest": "unknown", "has_update": False}
     vf = Path(__file__).resolve().parents[2] / "VERSION"
     if vf.exists():
@@ -56,10 +106,10 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: str = D
         "request": request, "tokens": tokens,
         "containers": containers, "images": images,
         "networks": networks, "volumes": volumes,
-        "info": info, "sec": sec, "version": version,
-        "docker_installed": DockerService.is_installed(),
-        "docker_running": DockerService.is_running(),
-        "docker_version": DockerService.installed_version(),
+        "sec": sec, "version": version,
+        "docker_installed": DockLinerService.docker_installed(),
+        "docker_running": DockLinerService.docker_running(),
+        "docker_version": DockLinerService.docker_version(),
     })
 
 @router.get("/projects/{pid}/logs", response_class=HTMLResponse)

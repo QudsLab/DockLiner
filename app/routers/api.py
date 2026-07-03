@@ -1,12 +1,13 @@
-from typing import List, Optional, Dict, Any
+import threading
 from datetime import datetime
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
 import io, zipfile, json, os, urllib.request, urllib.error
-from app.core.db import get_db
+from app.core.db import get_db, SessionLocal
 from app.core.config import settings
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
 from app.core.utils import find_free_ports
@@ -27,7 +28,7 @@ from app.schemas.monitoring import (
     MetricOut, AuditLogOut, WebhookCreate, WebhookOut, NotificationOut,
 )
 from app.services.deploy_service import DeployService
-from app.services.docker_service import DockerService
+from app.services.dockliner_service import DockLinerService
 from app.services.github_download_service import GitHubDownloadService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
 from app.services.file_scanner import scan_downloaded_repo
@@ -98,6 +99,8 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
         command_mode=data.command_mode or "compose",
         raw_mode=data.raw_mode or False,
         direct_command=data.direct_command or "",
+        source_type=data.source_type or "github",
+        source_path=data.source_path,
     )
     db.add(p)
     db.commit()
@@ -269,27 +272,27 @@ def run_health_check(hid: int, db: Session = Depends(get_db), user: str = Depend
 
 @router.get("/docker/containers")
 def list_containers(user: str = Depends(require_auth)):
-    return DockerService.list_containers()
+    return DockLinerService.list_containers()
 
 @router.get("/docker/images")
 def list_images(user: str = Depends(require_auth)):
-    return DockerService.list_images()
+    return DockLinerService.list_images()
 
 @router.get("/docker/networks")
 def list_networks(user: str = Depends(require_auth)):
-    return DockerService.list_networks()
+    return DockLinerService.list_networks()
 
 @router.get("/docker/volumes")
 def list_volumes(user: str = Depends(require_auth)):
-    return DockerService.list_volumes()
+    return DockLinerService.list_volumes()
 
 @router.get("/docker/security")
 def docker_security(user: str = Depends(require_auth)):
-    return DockerService.security_summary()
+    return DockLinerService.security_summary()
 
 @router.post("/docker/containers/{cid}/stop")
 def stop_container(cid: str, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    rc, out = DockerService.stop_container(cid)
+    rc, out = DockLinerService.stop_container(cid)
     AuditService.log(db, "container_stop", target=cid, user=user, ip=request.client.host if request.client else "")
     if rc != 0:
         raise HTTPException(status_code=500, detail=out)
@@ -297,7 +300,7 @@ def stop_container(cid: str, request: Request, db: Session = Depends(get_db), us
 
 @router.post("/docker/containers/{cid}/remove")
 def remove_container(cid: str, request: Request, force: bool = False, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    rc, out = DockerService.remove_container(cid, force)
+    rc, out = DockLinerService.remove_container(cid, force)
     AuditService.log(db, "container_remove", target=cid, user=user, ip=request.client.host if request.client else "")
     if rc != 0:
         raise HTTPException(status_code=500, detail=out)
@@ -305,7 +308,7 @@ def remove_container(cid: str, request: Request, force: bool = False, db: Sessio
 
 @router.post("/docker/images/{iid}/remove")
 def remove_image(iid: str, request: Request, force: bool = False, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    rc, out = DockerService.remove_image(iid, force)
+    rc, out = DockLinerService.remove_image(iid, force)
     AuditService.log(db, "image_remove", target=iid, user=user, ip=request.client.host if request.client else "")
     if rc != 0:
         raise HTTPException(status_code=500, detail=out)
@@ -313,15 +316,15 @@ def remove_image(iid: str, request: Request, force: bool = False, db: Session = 
 
 @router.get("/docker/containers/{cid}/ports")
 def container_ports(cid: str, user: str = Depends(require_auth)):
-    return DockerService.inspect_container_ports(cid)
+    return DockLinerService.inspect_container_ports(cid)
 
 @router.get("/docker/containers/{cid}/logs")
 def container_logs(cid: str, tail: int = 200, user: str = Depends(require_auth)):
-    return {"logs": DockerService.container_logs(cid, tail)}
+    return {"logs": DockLinerService.container_logs(cid, tail)}
 
 @router.get("/docker/containers/{cid}/top")
 def container_top(cid: str, user: str = Depends(require_auth)):
-    return DockerService.container_top(cid)
+    return DockLinerService.container_top(cid)
 
 # ---------- GitHub API via token ----------
 
@@ -492,63 +495,97 @@ def github_download(body: dict, db: Session = Depends(get_db), user: str = Depen
     if not tok:
         raise HTTPException(status_code=404, detail="Token not found")
     dl = GitHubDownloadService.create_download(db, token_id, owner, repo, ref)
-    try:
-        GitHubDownloadService.run_download(dl.id, str(tok.token), db)
-    except Exception as e:
-        db.refresh(dl)
-        raise HTTPException(status_code=500, detail=dl.error_message or str(e))
-    return GitHubDownloadService.scan(dl)
+    token_str = str(tok.token)
+    # Run download in background thread so the UI can poll progress
+    def progress(_dl):
+        pass
+    thread = threading.Thread(
+        target=GitHubDownloadService.run_download,
+        args=(dl.id, token_str, SessionLocal, progress),
+        daemon=True,
+    )
+    thread.start()
+    return {"download_id": dl.id, "status": dl.status, "owner": owner, "repo": repo, "ref": ref}
 
-@router.get("/github/download/{dl_id}")
-def github_download_status(dl_id, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+@router.get("/downloads")
+def api_downloads(db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    items = DockLinerService.list_downloads(db)
+    # Backfill hashes for existing downloads whose zip still exists
+    for item in items:
+        if item.get("status") == "done" and item.get("download_path") and not item.get("md5_hash"):
+            dl = db.query(Download).filter(Download.id == item["id"]).first()
+            if dl:
+                GitHubDownloadService.backfill_hashes(dl, db)
+                item["md5_hash"] = dl.md5_hash
+                item["sha256_hash"] = dl.sha256_hash
+    return {"downloads": items}
+
+@router.get("/downloads/{dl_id}")
+def api_download_detail(dl_id: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     dl = db.query(Download).filter(Download.id == dl_id).first()
     if not dl:
         raise HTTPException(status_code=404, detail="Download not found")
-    return GitHubDownloadService.scan(dl)
+    out = dl.to_dict()
+    out.update(DockLinerService.scan_download(dl))
+    return out
 
-@router.get("/github/downloads")
-def github_download_list(limit: int = 50, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    rows = db.query(Download).order_by(Download.created_at.desc()).limit(limit).all()
-    out = []
-    for dl in rows:
-        out.append({
-            "id": dl.id,
-            "owner": dl.owner,
-            "repo": dl.repo,
-            "ref": dl.ref,
-            "status": dl.status,
-            "size_bytes": dl.size_bytes,
-            "total_bytes": dl.total_bytes,
-            "created_at": dl.created_at,
-            "updated_at": dl.updated_at,
-        })
+@router.delete("/downloads/{dl_id}")
+def api_download_delete(dl_id: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    dl = db.query(Download).filter(Download.id == dl_id).first()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Download not found")
+    DockLinerService.delete_download(dl, db)
+    return {"ok": True}
+
+@router.get("/github/download/{dl_id}")
+def github_download_status(dl_id: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    dl = db.query(Download).filter(Download.id == dl_id).first()
+    if not dl:
+        raise HTTPException(status_code=404, detail="Download not found")
+    out = dl.to_dict()
+    out.update(GitHubDownloadService.scan(dl))
     return out
 
 @router.delete("/github/download/{dl_id}")
-def github_download_delete(dl_id, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+def github_download_delete(dl_id: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     dl = db.query(Download).filter(Download.id == dl_id).first()
     if not dl:
         raise HTTPException(status_code=404, detail="Download not found")
     GitHubDownloadService.delete_download(dl, db)
     return {"ok": True}
 
-@router.post("/github/downloads/cleanup")
-def github_download_cleanup(db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    rows = db.query(Download).all()
-    removed = 0
+@router.get("/github/downloads")
+def github_download_list(limit: int = 50, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    rows = db.query(Download).order_by(Download.created_at.desc()).limit(limit).all()
+    out = []
     for dl in rows:
-        try:
-            GitHubDownloadService.delete_download(dl, db)
-            removed += 1
-        except Exception:
-            pass
-    return {"removed": removed}
+        entry = dl.to_dict()
+        entry.update(GitHubDownloadService.scan(dl))
+        out.append(entry)
+    return out
 
 # ---------- Tokens ----------
 
 @router.get("/tokens", response_model=List[AccessTokenOut])
 def list_tokens(db: Session = Depends(get_db), user: str = Depends(require_auth)):
     return db.query(AccessToken).all()
+
+@router.get("/debug/routes")
+def debug_routes(request: Request, user: str = Depends(require_auth)):
+    from pathlib import Path
+    import app.routers.pages as pages_mod
+    routes = []
+    for r in request.app.routes:
+        p = getattr(r, 'path', '')
+        n = getattr(r, 'name', '')
+        if p:
+            routes.append(f"{p} -> {n}")
+    return {
+        "cwd": str(Path.cwd()),
+        "pages_module": pages_mod.__file__,
+        "has_setup": any('/projects/setup' in p for p in routes),
+        "routes": routes,
+    }
 
 @router.post("/tokens", response_model=AccessTokenOut)
 def create_token(data: AccessTokenCreate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -635,19 +672,31 @@ def mark_all_read(db: Session = Depends(get_db), user: str = Depends(require_aut
 
 @router.post("/docker/start-daemon")
 def start_docker_daemon(request: Request, user: str = Depends(require_auth)):
-    rc, msg = DockerService.start_daemon()
+    rc, msg = DockLinerService.start_daemon()
     if rc != 0:
         raise HTTPException(status_code=500, detail=msg)
     return {"ok": True, "message": msg}
 
 @router.post("/docker/stop-daemon")
 def stop_docker_daemon(request: Request, user: str = Depends(require_auth)):
-    rc, msg = DockerService.stop_daemon()
+    rc, msg = DockLinerService.stop_daemon()
     if rc != 0:
         raise HTTPException(status_code=500, detail=msg)
     return {"ok": True, "message": msg}
 
 # ---------- Backup ----------
+
+@router.get("/docker/info")
+def docker_info(user: str = Depends(require_auth)):
+    return {
+        "installed": DockLinerService.docker_installed(),
+        "running": DockLinerService.docker_running(),
+        "version": DockLinerService.docker_version(),
+    }
+
+@router.get("/docker/stats")
+def docker_stats(user: str = Depends(require_auth)):
+    return DockLinerService.container_stats()
 
 @router.get("/backup")
 def backup(db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -672,14 +721,14 @@ def backup(db: Session = Depends(get_db), user: str = Depends(require_auth)):
 @router.get("/docker/info")
 def docker_info(user: str = Depends(require_auth)):
     return {
-        "installed": DockerService.is_installed(),
-        "running": DockerService.is_running(),
-        "version": DockerService.installed_version(),
+        "installed": DockLinerService.docker_installed(),
+        "running": DockLinerService.docker_running(),
+        "version": DockLinerService.docker_version(),
     }
 
 @router.get("/docker/stats")
 def docker_stats(user: str = Depends(require_auth)):
-    return DockerService.system_stats()
+    return DockLinerService.container_stats()
 
 @router.get("/system/version")
 def system_version(user: str = Depends(require_auth)):

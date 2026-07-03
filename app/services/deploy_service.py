@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from app.core.config import settings
 from app.services.git_service import GitService
-from app.services.docker_service import DockerService
+from app.services.dockliner_service import DockLinerService
 from app.models.project import Deployment
 
 class DeployService:
@@ -37,7 +37,7 @@ class DeployService:
         # 2. Sync cache into deploy_path
         if cache:
             logs.append("Syncing into deploy path...")
-            rc, out = DockerService.rsync_delete(cache, str(deploy_path))
+            rc, out = DockLinerService.rsync_delete(cache, str(deploy_path))
             logs.append(out)
             if rc != 0:
                 raise RuntimeError("rsync failed: " + out)
@@ -58,13 +58,13 @@ class DeployService:
         method = str(project.command_mode or project.deploy_method or "compose")
         if method == "direct":
             logs.append("Running direct command...")
-            rc, out = DockerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
+            rc, out = DockLinerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
         elif method == "compose":
             logs.append("Building compose...")
-            rc, out = DockerService.compose_up(str(deploy_path), project.compose_file)
+            rc, out = DockLinerService.compose_up(str(deploy_path), project.compose_file)
         else:
             logs.append("Building image...")
-            rc, out = DockerService.docker_build(str(deploy_path), project.name)
+            rc, out = DockLinerService.docker_build(str(deploy_path), project.name)
         logs.append(out)
         if rc != 0:
             raise RuntimeError("build failed: " + out)
@@ -103,12 +103,12 @@ class DeployService:
         deploy_path = Path(project.deploy_path)
         method = str(project.command_mode or project.deploy_method or "compose")
         if method == "compose":
-            rc, out = DockerService.compose_down(str(deploy_path), project.compose_file)
+            rc, out = DockLinerService.compose_down(str(deploy_path), project.compose_file)
         elif method == "direct":
-            r = DockerService._run(["docker", "stop", project.name], timeout=10)
+            r = DockLinerService._run(["docker", "stop", project.name], timeout=10)
             rc, out = r.returncode, r.stdout + r.stderr
         else:
-            rc, out = DockerService.stop_container_by_project(project.name)
+            rc, out = DockLinerService.stop_container(project.name)
         project.status = "stopped"
         return out
 
@@ -117,11 +117,11 @@ class DeployService:
         deploy_path = Path(project.deploy_path)
         method = str(project.command_mode or project.deploy_method or "compose")
         if method == "compose":
-            rc, out = DockerService.compose_up(str(deploy_path), project.compose_file)
+            rc, out = DockLinerService.compose_up(str(deploy_path), project.compose_file)
         elif method == "direct":
-            rc, out = DockerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
+            rc, out = DockLinerService.run_shell_command(str(deploy_path), str(project.direct_command or ""))
         else:
-            rc, out = DockerService.run_image(project.name, project.port or 8080)
+            rc, out = DockLinerService.run_image(project.name, project.port or 8080)
         project.status = "running"
         return out
 
@@ -135,6 +135,6 @@ class DeployService:
     def project_logs(project, tail: int = 200) -> str:
         deploy_path = Path(project.deploy_path)
         if project.deploy_method == "compose":
-            return DockerService.compose_logs(str(deploy_path), project.compose_file, tail)
+            return DockLinerService.compose_logs(str(deploy_path), project.compose_file, tail)
         else:
-            return DockerService.container_logs_by_project(project.name, tail)
+            return DockLinerService.container_logs(project.name, tail)

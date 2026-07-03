@@ -43,7 +43,7 @@
   </div>
   {% if not docker_installed %}
   <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-    Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" style="color:var(--primary);">Install Docker</a>.
+    Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.</div>
   </div>
   {% elif docker_installed and not docker_running %}
   <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
@@ -157,11 +157,13 @@
 
 <div class="card">
   <h2 class="section-title">About</h2>
-  <p style="color:var(--muted);font-size:13px;">DockLiner — lightweight deployment manager. GitHub: <a href="https://github.com/QudsLab/DockLiner" target="_blank" style="color:var(--primary);">QudsLab/DockLiner</a></p>
+  <p style="color:var(--muted);font-size:13px;">DockLiner — lightweight deployment manager. GitHub: <a href="https://github.com/QudsLab/DockLiner" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">QudsLab/DockLiner</a></p>
+  <div style="margin-top:16px;">
+    <button class="btn btn-ghost btn-sm" onclick="if(confirm('Logout?')) fetch('/api/logout',{method:'POST'}).then(()=>location.href='/login')">Logout</button>
+  </div>
 </div>
 {% endblock %}
-{% block scripts %}
-<script>
+{% block scripts %}<script>
 function createToken(form){
   const fd=new FormData(form);
   fetch('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),token:fd.get('token'),provider:'github'})})

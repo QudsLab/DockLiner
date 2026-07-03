@@ -1,56 +1,56 @@
 :root {
-  /* Brand / logo */
-  --logo-text: #faf9f5;
-  --logo-accent: #007cce;
+  /* Brand / logo (Slate Ember) */
+  --logo-text: #f8fafc;
+  --logo-accent: #f97316;
 
   /* Primary action colors */
-  --primary: #007cce;
-  --primary-active: #00a2ff;
-  --primary-disabled: #5a7a1f;
-  --on-primary: #141413;
+  --primary: #f97316;
+  --primary-active: #fb923c;
+  --primary-disabled: #94a3b8;
+  --on-primary: #0f172a;
 
   /* Text colors */
-  --ink: #faf9f5;
-  --body: #d1cec7;
-  --body-strong: #e8e5e0;
-  --muted: #a09d96;
-  --muted-soft: #7a7770;
+  --ink: #f8fafc;
+  --body: #cbd5e1;
+  --body-strong: #e2e8f0;
+  --muted: #94a3b8;
+  --muted-soft: #64748b;
 
   /* Surface / background colors */
-  --canvas: #141413;
-  --surface-soft: #1f1e1b;
-  --surface-card: #252320;
-  --surface-cream-strong: #3d3d3a;
-  --surface-dark: #181715;
-  --surface-dark-elevated: #252320;
-  --surface-dark-soft: #1f1e1b;
+  --canvas: #0f172a;
+  --surface-soft: #1e293b;
+  --surface-card: #334155;
+  --surface-cream-strong: #475569;
+  --surface-dark: #0f172a;
+  --surface-dark-elevated: #1e293b;
+  --surface-dark-soft: #1e293b;
 
   /* Border / divider colors */
-  --hairline: #3d3d3a;
-  --hairline-soft: #4a4740;
+  --hairline: #475569;
+  --hairline-soft: #64748b;
 
   /* Semantic colors */
-  --success: #5db872;
-  --warning: #d4a017;
-  --error: #c64545;
-  --accent-teal: #5db8a6;
-  --accent-amber: #e8a55a;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --accent-teal: #2dd4bf;
+  --accent-amber: #f97316;
 
   /* On-dark text (for dark surfaces) */
-  --on-dark: #faf9f5;
-  --on-dark-soft: #a09d96;
+  --on-dark: #f8fafc;
+  --on-dark-soft: #94a3b8;
 
   /* Derived / component-specific */
-  --danger-bg: rgba(198, 69, 69, 0.15);
-  --danger-bg-hover: rgba(198, 69, 69, 0.25);
-  --danger-border: rgba(198, 69, 69, 0.3);
-  --status-running-bg: rgba(93, 184, 114, 0.12);
-  --status-stopped-bg: rgba(160, 157, 150, 0.12);
-  --status-error-bg: rgba(198, 69, 69, 0.12);
-  --status-deploying-bg: rgba(232, 165, 90, 0.12);
-  --focus-glow: rgba(0, 162, 255, 0.15);
-  --toast-shadow: rgba(0, 0, 0, 0.25);
-  --modal-backdrop: rgba(0, 0, 0, 0.5);
+  --danger-bg: rgba(239, 68, 68, 0.15);
+  --danger-bg-hover: rgba(239, 68, 68, 0.25);
+  --danger-border: rgba(239, 68, 68, 0.3);
+  --status-running-bg: rgba(34, 197, 94, 0.12);
+  --status-stopped-bg: rgba(148, 163, 184, 0.12);
+  --status-error-bg: rgba(239, 68, 68, 0.12);
+  --status-deploying-bg: rgba(245, 158, 11, 0.12);
+  --focus-glow: rgba(249, 115, 22, 0.2);
+  --toast-shadow: rgba(0, 0, 0, 0.35);
+  --modal-backdrop: rgba(15, 23, 42, 0.6);
 
   /* Typography */
   --font-display: "Cormorant Garamond", "Tiempos Headline", Garamond, "Times New Roman", serif;
@@ -66,32 +66,32 @@
 }
 
 [data-theme="light"] {
-  --logo-text: #141413;
-  --logo-accent: #90ce00;
+  --logo-text: #0f172a;
+  --logo-accent: #f97316;
 
-  --primary: #90ce00;
-  --primary-active: #b3ff00;
-  --primary-disabled: #e6dfd8;
+  --primary: #f97316;
+  --primary-active: #ea580c;
+  --primary-disabled: #cbd5e1;
   --on-primary: #ffffff;
 
-  --ink: #141413;
-  --body: #3d3d3a;
-  --body-strong: #252523;
-  --muted: #6c6a64;
-  --muted-soft: #8e8b82;
+  --ink: #0f172a;
+  --body: #334155;
+  --body-strong: #1e293b;
+  --muted: #64748b;
+  --muted-soft: #94a3b8;
 
-  --canvas: #faf9f5;
-  --surface-soft: #f5f0e8;
-  --surface-card: #efe9de;
-  --surface-cream-strong: #e8e0d2;
-  --surface-dark: #181715;
-  --surface-dark-elevated: #252320;
-  --surface-dark-soft: #1f1e1b;
+  --canvas: #f8fafc;
+  --surface-soft: #e2e8f0;
+  --surface-card: #ffffff;
+  --surface-cream-strong: #cbd5e1;
+  --surface-dark: #e2e8f0;
+  --surface-dark-elevated: #f1f5f9;
+  --surface-dark-soft: #e2e8f0;
 
-  --hairline: #e6dfd8;
-  --hairline-soft: #ebe6df;
+  --hairline: #cbd5e1;
+  --hairline-soft: #e2e8f0;
 
-  --focus-glow: rgba(144, 206, 0, 0.15);
+  --focus-glow: rgba(249, 115, 22, 0.2);
 }
 
 * { box-sizing: border-box; }
@@ -107,7 +107,7 @@ h1,h2,h3,h4 { font-family: var(--font-display); color: var(--ink); font-weight: 
 button { cursor: pointer; font-family: var(--font-body); }
 input, select, textarea {
   font-family: var(--font-body);
-  background: var(--canvas);
+  background: var(--surface-soft);
   color: var(--ink);
   border: 1px solid var(--hairline);
   border-radius: var(--radius-md);
@@ -117,7 +117,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(144,206,0,0.15);
+  box-shadow: 0 0 0 3px var(--focus-glow);
 }
 table { width: 100%; border-collapse: collapse; }
 th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--hairline); }
