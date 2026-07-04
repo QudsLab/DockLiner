@@ -1,189 +1,379 @@
 {% extends "base.html" %}
 {% block title %}Settings — DockLiner{% endblock %}
 {% block content %}
-<h1 class="hero-title">Settings</h1>
-<p class="section-subtitle">System configuration, tokens, Docker management, and updates.</p>
-
-<!-- Docker Install / Upgrade -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Docker</h2>
-  <div class="grid grid-3" style="margin-bottom:16px;">
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Docker Engine</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">
-        {% if docker_installed and docker_running %}
-          {{ docker_version or info.ServerVersion or 'Running' }}
-        {% elif docker_installed and not docker_running %}
-          <span style="color:var(--error);">Daemon stopped</span>
-        {% else %}
-          <span style="color:var(--error);">Not installed</span>
-        {% endif %}
-      </div>
-      {% if docker_installed %}
-      <div style="margin-top:10px;">
-        {% if docker_running %}
-          <button class="btn btn-danger btn-sm" onclick="controlDaemon('stop')">Turn Off Daemon</button>
-        {% else %}
-          <button class="btn btn-success btn-sm" onclick="controlDaemon('start')">Turn On Daemon</button>
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Containers</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ containers|length }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ images|length }}</div>
-    </div>
-  </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <a class="btn btn-secondary btn-sm" href="/api/docker/security" onclick="event.preventDefault();fetch(this.href).then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Security Check</a>
-  </div>
-  {% if not docker_installed %}
-  <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-    Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.</div>
-  </div>
-  {% elif docker_installed and not docker_running %}
-  <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-    Docker is installed but the daemon is not running. Start Docker Desktop or the docker service.
-  </div>
-  {% endif %}
+<!-- Desktop: all sections visible. Mobile: home view visible, sheet opens from bottom nav. -->
+<div class="settings-home">
+  <h1 class="hero-title">Settings</h1>
+  <p class="section-subtitle">System configuration, tokens, Docker management, and updates.</p>
 </div>
 
-<!-- Containers table -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Containers</h2>
-  {% if containers %}
-  <table class="table">
-    <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>State</th><th>Ports</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for c in containers %}
-      <tr>
-        <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.State }}</td><td>{{ c.Ports or '-' }}</td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
-          <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
-          <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Ports</button>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p style="color:var(--muted)">No containers.</p>{% endif %}
-</div>
-
-<!-- Images table -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Images</h2>
-  {% if images %}
-  <table class="table">
-    <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for i in images %}
-      <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td>{{ i.CreatedAt }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p style="color:var(--muted)">No images.</p>{% endif %}
-</div>
-
-<!-- Networks & Volumes -->
-<div class="grid grid-2" style="margin-bottom:24px;">
-  <div class="card">
-    <h2 class="section-title">Networks</h2>
-    {% if networks %}
-    <table class="table"><thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-      {% for n in networks %}<tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>{% endfor %}
-    </tbody></table>
-    {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
-  </div>
-  <div class="card">
-    <h2 class="section-title">Volumes</h2>
-    {% if volumes %}
-    <table class="table"><thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-      {% for v in volumes %}<tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>{% endfor %}
-    </tbody></table>
-    {% else %}<p class="muted">No volumes.</p>{% endif %}
+<!-- Mobile bottom sheet menu -->
+<div id="settingsSheet" class="settings-sheet" aria-hidden="true">
+  <div class="settings-sheet-backdrop"></div>
+  <div class="settings-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="settingsSheetTitle">
+    <div class="settings-sheet-handle"></div>
+    <h2 id="settingsSheetTitle" class="settings-sheet-title">Settings</h2>
+    <div class="settings-sheet-grid">
+      <button type="button" class="settings-sheet-item" data-view="appearance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        <span>Theme</span>
+      </button>
+      <button type="button" class="settings-sheet-item" data-view="docker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+        <span>Docker</span>
+      </button>
+      <button type="button" class="settings-sheet-item" data-view="tokens">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m0 0h-3"/></svg>
+        <span>Tokens</span>
+      </button>
+      <button type="button" class="settings-sheet-item" data-view="system">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>System</span>
+      </button>
+    </div>
+    <button type="button" class="settings-sheet-close" id="settingsSheetClose">Cancel</button>
   </div>
 </div>
 
 <!-- Appearance -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Appearance</h2>
-  <div class="form-row" style="max-width:520px;">
-    <div class="form-col">
-      <label>Interface font</label>
-      <select class="input" id="uiFont" onchange="saveAppearance()">
-        <option value="">Default (Inter)</option>
-        <option value="system-ui">System UI</option>
-        <option value="Georgia, 'Times New Roman', serif">Georgia (serif)</option>
-        <option value="'Courier New', monospace">Courier (mono)</option>
-        <option value="'Segoe UI', sans-serif">Segoe UI</option>
-        <option value="'Roboto', sans-serif">Roboto</option>
-        <option value="'Open Sans', sans-serif">Open Sans</option>
-      </select>
+<div class="settings-view" data-view="appearance" id="appearance">
+  <div class="settings-view-header">
+    <button type="button" class="settings-back" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <h2 class="settings-view-title">Theme</h2>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Appearance</h2>
+
+    <label style="font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:4px 0 12px;display:block;">Color theme</label>
+    <div class="preset-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px;">
+      <div class="preset-card" data-preset="mono" role="button" tabindex="0" onclick="choosePreset('mono')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('mono')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#0a0a0a;border:1px solid #3a3a3a;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#f5f5f5;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#757575;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#e5e5e5;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Mono</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Clean grayscale — minimal and focused</div>
+      </div>
+
+      <div class="preset-card" data-preset="clay" role="button" tabindex="0" onclick="choosePreset('clay')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('clay')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#241f1d;border:1px solid #4a423e;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#faf9f5;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#8a817a;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Clay</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Warm earthen neutrals with amber accents</div>
+      </div>
+
+      <div class="preset-card" data-preset="obsidian" role="button" tabindex="0" onclick="choosePreset('obsidian')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('obsidian')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#181818;border:1px solid #333333;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#fafafa;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#6e6e6e;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#f97316;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Obsidian</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Pure charcoal with forge-orange accents</div>
+      </div>
+
+      <div class="preset-card" data-preset="ember" role="button" tabindex="0" onclick="choosePreset('ember')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('ember')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#160c0c;border:1px solid #4d3330;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#ffffff;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#a07c71;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Ember</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Warm crimson and bronze — forge vibes</div>
+      </div>
+
+      <div class="preset-card" data-preset="terminal" role="button" tabindex="0" onclick="choosePreset('terminal')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('terminal')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#030703;border:1px solid #1a3d1a;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#e2fbe2;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#22c55e;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#22c55e;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Terminal</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Brand-success green on black — console feel</div>
+      </div>
+
+      <div class="preset-card" data-preset="slate" role="button" tabindex="0" onclick="choosePreset('slate')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('slate')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
+        <div style="height:70px;border-radius:var(--radius-md);background:#0b101a;border:1px solid #33425c;position:relative;overflow:hidden;margin-bottom:12px;">
+          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#ffffff;"></div>
+          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#6d819c;"></div>
+          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+        </div>
+        <div style="font-weight:600;color:var(--ink);">Slate</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">Cool slate with amber accent — default</div>
+      </div>
     </div>
-    <div class="form-col">
-      <label>Font size: <span id="sizeValue">100%</span></label>
-      <input class="input" id="uiFontSize" type="range" min="75" max="150" value="100" step="5" oninput="saveAppearance()">
+
+    <div class="grid grid-2" style="max-width:720px;">
+      <div class="form-col">
+        <label>Interface font</label>
+        <select class="input" id="uiFont" onchange="saveAppearance()">
+          <option value="'Fira Code', monospace" style="font-family:'Fira Code', monospace;">Fira Code (default)</option>
+          <option value="'JetBrains Mono', monospace" style="font-family:'JetBrains Mono', monospace;">JetBrains Mono</option>
+          <option value="'Courier New', monospace" style="font-family:'Courier New', monospace;">Courier New</option>
+          <option value="'Roboto Mono', monospace" style="font-family:'Roboto Mono', monospace;">Roboto Mono</option>
+          <option value="system-ui" style="font-family:system-ui;">System UI</option>
+          <option value="'Segoe UI', sans-serif" style="font-family:'Segoe UI', sans-serif;">Segoe UI</option>
+          <option value="'Roboto', sans-serif" style="font-family:'Roboto', sans-serif;">Roboto</option>
+          <option value="'Open Sans', sans-serif" style="font-family:'Open Sans', sans-serif;">Open Sans</option>
+          <option value="'Inter', sans-serif" style="font-family:'Inter', sans-serif;">Inter</option>
+          <option value="'Lato', sans-serif" style="font-family:'Lato', sans-serif;">Lato</option>
+          <option value="'Poppins', sans-serif" style="font-family:'Poppins', sans-serif;">Poppins</option>
+          <option value="'Nunito', sans-serif" style="font-family:'Nunito', sans-serif;">Nunito</option>
+          <option value="'Montserrat', sans-serif" style="font-family:'Montserrat', sans-serif;">Montserrat</option>
+          <option value="'Source Sans Pro', sans-serif" style="font-family:'Source Sans Pro', sans-serif;">Source Sans Pro</option>
+          <option value="Georgia, 'Times New Roman', serif" style="font-family:Georgia, 'Times New Roman', serif;">Georgia</option>
+          <option value="'Merriweather', serif" style="font-family:'Merriweather', serif;">Merriweather</option>
+          <option value="'Playfair Display', serif" style="font-family:'Playfair Display', serif;">Playfair Display</option>
+        </select>
+      </div>
+      <div class="form-col">
+        <label>Font size: <span id="sizeValue">100%</span></label>
+        <input class="input" id="uiFontSize" type="range" min="75" max="150" value="100" step="5" oninput="saveAppearance()">
+      </div>
+      <div class="form-col">
+        <label>Font weight: <span id="weightValue">Regular</span></label>
+        <input class="input" id="uiFontWeight" type="range" min="300" max="800" value="400" step="100" oninput="saveAppearance()">
+      </div>
+      <div class="form-col">
+        <label>Accessibility contrast boost</label>
+        <select class="input" id="uiBoost" onchange="saveAppearance()">
+          <option value="none">Off — preset defaults</option>
+          <option value="mild">Mild — slightly stronger text</option>
+          <option value="strong">Strong — high legibility</option>
+          <option value="max">Maximum — accessibility first</option>
+        </select>
+      </div>
+    </div>
+
+    <p style="color:var(--muted);font-size:12px;margin-top:16px;line-height:1.6;">
+      Each theme is built with WCAG contrast science: headings and body text stay readable, borders stay visible, and accents stay distinct. Pick a preset, then fine-tune font and contrast boost. Everything is saved to cookies and applies across every page.
+    </p>
+  </div>
+</div>
+
+<!-- Docker -->
+<div class="settings-view" data-view="docker" id="docker">
+  <div class="settings-view-header">
+    <button type="button" class="settings-back" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <h2 class="settings-view-title">Docker</h2>
+  </div>
+  <div class="card">
+    <h2 class="section-title">Docker</h2>
+    <div class="grid grid-3" style="margin-bottom:16px;">
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Docker Engine</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">
+          {% if docker_installed and docker_running %}
+            {{ docker_version or info.ServerVersion or 'Running' }}
+          {% elif docker_installed and not docker_running %}
+            <span style="color:var(--error);">Daemon stopped</span>
+          {% else %}
+            <span style="color:var(--error);">Not installed</span>
+          {% endif %}
+        </div>
+        {% if docker_installed %}
+        <div style="margin-top:10px;">
+          {% if docker_running %}
+            <button class="btn btn-danger btn-sm" onclick="controlDaemon('stop')">Turn Off Daemon</button>
+          {% else %}
+            <button class="btn btn-success btn-sm" onclick="controlDaemon('start')">Turn On Daemon</button>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Containers</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ containers|length }}</div>
+      </div>
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ images|length }}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a class="btn btn-secondary btn-sm" href="/api/docker/security" onclick="event.preventDefault();fetch(this.href).then(r=>r.json()).then(d=>showInfoModal('Security Check', JSON.stringify(d,null,2)))" style="text-decoration:none;">Security Check</a>
+    </div>
+    {% if not docker_installed %}
+    <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
+      Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.
+    </div>
+    {% elif docker_installed and not docker_running %}
+    <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
+      Docker is installed but the daemon is not running. Start Docker Desktop or the docker service.
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <h2 class="section-title">Containers</h2>
+    {% if containers %}
+    <table class="table">
+      <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>State</th><th>Ports</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for c in containers %}
+        <tr>
+          <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.State }}</td><td>{{ c.Ports or '-' }}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
+            <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
+            <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>showInfoModal('Container ports', JSON.stringify(d,null,2)))">Ports</button>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p style="color:var(--muted)">No containers.</p>{% endif %}
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <h2 class="section-title">Images</h2>
+    {% if images %}
+    <table class="table">
+      <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for i in images %}
+        <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td>{{ i.CreatedAt }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p style="color:var(--muted)">No images.</p>{% endif %}
+  </div>
+
+  <div class="grid grid-2" style="margin-bottom:24px;">
+    <div class="card">
+      <h2 class="section-title">Networks</h2>
+      {% if networks %}
+      <table class="table"><thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
+        {% for n in networks %}<tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2 class="section-title">Volumes</h2>
+      {% if volumes %}
+      <table class="table"><thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
+        {% for v in volumes %}<tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>{% endfor %}
+      </tbody></table>
+      {% else %}<p class="muted">No volumes.</p>{% endif %}
     </div>
   </div>
-  <p style="color:var(--muted);font-size:12px;margin-top:8px;">Font size is applied percentage-wise to the whole interface.</p>
 </div>
 
 <!-- Access Tokens -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Access Tokens</h2>
-  <form onsubmit="return createToken(this)" style="margin-top:12px;">
-    <div class="form-row">
-      <div class="form-col"><label>Name</label><input class="input" name="name" required placeholder="github-pat-1"></div>
-      <div class="form-col"><label>Token</label><input class="input" name="token" required type="password" placeholder="ghp_..."></div>
-      <div class="form-col" style="align-self:end;"><button class="btn btn-primary">Add Token</button></div>
-    </div>
-  </form>
-  {% if tokens %}
-  <table class="table" style="margin-top:16px;">
-    <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for t in tokens %}
-      <tr><td>{{ t.name }}</td><td>GitHub</td><td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><button class="btn btn-danger btn-sm" onclick="if(confirm('Delete token?')) fetch('/api/tokens/{{ t.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button></td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p style="color:var(--muted);margin-top:12px;">No tokens yet.</p>{% endif %}
+<div class="settings-view" data-view="tokens" id="tokens">
+  <div class="settings-view-header">
+    <button type="button" class="settings-back" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <h2 class="settings-view-title">Tokens</h2>
+  </div>
+  <div class="card" id="tokens">
+    <h2 class="section-title">Access Tokens</h2>
+    <form onsubmit="return createToken(this)" style="margin-top:12px;">
+      <div class="form-row">
+        <div class="form-col"><label>Name</label><input class="input" name="name" required placeholder="github-pat-1"></div>
+        <div class="form-col"><label>Token</label><input class="input" name="token" required type="password" placeholder="ghp_..."></div>
+        <div class="form-col" style="align-self:end;"><button class="btn btn-primary has-icon"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Token</button></div>
+      </div>
+    </form>
+    {% if tokens %}
+    <table class="table" style="margin-top:16px;">
+      <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for t in tokens %}
+        <tr><td>{{ t.name }}</td><td>GitHub</td><td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><button class="btn btn-danger btn-sm" onclick="confirmDeleteToken({{ t.id }})">Delete</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p style="color:var(--muted);margin-top:12px;">No tokens yet.</p>{% endif %}
+  </div>
 </div>
 
-<!-- Version / Update -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">System Update</h2>
-  <div class="grid grid-3">
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Current</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ version.current }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Latest</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">{{ version.latest }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Update</label>
-      <div style="font-size:28px;font-family:var(--font-display);color:var(--ink);margin-top:6px;">
-        {% if version.has_update %}<span style="color:var(--primary);">Available</span>{% else %}<span style="color:var(--muted);">Up to date</span>{% endif %}
+<!-- System / Update / About -->
+<div class="settings-view" data-view="system" id="system">
+  <div class="settings-view-header">
+    <button type="button" class="settings-back" aria-label="Back to settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    </button>
+    <h2 class="settings-view-title">System</h2>
+  </div>
+  <div class="card" id="system">
+    <h2 class="section-title">System</h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Current</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ version.current }}</div>
+      </div>
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Latest</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ version.latest }}</div>
+      </div>
+      <div class="card">
+        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Update</label>
+        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">
+          {% if version.has_update %}<span style="color:var(--primary);">Available</span>{% else %}<span style="color:var(--muted);">Up to date</span>{% endif %}
+        </div>
       </div>
     </div>
+    {% if version.url %}
+    <a class="btn btn-secondary" href="{{ version.url }}" target="_blank" style="margin-top:12px;">View Release</a>
+    {% endif %}
+    <hr style="border:none;border-top:1px solid var(--hairline);margin:24px 0;">
+    <p style="color:var(--muted);font-size:13px;">DockLiner — lightweight deployment manager. GitHub: <a href="https://github.com/QudsLab/DockLiner" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">QudsLab/DockLiner</a></p>
+    <div style="margin-top:16px;">
+      <button class="btn btn-ghost btn-sm" onclick="showLogoutModal()">Logout</button>
+    </div>
   </div>
-  {% if version.url %}
-  <a class="btn btn-secondary" href="{{ version.url }}" target="_blank" style="margin-top:12px;">View Release</a>
-  {% endif %}
 </div>
 
-<div class="card">
-  <h2 class="section-title">About</h2>
-  <p style="color:var(--muted);font-size:13px;">DockLiner — lightweight deployment manager. GitHub: <a href="https://github.com/QudsLab/DockLiner" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">QudsLab/DockLiner</a></p>
-  <div style="margin-top:16px;">
-    <button class="btn btn-ghost btn-sm" onclick="if(confirm('Logout?')) fetch('/api/logout',{method:'POST'}).then(()=>location.href='/login')">Logout</button>
+<!-- Custom styled modals for settings -->
+<div id="daemon-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3 class="modal-title" id="daemon-modal-title">Stop Docker daemon?</h3>
+    <p class="modal-text" id="daemon-modal-text">This will stop the Docker Desktop service.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="daemon-modal-cancel">Cancel</button>
+      <button class="btn btn-danger" id="daemon-modal-ok">Stop</button>
+    </div>
+  </div>
+</div>
+
+<div id="error-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:420px; width:90vw; border-radius:var(--radius-xl); padding:28px;">
+    <h3 class="modal-title" id="error-modal-title" style="margin-bottom:12px;">Docker daemon</h3>
+    <p class="modal-text" id="error-modal-text" style="line-height:1.6;"></p>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn btn-secondary" id="error-modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="info-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:640px;">
+    <h3 class="modal-title" id="info-modal-title">Info</h3>
+    <pre id="info-modal-text" style="background:var(--surface-dark);color:var(--on-dark);padding:16px;border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;line-height:1.55;max-height:60vh;overflow:auto;white-space:pre-wrap;"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="info-modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:420px;">
+    <h3 class="modal-title" id="confirm-modal-title">Confirm</h3>
+    <p class="modal-text" id="confirm-modal-text" style="line-height:1.6;"></p>
+    <div class="modal-actions" style="margin-top:24px;">
+      <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+      <button class="btn btn-danger" id="confirm-modal-ok">Confirm</button>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -191,39 +381,246 @@
 function createToken(form){
   const fd=new FormData(form);
   fetch('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),token:fd.get('token'),provider:'github'})})
-    .then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
+    .then(r=>{ if(r.ok) location.reload(); else { r.json().then(d=>showErrorModal('Access token', d.detail || 'Failed')).catch(()=>showErrorModal('Access token','Failed')); } })
+    .catch(e=>showErrorModal('Access token', 'Error: '+e.message));
   return false;
 }
 
 function loadAppearance(){
-  const font = localStorage.getItem('dockliner-font') || '';
-  const size = localStorage.getItem('dockliner-font-size') || '100';
-  document.getElementById('uiFont').value = font;
-  document.getElementById('uiFontSize').value = size;
+  // One-time cleanup of old localStorage keys so they never fight with cookies
+  const legacyKeys = ['dockliner-font','dockliner-font-size','dockliner-font-weight','dockliner-ui-contrast','dockliner-text-contrast','dockliner-border-contrast','dockliner-dark-text-color','dockliner-dark-border-color','dockliner-dark-canvas-color','dockliner-dark-card-color','dockliner-light-text-color','dockliner-light-border-color','dockliner-light-canvas-color','dockliner-light-card-color','dockliner-theme'];
+  legacyKeys.forEach(k => { try { localStorage.removeItem(k); } catch(e){} });
+
+  const font = getCookie('dockliner-font') || "'Fira Code', monospace";
+  const size = getCookie('dockliner-font-size') || '100';
+  const weight = getCookie('dockliner-font-weight') || '400';
+  const boost = getCookie('dockliner-accessibility-boost') || 'none';
+  const preset = (getCookie('dockliner-preset') || 'slate').toLowerCase();
+
+  const fontEl = document.getElementById('uiFont');
+  if (fontEl) fontEl.value = font;
+  const sizeEl = document.getElementById('uiFontSize');
+  if (sizeEl) sizeEl.value = size;
+  const weightEl = document.getElementById('uiFontWeight');
+  if (weightEl) weightEl.value = weight;
+  const boostEl = document.getElementById('uiBoost');
+  if (boostEl) boostEl.value = boost;
+
+  document.querySelectorAll('.preset-card').forEach(c => {
+    c.style.borderColor = c.dataset.preset === preset ? 'var(--primary)' : 'var(--hairline)';
+    c.style.boxShadow = c.dataset.preset === preset ? '0 0 0 3px var(--focus-glow)' : 'none';
+  });
+
   document.getElementById('sizeValue').textContent = size + '%';
-  applyAppearance(font, size);
+  document.getElementById('weightValue').textContent = weightLabel(weight);
+  applyGlobalAppearance();
+}
+function choosePreset(name){
+  setCookie('dockliner-preset', name.toLowerCase());
+  loadAppearance();
 }
 function saveAppearance(){
   const font = document.getElementById('uiFont').value;
   const size = document.getElementById('uiFontSize').value;
-  localStorage.setItem('dockliner-font', font);
-  localStorage.setItem('dockliner-font-size', size);
+  const weight = document.getElementById('uiFontWeight').value;
+  const boost = document.getElementById('uiBoost').value;
+  setCookie('dockliner-font', font);
+  setCookie('dockliner-font-size', size);
+  setCookie('dockliner-font-weight', weight);
+  setCookie('dockliner-accessibility-boost', boost);
   document.getElementById('sizeValue').textContent = size + '%';
-  applyAppearance(font, size);
+  document.getElementById('weightValue').textContent = weightLabel(weight);
+  applyGlobalAppearance();
 }
-function applyAppearance(font, size){
-  document.documentElement.style.setProperty('--ui-font-scale', size + '%');
-  document.documentElement.style.setProperty('--ui-font-family', font || "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif");
+function weightLabel(w){
+  const map = {'300':'Light','400':'Regular','500':'Medium','600':'Semi-bold','700':'Bold','800':'Extra-bold'};
+  return map[w] || w;
+}
+function getCookie(name){
+  const v = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)');
+  return v ? decodeURIComponent(v[1]) : '';
+}
+function setCookie(name, value){
+  document.cookie = name + '=' + encodeURIComponent(value) + ';path=/;max-age=31536000;SameSite=Lax';
 }
 
 loadAppearance();
 
-function controlDaemon(action){
-  if(!confirm((action==='stop'?'Stop':'Start')+' Docker daemon?')) return;
+// ---- Mobile settings bottom sheet / sub-page navigation ----
+(function(){
+  const sheet = document.getElementById('settingsSheet');
+  const closeBtn = document.getElementById('settingsSheetClose');
+  const items = document.querySelectorAll('.settings-sheet-item');
+  const views = document.querySelectorAll('.settings-view');
+  const home = document.querySelector('.settings-home');
+  const backBtns = document.querySelectorAll('.settings-back');
+  const settingsTab = document.getElementById('bottomNavSettings');
+
+  function isMobile(){
+    return window.matchMedia('(max-width:768px)').matches;
+  }
+  function openSheet(){
+    if (!isMobile()) return;
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeSheet(){
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  function showView(name){
+    closeSheet();
+    if (home) home.style.display = 'none';
+    views.forEach(v => {
+      if (v.dataset.view === name){
+        v.classList.add('active');
+        v.style.display = 'block';
+      } else {
+        v.classList.remove('active');
+        v.style.display = 'none';
+      }
+    });
+  }
+  function showHome(){
+    if (home) home.style.display = 'block';
+    views.forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
+  }
+
+  items.forEach(btn => {
+    btn.addEventListener('click', () => showView(btn.dataset.view));
+  });
+
+  backBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      showHome();
+      openSheet();
+    });
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', closeSheet);
+  sheet.querySelector('.settings-sheet-backdrop').addEventListener('click', closeSheet);
+
+  if (settingsTab){
+    settingsTab.addEventListener('click', e => {
+      if (isMobile() && location.pathname === '/settings'){
+        e.preventDefault();
+        openSheet();
+      }
+    });
+  }
+
+  // On mobile, start at home with sheet closed; desktop shows everything.
+  if (isMobile()){
+    showHome();
+  } else {
+    views.forEach(v => v.style.display = 'block');
+  }
+})();
+
+// ---- Custom modals for daemon control ----
+let pendingDaemonAction = null;
+const daemonModal = document.getElementById('daemon-modal');
+const daemonTitle = document.getElementById('daemon-modal-title');
+const daemonText = document.getElementById('daemon-modal-text');
+const daemonOk = document.getElementById('daemon-modal-ok');
+const daemonCancel = document.getElementById('daemon-modal-cancel');
+
+const errorModal = document.getElementById('error-modal');
+const errorTitle = document.getElementById('error-modal-title');
+const errorText = document.getElementById('error-modal-text');
+const errorOk = document.getElementById('error-modal-ok');
+
+function showDaemonModal(action){
+  pendingDaemonAction = action;
+  const label = action === 'stop' ? 'Stop' : 'Start';
+  daemonTitle.textContent = label + ' Docker daemon?';
+  daemonText.textContent = 'This will ' + (action === 'stop' ? 'stop' : 'start') + ' the Docker Desktop service.';
+  daemonOk.textContent = label;
+  daemonOk.className = 'btn ' + (action === 'stop' ? 'btn-danger' : 'btn-success');
+  daemonModal.style.display = 'flex';
+}
+function hideDaemonModal(){
+  pendingDaemonAction = null;
+  daemonModal.style.display = 'none';
+}
+function showErrorModal(title, text){
+  errorTitle.textContent = title;
+  errorText.textContent = text;
+  errorModal.style.display = 'flex';
+}
+function hideErrorModal(){
+  errorModal.style.display = 'none';
+}
+
+daemonCancel.addEventListener('click', hideDaemonModal);
+daemonOk.addEventListener('click', () => {
+  if(!pendingDaemonAction) return;
+  const action = pendingDaemonAction;
+  hideDaemonModal();
   fetch('/api/docker/'+action+'-daemon',{method:'POST'}).then(r=>{
     if(r.ok){ location.reload(); }
-    else{ r.json().then(d=>alert(d.detail||'Failed')); }
-  }).catch(e=>alert('Error: '+e.message));
+    else{ r.json().then(d=>showErrorModal('Docker daemon', d.detail || 'Failed')); }
+  }).catch(e=>showErrorModal('Docker daemon', 'Error: '+e.message));
+});
+daemonModal.addEventListener('click', e=>{ if(e.target === daemonModal) hideDaemonModal(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && daemonModal.style.display === 'flex') hideDaemonModal(); });
+
+errorOk.addEventListener('click', hideErrorModal);
+errorModal.addEventListener('click', e=>{ if(e.target === errorModal) hideErrorModal(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && errorModal.style.display === 'flex') hideErrorModal(); });
+
+const infoModal = document.getElementById('info-modal');
+const infoTitle = document.getElementById('info-modal-title');
+const infoText = document.getElementById('info-modal-text');
+const infoOk = document.getElementById('info-modal-ok');
+function showInfoModal(title, text){
+  infoTitle.textContent = title;
+  infoText.textContent = text;
+  infoModal.style.display = 'flex';
+}
+function hideInfoModal(){ infoModal.style.display = 'none'; }
+infoOk.addEventListener('click', hideInfoModal);
+infoModal.addEventListener('click', e=>{ if(e.target === infoModal) hideInfoModal(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && infoModal.style.display === 'flex') hideInfoModal(); });
+
+const confirmModal = document.getElementById('confirm-modal');
+const confirmTitle = document.getElementById('confirm-modal-title');
+const confirmText = document.getElementById('confirm-modal-text');
+const confirmOk = document.getElementById('confirm-modal-ok');
+const confirmCancel = document.getElementById('confirm-modal-cancel');
+let confirmCallback = null;
+function showConfirmModal(title, text, okText, okClass, callback){
+  confirmTitle.textContent = title;
+  confirmText.textContent = text;
+  confirmOk.textContent = okText || 'Confirm';
+  confirmOk.className = 'btn ' + (okClass || 'btn-danger');
+  confirmCallback = callback;
+  confirmModal.style.display = 'flex';
+}
+function hideConfirmModal(){
+  confirmCallback = null;
+  confirmModal.style.display = 'none';
+}
+confirmCancel.addEventListener('click', hideConfirmModal);
+confirmOk.addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); hideConfirmModal(); });
+confirmModal.addEventListener('click', e=>{ if(e.target === confirmModal) hideConfirmModal(); });
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && confirmModal.style.display === 'flex') hideConfirmModal(); });
+
+function confirmDeleteToken(id){
+  showConfirmModal('Delete token?', 'This token will be removed permanently.', 'Delete', 'btn-danger', ()=>{
+    fetch('/api/tokens/'+id,{method:'DELETE'}).then(()=>location.reload());
+  });
+}
+function showLogoutModal(){
+  showConfirmModal('Logout?', 'You will be signed out of DockLiner.', 'Logout', 'btn-ghost', ()=>{
+    fetch('/api/logout',{method:'POST'}).then(()=>location.href='/login');
+  });
+}
+
+function controlDaemon(action){
+  showDaemonModal(action);
 }
 </script>
 {% endblock %}

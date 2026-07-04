@@ -110,14 +110,14 @@
         <div class="cfb-section">
           <div class="cfb-title">
             <span>Services</span>
-            <button class="btn btn-secondary btn-xs" onclick="addService()">+ Add service</button>
+            <button class="btn btn-secondary btn-xs has-icon" onclick="addService()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add service</button>
           </div>
           <div id="servicesList" class="cfb-list"></div>
         </div>
         <div class="cfb-section">
           <div class="cfb-title">
             <span>Volumes</span>
-            <button class="btn btn-secondary btn-xs" onclick="addVolume()">+ Add volume</button>
+            <button class="btn btn-secondary btn-xs has-icon" onclick="addVolume()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add volume</button>
           </div>
           <div id="volumesList" class="cfb-list"></div>
           <p class="subtle" style="margin-top:8px;">Volumes referenced by services are auto-added.</p>
@@ -125,7 +125,7 @@
         <div class="cfb-section">
           <div class="cfb-title">
             <span>Networks</span>
-            <button class="btn btn-secondary btn-xs" onclick="addNetwork()">+ Add network</button>
+            <button class="btn btn-secondary btn-xs has-icon" onclick="addNetwork()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add network</button>
           </div>
           <div id="networksList" class="cfb-list"></div>
         </div>
@@ -404,19 +404,19 @@ function renderComposeForm(){
         <div class="form-col form-col-shrink" style="min-width:110px;"><label>Restart</label><input class="input" value="${escapeHtml(svc.restart)}" oninput="updateService(${si},'restart',this.value)" placeholder="unless-stopped"></div>
       </div>
       <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Ports</span><button class="btn btn-secondary btn-xs" onclick="addServiceItem(${si},'ports')">+ Port</button></div>
+        <div class="cfb-title"><span class="subtle">Ports</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'ports')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Port</button></div>
         ${svc.ports.map((p,pi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(p)}" oninput="updateServiceItem(${si},'ports',${pi},this.value)" placeholder="HOST:CONTAINER"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'ports',${pi})">×</button></div>`).join('')}
       </div>
       <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Environment</span><button class="btn btn-secondary btn-xs" onclick="addServiceItem(${si},'env_vars')">+ Var</button></div>
+        <div class="cfb-title"><span class="subtle">Environment</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'env_vars')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Var</button></div>
         ${svc.env_vars.map((v,vi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(v)}" oninput="updateServiceItem(${si},'env_vars',${vi},this.value)" placeholder="KEY=VALUE"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'env_vars',${vi})">×</button></div>`).join('')}
       </div>
       <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Volumes</span><button class="btn btn-secondary btn-xs" onclick="addServiceItem(${si},'volumes')">+ Volume</button></div>
+        <div class="cfb-title"><span class="subtle">Volumes</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'volumes')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Volume</button></div>
         ${svc.volumes.map((v,vi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(v)}" oninput="updateServiceItem(${si},'volumes',${vi},this.value)" placeholder="HOST:CONTAINER[:ro]"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'volumes',${vi})">×</button></div>`).join('')}
       </div>
       <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Networks</span><button class="btn btn-secondary btn-xs" onclick="addServiceItem(${si},'networks')">+ Network</button></div>
+        <div class="cfb-title"><span class="subtle">Networks</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'networks')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Network</button></div>
         ${svc.networks.map((n,ni)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(n)}" oninput="updateServiceItem(${si},'networks',${ni},this.value)" placeholder="network-name"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'networks',${ni})">×</button></div>`).join('')}
       </div>
     </div>`).join('');

@@ -6,3 +6,6 @@ docker-compose-explained.html
 dockliner.db
 /.backup
 PLAN.md
+uvicorn.log
+uvicorn_run.log
+EXAMPLE.DESIGN.md

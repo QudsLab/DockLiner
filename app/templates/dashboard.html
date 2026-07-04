@@ -12,9 +12,24 @@
 <p class="section-subtitle">Overview of projects, containers, and images.</p>
 
 <div class="grid grid-3" style="margin-bottom:24px;">
-  <div class="card"><div class="form-col"><label>Projects</label><div style="font-size:36px;font-family:var(--font-display);color:var(--ink);">{{ projects|length }}</div></div></div>
-  <div class="card"><div class="form-col"><label>Containers</label><div style="font-size:36px;font-family:var(--font-display);color:var(--ink);">{{ containers|length }}</div></div></div>
-  <div class="card"><div class="form-col"><label>Images</label><div style="font-size:36px;font-family:var(--font-display);color:var(--ink);">{{ images|length }}</div></div></div>
+<div class="card stat-card">
+  <div class="form-col">
+    <span class="stat-label">Projects</span>
+    <div class="stat-value">{{ projects|length }}</div>
+  </div>
+</div>
+<div class="card stat-card">
+  <div class="form-col">
+    <span class="stat-label">Containers</span>
+    <div class="stat-value">{{ containers|length }}</div>
+  </div>
+</div>
+<div class="card stat-card">
+  <div class="form-col">
+    <span class="stat-label">Images</span>
+    <div class="stat-value">{{ images|length }}</div>
+  </div>
+</div>
 </div>
 
 <div class="card" style="margin-bottom:24px;">
@@ -44,11 +59,10 @@
     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="opacity:.6;margin-bottom:12px;">
       <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/><circle cx="17" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.5" r=".8" fill="currentColor"/>
     </svg>
-    <p style="color:var(--muted);margin:0 0 18px;font-size:14px;">No projects yet.</p>
-    <a class="btn btn-primary" href="/projects/add" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
+    <p class="empty-state">No projects yet.</p>
+    <a class="btn btn-primary has-icon" href="/projects/add" style="text-decoration:none;display:inline-flex;">
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14M5 12h14"/>
       </svg>
       Add Project
     </a>
@@ -74,7 +88,7 @@
     </tbody>
   </table>
   {% else %}
-  <p style="color:var(--muted)">No containers running.</p>
+  <p class="empty-state">No containers running.</p>
   {% endif %}
 </div>
 
@@ -89,9 +103,9 @@
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p style="color:var(--muted)">No images found.</p>{% endif %}
+  {% else %}<p class="empty-state">No images found.</p>
+{% endif %}
 </div>
-
 <script>
 // Dashboard-only install prompt
 (function(){

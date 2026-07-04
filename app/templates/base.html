@@ -33,8 +33,10 @@
     .grid-3 { grid-template-columns:repeat(3,1fr); }
     .grid-2 { grid-template-columns:repeat(2,1fr); }
     @media (max-width:900px){ .grid-3,.grid-2 { grid-template-columns:1fr; } }
-    .logo-wrap { display:flex; align-items:center; }
+    .logo-wrap { display:flex; align-items:center; gap:8px; }
     .logo-wrap img.logo { height:28px; width:auto; display:block; }
+    .logo-wrap .logo-m { margin-right:8px; }
+    .logo-wrap .brand-text { margin-left:0; }
 
     /* Theme toggle switch */
     .theme-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }
@@ -51,9 +53,11 @@
     .bottom-nav a:hover, .bottom-nav a.active { color:var(--ink); background:var(--surface-card); }
     .bottom-nav a.active svg { color:var(--primary); }
 
-    /* Desktop nav with icons */
-    .nav-link { display:flex; align-items:center; gap:6px; }
-    .nav-link svg { width:16px; height:16px; fill:currentColor; }
+    <!-- Desktop nav with icons -->
+    .nav-link { display:flex; align-items:baseline; gap:6px; font-family:var(--ui-font-family,var(--font-body)); }
+    .nav-link svg { width:16px; height:16px; fill:currentColor; flex-shrink:0; position:relative; top:2px; }
+    .nav-link span { font-size:13px; }
+    .nav-links { display:flex; align-items:baseline; gap:8px; }
     .nav-bar {
       position:sticky;
       top:0;
@@ -61,12 +65,19 @@
       background:var(--surface-soft);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 24px;
+      border-bottom:1px solid var(--hairline);
     }
+    .nav-brand .brand-text { font-family:var(--ui-font-family,var(--font-display)) !important; }
 
     /* Mobile top bar */
     .mobile-top-bar { display:none; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--hairline); background:var(--surface-soft); }
-    .mobile-top-bar .logo-m { height:26px; width:auto; }
-    .mobile-top-bar .theme-btn { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px; }
+    .mobile-top-bar .logo-m { height:26px; width:26px; display:block; }
+    .mobile-top-bar .logo-wrap { gap:10px; }
+    .mobile-top-bar .theme-btn { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; padding:4px; font-family:var(--ui-font-family,var(--font-body)); }
 
     /* Native app feel on mobile */
     @media (max-width:768px) {
@@ -75,10 +86,10 @@
         display:flex;
         height:calc(64px + env(safe-area-inset-bottom));
         padding-bottom:env(safe-area-inset-bottom);
-        background:rgba(15,23,42,0.92);
+        background:var(--surface-soft);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-top:1px solid rgba(100,116,139,0.25);
+        border-top:1px solid var(--hairline);
         box-shadow:0 -4px 20px rgba(0,0,0,0.15);
       }
       .bottom-nav a {
@@ -93,10 +104,10 @@
       .mobile-top-bar {
         display:flex;
         padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
-        background:rgba(15,23,42,0.92);
+        background:var(--surface-soft);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-bottom:1px solid rgba(100,116,139,0.25);
+        border-bottom:1px solid var(--hairline);
         position:fixed;
         top:0;
         left:0;
@@ -112,8 +123,9 @@
         padding-top:8px;
         padding-bottom:calc(88px + env(safe-area-inset-bottom));
       }
-      .hero-title { font-size:30px !important; }
-      .section-title { font-size:20px !important; }
+      .hero-title { font-size:2.15rem !important; }
+      .section-title { font-size:1.45rem !important; }
+      .nav-brand { font-size:1.35rem !important; }
       .logo-mobile { display:block !important; }
       .logo-desktop { display:none !important; }
       /* iOS-style card radius */
@@ -126,25 +138,45 @@
       .logo-desktop { display:block !important; }
     }
   </style>
+  <style id="ui-adapt">
+    .nav-bar .nav-brand .brand-text,
+    .mobile-top-bar .logo-wrap .brand-text { font-family:var(--ui-font-family,var(--font-display)) !important; }
+    .nav-link, .nav-link span, .bottom-nav a span { font-family:var(--ui-font-family,var(--font-body)) !important; }
+    .hero-title { font-size:3.5rem; }
+    .section-title { font-size:1.95rem; }
+    .section-subtitle, .empty-state, .stat-label { font-family:var(--ui-font-family,var(--font-body)); }
+    /* Dashboard stat cards / empty states / labels */
+    .stat-card { text-align:left; }
+    .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); }
+    .stat-value { font-size:2.55rem; font-family:var(--ui-font-family,var(--font-display)); color:var(--ink); margin-top:6px; }
+    .empty-state { color:var(--muted); font-size:1rem; }
+    @media (max-width:768px){
+      .hero-title { font-size:2.15rem !important; }
+      .section-title { font-size:1.45rem !important; }
+      .nav-brand { font-size:1.35rem !important; }
+      .appearance-grid { grid-template-columns:1fr !important; }
+      .preset-grid { grid-template-columns:1fr !important; }
+    }
+  </style>
   {% block head %}{% endblock %}
 </head>
 <body>
   <!-- Mobile top bar: logo + theme toggle -->
   <div class="mobile-top-bar" style="position:fixed;top:0;left:0;right:0;z-index:60;">
     <a href="/" class="logo-wrap" style="text-decoration:none;">
-      <img src="/static/img/icon.svg" alt="" class="logo-m" id="mobileLogo">
-      <span class="brand-text" style="font-family:var(--font-display);font-size:20px;color:var(--logo-text);">Dock<span style="color:var(--primary);">Liner</span></span>
-    </a>
-    <button class="theme-btn" id="mobileThemeBtn" onclick="toggleTheme(document.documentElement.dataset.theme==='dark')" title="Toggle theme" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;">☾</button>
-  </div>
+        <img src="/static/img/icon.svg" alt="" class="logo-m" id="mobileLogo">
+        <span class="brand-text" style="font-family:var(--ui-font-family,var(--font-display));font-size:20px;color:var(--logo-text);">Dock<span style="color:var(--primary);">Liner</span></span>
+      </a>
+      <button class="theme-btn" id="mobileThemeBtn" onclick="toggleTheme(document.documentElement.dataset.theme==='dark')" title="Toggle theme" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px;">☾</button>
+    </div>
 
-  <!-- Desktop nav -->
-  <nav class="nav-bar">
-    <a href="/" class="nav-brand logo-wrap" style="text-decoration:none;">
-      <img src="/static/img/icon.svg" alt="" class="logo logo-mobile" style="display:none;" width="28" height="28">
-      <img src="/static/img/logo_dark.svg" alt="" class="logo logo-desktop" id="desktopLogo" style="display:none;" height="28">
-      <span class="brand-text" style="font-family:var(--font-display);font-size:22px;color:var(--logo-text);">Dock<span style="color:var(--primary);">Liner</span></span>
-    </a>
+    <!-- Desktop nav -->
+    <nav class="nav-bar">
+      <a href="/" class="nav-brand logo-wrap" style="text-decoration:none;">
+        <img src="/static/img/icon.svg" alt="" class="logo logo-mobile" style="display:none;" width="28" height="28">
+        <img src="/static/img/logo_dark.svg" alt="" class="logo logo-desktop" id="desktopLogo" style="display:none;" height="28">
+        <span class="brand-text" style="font-family:var(--ui-font-family,var(--font-display));font-size:22px;color:var(--logo-text);">Dock<span style="color:var(--primary);">Liner</span></span>
+      </a>
     <div class="nav-links">
       <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard
@@ -179,7 +211,7 @@
       <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
       <span>Downloads</span>
     </a>
-    <a href="/settings" class="bottom-link {% if request.url.path == '/settings' %}active{% endif %}">
+    <a href="/settings" id="bottomNavSettings" class="bottom-link {% if request.url.path == '/settings' %}active{% endif %}">
       <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       <span>Settings</span>
     </a>
@@ -190,13 +222,129 @@
   </main>
   <script src="/static/js/common.js?v=2"></script>
   <script>
+    // Global appearance helpers: every page reads cookies and applies theme/font/accessibility
+    const PRESETS = {
+      Mono: {
+        dark:  { canvas:'#0a0a0a', card:'#151515', ink:'#f5f5f5', body:'#b8b8b8', muted:'#757575', border:'#3a3a3a', accent:'#e5e5e5', onAccent:'#0a0a0a' },
+        light: { canvas:'#f4f4f4', card:'#ffffff', ink:'#111111', body:'#333333', muted:'#595959', border:'#b8b8b8', accent:'#111111', onAccent:'#ffffff' },
+      },
+      Clay: {
+        dark:  { canvas:'#171412', card:'#241f1d', ink:'#faf9f5', body:'#b8b0a8', muted:'#8a817a', border:'#4a423e', accent:'#fb923c', onAccent:'#170f0b' },
+        light: { canvas:'#f6f4f1', card:'#ffffff', ink:'#1a1614', body:'#4a4541', muted:'#7d7873', border:'#c4b5a5', accent:'#c2410c', onAccent:'#ffffff' },
+      },
+      Obsidian: {
+        dark:  { canvas:'#0a0a0a', card:'#181818', ink:'#fafafa', body:'#a3a3a3', muted:'#6e6e6e', border:'#4a4a4a', accent:'#f97316', onAccent:'#0a0a0a' },
+        light: { canvas:'#f2f2f2', card:'#ffffff', ink:'#171717', body:'#404040', muted:'#6e6e6e', border:'#a3a3a3', accent:'#c2410c', onAccent:'#ffffff' },
+      },
+      Ember: {
+        dark:  { canvas:'#160c0c', card:'#221414', ink:'#ffffff', body:'#e2bdae', muted:'#a07c71', border:'#4d3330', accent:'#fb923c', onAccent:'#160c0c' },
+        light: { canvas:'#fff5f2', card:'#ffffff', ink:'#1f0f0c', body:'#553a33', muted:'#7a5a50', border:'#eac4b8', accent:'#c2410c', onAccent:'#ffffff' },
+      },
+      Terminal: {
+        dark:  { canvas:'#030703', card:'#0f1f0f', ink:'#ffffff', body:'#a7d4a7', muted:'#5a9a5a', border:'#2a5c2a', accent:'#4ade80', onAccent:'#030703' },
+        light: { canvas:'#f0fdf4', card:'#ffffff', ink:'#052e16', body:'#166534', muted:'#3f6212', border:'#4ade80', accent:'#15803d', onAccent:'#ffffff' },
+      },
+      Slate: {
+        dark:  { canvas:'#0b101a', card:'#151d2c', ink:'#ffffff', body:'#a3b3c9', muted:'#6d819c', border:'#33425c', accent:'#fb923c', onAccent:'#0b101a' },
+        light: { canvas:'#f5f7fa', card:'#ffffff', ink:'#080d15', body:'#2d3748', muted:'#536079', border:'#c8ced6', accent:'#c2410c', onAccent:'#ffffff' },
+      },
+    };
+
+    function getCookie(name){
+      const v = document.cookie.match('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\\\$1') + '=([^;]*)');
+      return v ? decodeURIComponent(v[1]) : '';
+    }
+    function setCookie(name, value){
+      document.cookie = name + '=' + encodeURIComponent(value) + ';path=/;max-age=31536000;SameSite=Lax';
+    }
+    function hexToRgb(hex){
+      const n = hex.replace('#','');
+      const bigint = parseInt(n, 16);
+      return { r:(bigint>>16)&255, g:(bigint>>8)&255, b:bigint&255 };
+    }
+    function mix(hex, ratio, baseHex){
+      const a = hexToRgb(hex), b = hexToRgb(baseHex);
+      return `rgb(${Math.round(a.r*ratio+b.r*(1-ratio))},${Math.round(a.g*ratio+b.g*(1-ratio))},${Math.round(a.b*ratio+b.b*(1-ratio))})`;
+    }
+    function clamp(n){ return Math.max(0, Math.min(255, Math.round(n))); }
+    function scaleColor(value, scale){
+      if (!value) return value;
+      if (value.startsWith('#')) {
+        const {r,g,b} = hexToRgb(value);
+        return `rgb(${clamp(r*scale)},${clamp(g*scale)},${clamp(b*scale)})`;
+      }
+      if (value.startsWith('rgb')) {
+        const m = value.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (m) return `rgb(${clamp(m[1]*scale)},${clamp(m[2]*scale)},${clamp(m[3]*scale)})`;
+      }
+      return value;
+    }
+    function scaleHex(hex, scale){ return scaleColor(hex, scale); }
+    function contrastColor(hex, targetHex, ratio){
+      const a = hexToRgb(hex), b = hexToRgb(targetHex);
+      return `rgb(${Math.round(a.r*(1-ratio)+b.r*ratio)},${Math.round(a.g*(1-ratio)+b.g*ratio)},${Math.round(a.b*(1-ratio)+b.b*ratio)})`;
+    }
+    function applyGlobalAppearance(){
+      const html = document.documentElement;
+      const theme = html.dataset.theme || 'dark';
+      const isDark = theme === 'dark';
+      const presetName = (getCookie('dockliner-preset') || 'slate').toLowerCase();
+      const preset = PRESETS[presetName.charAt(0).toUpperCase() + presetName.slice(1)] || PRESETS.Slate;
+      const p = preset[theme];
+      const font = getCookie('dockliner-font') || "'Fira Code', monospace";
+      const size = getCookie('dockliner-font-size') || '100';
+      const weight = getCookie('dockliner-font-weight') || '400';
+      const boost = getCookie('dockliner-accessibility-boost') || 'none';
+
+      html.style.setProperty('--ui-font-scale', parseFloat(size) / 100);
+      html.style.setProperty('--ui-font-weight', weight);
+      html.style.setProperty('--ui-font-family', font);
+      html.dataset.preset = presetName;
+      html.dataset.accessibilityBoost = boost;
+
+      // Base palette
+      html.style.setProperty('--ink', p.ink);
+      html.style.setProperty('--body', p.body);
+      html.style.setProperty('--muted', p.muted);
+      html.style.setProperty('--muted-soft', isDark ? scaleColor(p.muted, 0.85) : scaleColor(p.muted, 0.85));
+      html.style.setProperty('--canvas', p.canvas);
+      html.style.setProperty('--surface-soft', mix(p.card, 0.85, p.canvas));
+      html.style.setProperty('--surface-card', p.card);
+      html.style.setProperty('--surface-cream-strong', mix(p.border, 0.6, p.card));
+      html.style.setProperty('--surface-dark', p.card);
+      html.style.setProperty('--surface-dark-elevated', mix(p.card, 0.9, p.ink));
+      html.style.setProperty('--surface-dark-soft', mix(p.card, 0.85, p.canvas));
+      html.style.setProperty('--hairline', p.border);
+      html.style.setProperty('--hairline-soft', mix(p.border, 0.75, p.canvas));
+      html.style.setProperty('--primary', p.accent);
+      html.style.setProperty('--primary-active', isDark ? scaleColor(p.accent, 1.2) : scaleColor(p.accent, 0.85));
+      html.style.setProperty('--primary-disabled', p.muted);
+      html.style.setProperty('--on-primary', p.onAccent);
+      html.style.setProperty('--accent-amber', p.accent);
+      html.style.setProperty('--logo-accent', p.accent);
+      html.style.setProperty('--logo-text', p.ink);
+      html.style.setProperty('--focus-glow', isDark ? p.accent + '33' : p.accent + '33');
+
+      // Accessibility boost: interpolate text toward target (white in dark, black in light) and strengthen borders
+      const boostMap = { 'none':0, 'mild':0.12, 'strong':0.25, 'max':0.42 };
+      const boostRatio = boostMap[boost] || 0;
+      if (boostRatio) {
+        const target = isDark ? '#ffffff' : '#000000';
+        html.style.setProperty('--ink', contrastColor(p.ink, target, boostRatio));
+        html.style.setProperty('--body', contrastColor(p.body, target, boostRatio * 0.85));
+        html.style.setProperty('--muted', contrastColor(p.muted, target, boostRatio * 0.7));
+        html.style.setProperty('--hairline', contrastColor(p.border, target, isDark ? boostRatio * 0.55 : boostRatio * 0.55));
+      }
+    }
+
     function toggleTheme(checked) {
       const html = document.documentElement;
       html.dataset.theme = checked ? 'light' : 'dark';
-      localStorage.setItem('dockliner-theme', html.dataset.theme);
+      setCookie('dockliner-theme', html.dataset.theme);
       swapLogo(html.dataset.theme);
       syncMobileTheme(html.dataset.theme);
       updateMobileTopBar(html.dataset.theme);
+      applyGlobalAppearance();
     }
     function swapLogo(theme) {
       const logo = document.getElementById('desktopLogo');
@@ -204,8 +352,7 @@
       logo.src = theme === 'light' ? '/static/img/logo_light.svg' : '/static/img/logo_dark.svg';
     }
     function updateMobileTopBar(theme) {
-      const bar = document.querySelector('.mobile-top-bar');
-      if (bar) bar.style.background = theme === 'light' ? 'rgba(248,250,252,0.92)' : 'rgba(15,23,42,0.92)';
+      // CSS variables now drive the mobile top bar; no inline override needed
     }
     function syncMobileTheme(theme) {
       const btn = document.getElementById('mobileThemeBtn');
@@ -213,7 +360,7 @@
       btn.textContent = theme === 'light' ? '☀' : '☾';
     }
     (function() {
-      const saved = localStorage.getItem('dockliner-theme');
+      const saved = getCookie('dockliner-theme');
       const theme = saved || 'dark';
       document.documentElement.dataset.theme = theme;
       const cb = document.getElementById('themeCheckbox');
@@ -221,6 +368,7 @@
       swapLogo(theme);
       syncMobileTheme(theme);
       updateMobileTopBar(theme);
+      applyGlobalAppearance();
     })();
 
     // Register minimal service worker for PWA installability

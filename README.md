@@ -115,18 +115,23 @@ A lightweight, self-hosted deployment management system for personal Docker-base
 ## Development Phases
 
 ### Phase 1 - Foundation
+
 - Project structure, dependencies, SQLite models, Git/Docker services, basic API routes, systemd service.
 
 ### Phase 2 - Core Deployment Engine
+
 - Full deployment pipeline, aggressive cleanup, `.env` per project, deployment history, error handling & rollback.
 
 ### Phase 3 - Web Dashboard
+
 - Project list with status, one-click actions, add/edit forms, simple authentication, responsive UI.
 
 ### Phase 4 - Polish & Safety
+
 - Validation, background tasks, rate limiting, security headers, backup utility, monitoring endpoints.
 
 ### Phase 5 - Advanced Features (Future)
+
 - GitHub webhook support, Portainer integration, resource monitoring, one-click templates, preview/staging environments.
 
 ## Quick Start
@@ -148,5 +153,5 @@ A lightweight, self-hosted deployment management system for personal Docker-base
 
 ---
 
-**Status**: Planning Complete  
+**Status**: Planning Complete
 **Last Updated**: June 2026

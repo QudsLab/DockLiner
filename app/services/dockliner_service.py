@@ -185,19 +185,30 @@ class DockLinerService:
     @classmethod
     def start_daemon(cls) -> tuple:
         if os.name == "nt":
-            # Try to start Docker Desktop service (best-effort)
-            r = subprocess.run(["powershell.exe", "-Command", "Start-Service com.docker.service"], capture_output=True, text=True, timeout=30)
-            if r.returncode != 0:
-                return r.returncode, r.stderr or r.stdout
-            return 0, "Docker service start attempted."
+            # Prefer Docker Desktop CLI commands (no admin needed) then Windows service
+            for ps_cmd in ["Start-Process -FilePath \"%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe\"", "Start-Service com.docker.service"]:
+                r = subprocess.run(["powershell.exe", "-Command", ps_cmd], capture_output=True, text=True, timeout=30)
+                if r.returncode == 0:
+                    return 0, "Docker Desktop start command sent."
+            err = (r.stderr or r.stdout or "").strip()
+            if "access is denied" in err.lower() or "cannot open" in err.lower() or "servicecontroller" in err.lower():
+                return 1, "Permission denied: could not start Docker Desktop service. Please run PowerShell as Administrator, or start Docker Desktop manually from the Start menu."
+            return r.returncode, err or "Could not start Docker daemon."
         r = subprocess.run(["sudo", "systemctl", "start", "docker"], capture_output=True, text=True, timeout=30)
         return r.returncode, r.stdout + r.stderr
 
     @classmethod
     def stop_daemon(cls) -> tuple:
         if os.name == "nt":
-            r = subprocess.run(["powershell.exe", "-Command", "Stop-Service com.docker.service"], capture_output=True, text=True, timeout=30)
-            return r.returncode, r.stderr or r.stdout
+            # Try Docker Desktop CLI stop first, then Windows service
+            for ps_cmd in ["Start-Process -FilePath \"%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe\" -ArgumentList \"--quit\"", "Stop-Service com.docker.service"]:
+                r = subprocess.run(["powershell.exe", "-Command", ps_cmd], capture_output=True, text=True, timeout=30)
+                if r.returncode == 0:
+                    return 0, "Docker Desktop stop command sent."
+            err = (r.stderr or r.stdout or "").strip()
+            if "access is denied" in err.lower() or "cannot open" in err.lower() or "servicecontroller" in err.lower():
+                return 1, "Permission denied: could not stop Docker Desktop service. Please run PowerShell as Administrator and run: Stop-Service com.docker.service, or quit Docker Desktop from the system tray."
+            return r.returncode, err or "Could not stop Docker daemon."
         r = subprocess.run(["sudo", "systemctl", "stop", "docker"], capture_output=True, text=True, timeout=30)
         return r.returncode, r.stdout + r.stderr
 
