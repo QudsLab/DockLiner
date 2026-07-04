@@ -109,6 +109,30 @@
   </div>
 </div>
 
+<!-- Appearance -->
+<div class="card" style="margin-bottom:24px;">
+  <h2 class="section-title">Appearance</h2>
+  <div class="form-row" style="max-width:520px;">
+    <div class="form-col">
+      <label>Interface font</label>
+      <select class="input" id="uiFont" onchange="saveAppearance()">
+        <option value="">Default (Inter)</option>
+        <option value="system-ui">System UI</option>
+        <option value="Georgia, 'Times New Roman', serif">Georgia (serif)</option>
+        <option value="'Courier New', monospace">Courier (mono)</option>
+        <option value="'Segoe UI', sans-serif">Segoe UI</option>
+        <option value="'Roboto', sans-serif">Roboto</option>
+        <option value="'Open Sans', sans-serif">Open Sans</option>
+      </select>
+    </div>
+    <div class="form-col">
+      <label>Font size: <span id="sizeValue">100%</span></label>
+      <input class="input" id="uiFontSize" type="range" min="75" max="150" value="100" step="5" oninput="saveAppearance()">
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-top:8px;">Font size is applied percentage-wise to the whole interface.</p>
+</div>
+
 <!-- Access Tokens -->
 <div class="card" style="margin-bottom:24px;">
   <h2 class="section-title">Access Tokens</h2>
@@ -170,6 +194,29 @@ function createToken(form){
     .then(r=>{ if(r.ok) location.reload(); else alert('Failed'); });
   return false;
 }
+
+function loadAppearance(){
+  const font = localStorage.getItem('dockliner-font') || '';
+  const size = localStorage.getItem('dockliner-font-size') || '100';
+  document.getElementById('uiFont').value = font;
+  document.getElementById('uiFontSize').value = size;
+  document.getElementById('sizeValue').textContent = size + '%';
+  applyAppearance(font, size);
+}
+function saveAppearance(){
+  const font = document.getElementById('uiFont').value;
+  const size = document.getElementById('uiFontSize').value;
+  localStorage.setItem('dockliner-font', font);
+  localStorage.setItem('dockliner-font-size', size);
+  document.getElementById('sizeValue').textContent = size + '%';
+  applyAppearance(font, size);
+}
+function applyAppearance(font, size){
+  document.documentElement.style.setProperty('--ui-font-scale', size + '%');
+  document.documentElement.style.setProperty('--ui-font-family', font || "\"Inter\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif");
+}
+
+loadAppearance();
 
 function controlDaemon(action){
   if(!confirm((action==='stop'?'Stop':'Start')+' Docker daemon?')) return;
