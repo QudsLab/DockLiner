@@ -97,16 +97,16 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: var(--font-body);
+  font-family: var(--ui-font-family, var(--font-body));
   background-color: var(--canvas);
   color: var(--body);
-  font-size: 14px;
+  font-size: calc(14px * var(--ui-font-scale, 100) / 100);
   line-height: 1.55;
 }
-h1,h2,h3,h4 { font-family: var(--font-display); color: var(--ink); font-weight: 400; margin: 0; }
-button { cursor: pointer; font-family: var(--font-body); }
+h1,h2,h3,h4 { font-family: var(--ui-font-family, var(--font-display)); color: var(--ink); font-weight: 400; margin: 0; }
+button { cursor: pointer; font-family: var(--ui-font-family, var(--font-body)); }
 input, select, textarea {
-  font-family: var(--font-body);
+  font-family: var(--ui-font-family, var(--font-body));
   background: var(--surface-soft);
   color: var(--ink);
   border: 1px solid var(--hairline);
