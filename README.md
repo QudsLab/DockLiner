@@ -1,7 +1,7 @@
 <br>
 <br>
 <div align="center">
-<img src="app/static/img/logo_light.svg" width="35%" alt="DockLiner Banner" />
+<img src="app/static/img/logo_dark.svg" width="35%" alt="DockLiner Banner" />
 <br>
 <br>
 <h1>

@@ -34,6 +34,34 @@ class Project(Base):
     source_path = Column(String, nullable=True)  # local path or download_id
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "github_repo_url": self.github_repo_url,
+            "branch": self.branch,
+            "deploy_path": self.deploy_path,
+            "compose_file": self.compose_file,
+            "status": self.status,
+            "last_deployed": self.last_deployed.isoformat() if self.last_deployed else None,
+            "env_vars": self.env_vars or {},
+            "env_content": self.env_content or "",
+            "example_env_content": self.example_env_content or "",
+            "dockerfile_content": self.dockerfile_content or "",
+            "compose_content": self.compose_content or "",
+            "labels": self.labels or "",
+            "token_id": self.token_id,
+            "port": self.port,
+            "deploy_method": self.deploy_method or "compose",
+            "release_tag": self.release_tag,
+            "command_mode": self.command_mode or "compose",
+            "raw_mode": self.raw_mode or False,
+            "direct_command": self.direct_command or "",
+            "source_type": self.source_type or "github",
+            "source_path": self.source_path,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
 class Deployment(Base):
     __tablename__ = "deployments"
     id = Column(Integer, primary_key=True, index=True)

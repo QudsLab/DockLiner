@@ -24,6 +24,7 @@ class ProjectCreate(BaseModel):
     source_path: Optional[str] = None
 
 class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
     github_repo_url: Optional[str] = None
     branch: Optional[str] = None
     compose_file: Optional[str] = None
@@ -42,6 +43,23 @@ class ProjectUpdate(BaseModel):
     direct_command: Optional[str] = None
     source_type: Optional[str] = None
     source_path: Optional[str] = None
+
+class ProjectFileUpdate(BaseModel):
+    content: str
+
+class ProjectFileOut(BaseModel):
+    path: str
+    size: int
+    is_dir: bool
+
+class ProjectFilesOut(BaseModel):
+    files: List[ProjectFileOut]
+
+class DeployLogOut(BaseModel):
+    id: int
+    timestamp: datetime
+    status: str
+    logs: str
 
 class ProjectOut(BaseModel):
     id: int

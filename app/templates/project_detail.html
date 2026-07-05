@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — DockLiner{% endblock %}
+{% block content %}
+
+<link id="prismTheme" rel="stylesheet" href="/static/vendor/prism/prism.min.css">
+<script src="/static/vendor/prism/prism.min.js"></script>
+<script src="/static/vendor/prism/prism-yaml.min.js"></script>
+<script src="/static/vendor/prism/prism-docker.min.js"></script>
+<script src="/static/vendor/prism/prism-bash.min.js"></script>
+<script src="/static/vendor/prism/prism-ini.min.js"></script>
+
+<style>
+.editor-outer{display:flex;border:1px solid var(--hairline);border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);min-height:360px}
+.editor-gutter{padding:12px 10px 12px 8px;background:var(--surface-soft);border-right:1px solid var(--hairline);font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;color:var(--muted);text-align:right;user-select:none;white-space:pre;overflow:hidden;min-width:44px;flex-shrink:0}
+.prism-editor-wrap{display:grid;flex:1;overflow:auto;min-height:360px}
+.prism-editor-wrap>pre[class*="language-"],.prism-editor-wrap>textarea{grid-area:1/1;padding:12px!important;margin:0!important;font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;tab-size:2;-moz-tab-size:2;white-space:pre!important;box-sizing:border-box;border:none!important;border-radius:0!important;min-width:100%}
+.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:visible!important;background:transparent!important;text-shadow:none!important}
+.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important}
+.prism-editor-wrap .token{text-shadow:none!important;background:transparent!important}
+.prism-editor-wrap>textarea{background:transparent;color:transparent;caret-color:var(--ink);-webkit-text-fill-color:transparent;outline:none;resize:none;z-index:1;overflow:hidden;height:100%;-webkit-appearance:none;appearance:none}
+html[data-theme="dark"] .editor-outer{background:#1e1e1e;border-color:var(--hairline)}
+html[data-theme="dark"] .editor-gutter{background:#252526;border-color:var(--hairline);color:#6e7681}
+html[data-theme="dark"] .prism-editor-wrap{background:#1e1e1e}
+html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
+.detail-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+.detail-tabs{display:flex;gap:6px;border-bottom:2px solid var(--hairline);margin-bottom:0;padding:4px;background:var(--surface-card);border-radius:var(--radius-md) var(--radius-md) 0 0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.detail-tab{padding:10px 18px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:8px;background:transparent;border:none;border-radius:8px 8px 0 0}
+.detail-tab.active{color:#ff7300;border-bottom-color:#ff7300;background:rgba(255,115,0,.10)}
+.editor-card{border:1px solid var(--hairline);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);display:none}
+.editor-card.active{display:block}
+.editor-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
+.editor-header span{font-weight:700;font-size:14px;color:var(--ink)}
+.panel{display:none}
+.panel.active{display:block}
+.file-list{display:flex;flex-direction:column;gap:6px}
+.file-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--hairline);background:var(--surface-card);cursor:pointer}
+.file-row:hover{border-color:var(--primary)}
+.file-row .name{font-size:13px;color:var(--ink);font-family:var(--font-mono)}
+.file-row .meta{font-size:11px;color:var(--muted)}
+.log-window{min-height:220px;max-height:420px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:12px;border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.deploy-entry{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:10px 12px;background:var(--surface-card);margin-bottom:8px}
+.deploy-entry .meta{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px}
+.status-success{color:var(--success)}
+.status-error{color:var(--error)}
+.status-started{color:var(--warning)}
+.action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+</style>
+
+<div class="detail-header">
+  <div>
+    <h1 class="hero-title" style="margin:0;">{{ project.name }}</h1>
+    <p style="color:var(--muted);font-size:13px;margin:4px 0 0;">Status: <span class="status-pill status-{{ project.status }}">{{ project.status }}</span> · Port: {{ project.port or '-' }} · Mode: {{ project.command_mode }}</p>
+  </div>
+  <div class="action-bar">
+    <button class="btn btn-primary btn-sm" onclick="doAction('build')">Build/Deploy</button>
+    <button class="btn btn-secondary btn-sm" onclick="doAction('start')">Start</button>
+    <button class="btn btn-secondary btn-sm" onclick="doAction('restart')">Restart</button>
+    <button class="btn btn-secondary btn-sm" onclick="doAction('stop')">Stop</button>
+    <a class="btn btn-secondary btn-sm" href="/projects">← Projects</a>
+  </div>
+</div>
+
+<div class="detail-tabs">
+  <button class="detail-tab active" onclick="showTab('compose')">compose.yml</button>
+  <button class="detail-tab" onclick="showTab('dockerfile')">Dockerfile</button>
+  <button class="detail-tab" onclick="showTab('env')">.env</button>
+  <button class="detail-tab" onclick="showTab('files')">Files</button>
+  <button class="detail-tab" onclick="showTab('logs')">Deploy Logs</button>
+  <button class="detail-tab" onclick="showTab('runtime')">Runtime Logs</button>
+</div>
+
+<div id="tab-compose" class="panel active">
+  <div class="editor-card">
+    <div class="editor-header"><span>compose.yml</span><button class="btn btn-primary btn-sm" onclick="saveFile('docker-compose.yml','compose')">Save</button></div>
+    <div id="editor-compose"></div>
+  </div>
+</div>
+
+<div id="tab-dockerfile" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>Dockerfile</span><button class="btn btn-primary btn-sm" onclick="saveFile('Dockerfile','dockerfile')">Save</button></div>
+    <div id="editor-dockerfile"></div>
+  </div>
+</div>
+
+<div id="tab-env" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>.env</span><button class="btn btn-primary btn-sm" onclick="saveFile('.env','env')">Save</button></div>
+    <div id="editor-env"></div>
+  </div>
+</div>
+
+<div id="tab-files" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>Project Files</span><span id="currentFileLabel" class="subtle" style="font-size:12px;color:var(--muted);"></span></div>
+    <div style="display:grid;grid-template-columns:260px 1fr;gap:12px;padding:12px;">
+      <div id="fileList" class="file-list" style="max-height:420px;overflow:auto;"></div>
+      <div id="editor-file"></div>
+    </div>
+    <div style="padding:0 12px 12px;">
+      <button class="btn btn-primary btn-sm" id="saveFileBtn" onclick="saveCurrentFile()" disabled>Save File</button>
+    </div>
+  </div>
+</div>
+
+<div id="tab-logs" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>Deploy Logs</span><button class="btn btn-secondary btn-sm" onclick="loadDeployLogs()">Refresh</button></div>
+    <div id="deployLogs" style="padding:12px;max-height:500px;overflow:auto;"></div>
+  </div>
+</div>
+
+<div id="tab-runtime" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>Runtime Logs</span><button class="btn btn-secondary btn-sm" onclick="loadRuntimeLogs()">Refresh</button></div>
+    <div style="padding:12px;"><pre id="runtimeLogs" class="log-window">Loading...</pre></div>
+  </div>
+</div>
+
+<script>
+const pid={{ project.id }};
+let currentFilePath='';
+const editors={};
+
+function showTab(id){
+  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.toggle('active', t.getAttribute('onclick').includes("'"+id+"'")));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+id));
+  if(id==='files') loadFiles();
+  if(id==='logs') loadDeployLogs();
+  if(id==='runtime') loadRuntimeLogs();
+  setTimeout(()=>{ if(editors[id]) editors[id].refresh(); }, 10);
+}
+function guessLang(path){
+  const p=path.toLowerCase();
+  if(p.endsWith('dockerfile')) return 'docker';
+  if(p.endsWith('.env')||p.endsWith('.ini')) return 'ini';
+  if(p.endsWith('.yml')||p.endsWith('.yaml')) return 'yaml';
+  if(p.endsWith('.sh')||p.endsWith('.bash')) return 'bash';
+  return 'none';
+}
+function makeEditor(mountId, lang, value){
+  const el = document.getElementById(mountId);
+  el.innerHTML = `<div class="editor-outer"><div class="editor-gutter" aria-hidden="true"></div><div class="prism-editor-wrap"><pre class="language-${lang}"><code class="language-${lang}"></code></pre><textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea></div></div>`;
+  const gutter = el.querySelector('.editor-gutter');
+  const wrap = el.querySelector('.prism-editor-wrap');
+  const code = wrap.querySelector('code');
+  const ta = wrap.querySelector('textarea');
+  function update(){
+    code.textContent = ta.value;
+    if(window.Prism) Prism.highlightElement(code);
+    const lines = (ta.value.match(/\n/g)||[]).length + 1;
+    gutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
+    gutter.scrollTop = wrap.scrollTop;
+  }
+  wrap.addEventListener('scroll', ()=>{ gutter.scrollTop = wrap.scrollTop; });
+  ta.value = value || '';
+  ta.addEventListener('input', update);
+  ta.addEventListener('keydown', e=>{
+    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(en); ta.selectionStart=ta.selectionEnd=s+2; update(); }
+  });
+  update();
+  return { getValue:()=>ta.value, setValue:(v)=>{ta.value=v;update();}, refresh:()=>{}, setOption:()=>{}, getOption:()=>'', getWrapperElement:()=>el.querySelector('.editor-outer'), toTextArea:()=>{el.innerHTML='';} };
+}
+function setTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  document.getElementById('prismTheme').href = '/static/vendor/prism/' + (isDark?'prism-dark.min.css':'prism.min.css');
+}
+(async function(){
+  const [c,d,e] = await Promise.all([
+    fetch(`/api/projects/${pid}/files/docker-compose.yml`).then(r=>r.ok?r.json():{content:''}),
+    fetch(`/api/projects/${pid}/files/Dockerfile`).then(r=>r.ok?r.json():{content:''}),
+    fetch(`/api/projects/${pid}/files/.env`).then(r=>r.ok?r.json():{content:''})
+  ]);
+  editors.compose = makeEditor('editor-compose', 'yaml', c.content||'');
+  editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.content||'');
+  editors.env = makeEditor('editor-env', 'bash', e.content||'');
+  setTheme();
+})();
+
+async function saveFile(path, key){
+  const content=editors[key].getValue();
+  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})
+  });
+  showToast(r.ok?'Saved':'Save failed', r.ok?'success':'error');
+}
+
+async function loadFiles(){
+  const r=await fetch(`/api/projects/${pid}/files`);
+  const data=await r.json();
+  const list=document.getElementById('fileList');
+  list.innerHTML=data.files.filter(f=>!f.is_dir).map(f=>`
+    <div class="file-row" onclick="openFile('${f.path.replace(/'/g,"\\'")}')">
+      <span class="name">${f.path}</span>
+      <span class="meta">${humanSize(f.size)}</span>
+    </div>`).join('');
+}
+
+async function openFile(path){
+  currentFilePath=path;
+  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`);
+  const d=await r.json();
+  const el=document.getElementById('editor-file');
+  el.innerHTML='';
+  if(editors.file){ editors.file.toTextArea(); editors.file=null; }
+  editors.file = makeEditor('editor-file', guessLang(path), d.content||'');
+  document.getElementById('currentFileLabel').textContent=path;
+  document.getElementById('saveFileBtn').disabled=false;
+  setTheme();
+}
+
+async function saveCurrentFile(){
+  if(!currentFilePath || !editors.file) return;
+  const content=editors.file.getValue();
+  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(currentFilePath)}`,{
+    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})
+  });
+  showToast(r.ok?currentFilePath+' saved':'Save failed', r.ok?'success':'error');
+}
+
+async function loadDeployLogs(){
+  const r=await fetch(`/api/projects/${pid}/deploy-logs`);
+  const logs=await r.json();
+  const box=document.getElementById('deployLogs');
+  if(!logs.length){ box.innerHTML='<div class="empty">No deploy logs yet.</div>'; return; }
+  box.innerHTML=logs.map(l=>{
+    const date=new Date(l.timestamp).toLocaleString();
+    return `<div class="deploy-entry">
+      <div class="meta"><span>#${l.id}</span><span>${date}</span><span class="status-${l.status}">${l.status}</span></div>
+      <pre style="margin:0;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(l.logs||'No output')}</pre>
+    </div>`;
+  }).join('');
+}
+
+async function loadRuntimeLogs(){
+  const r=await fetch(`/api/projects/${pid}/logs`);
+  const d=await r.json();
+  document.getElementById('runtimeLogs').textContent=d.logs||'No runtime logs.';
+}
+
+async function doAction(action){
+  const r=await fetch(`/api/projects/${pid}/${action}`,{method:'POST'});
+  const d=await r.json().catch(()=>({}));
+  showToast(d.status||action, r.ok?'success':'error');
+  if(r.ok && action==='build') loadDeployLogs();
+}
+
+function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB','GB']; let i=0; while(n>=1024 && i<units.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+units[i]; }
+function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showToast(msg,type='info'){
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;bottom:16px;right:16px;padding:10px 14px;border-radius:8px;background:'+(type==='error'?'var(--error)':type==='success'?'var(--success)':'var(--primary)')+';color:#fff;z-index:9999;font-size:13px;';
+  div.textContent=msg;
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),2500);
+}
+
+window.addEventListener('themeChanged', setTheme);
+</script>
+
+{% endblock %}

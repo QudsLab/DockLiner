@@ -22,11 +22,13 @@ from app.models.project import (
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectOut,
     DeploymentOut, AccessTokenCreate, AccessTokenOut,
+    ProjectFileUpdate, ProjectFilesOut, DeployLogOut,
 )
 from app.schemas.monitoring import (
     HealthCheckCreate, HealthCheckUpdate, HealthCheckOut,
     MetricOut, AuditLogOut, WebhookCreate, WebhookOut, NotificationOut,
 )
+
 from app.services.deploy_service import DeployService
 from app.services.dockliner_service import DockLinerService
 from app.services.github_download_service import GitHubDownloadService
@@ -204,6 +206,74 @@ def project_logs(pid: int, tail: int = 200, db: Session = Depends(get_db), user:
 @router.get("/projects/{pid}/deployments", response_model=List[DeploymentOut])
 def list_deployments(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     return db.query(Deployment).filter(Deployment.project_id == pid).order_by(Deployment.timestamp.desc()).all()
+
+@router.get("/projects/{pid}/deploy-logs", response_model=List[DeployLogOut])
+def deploy_logs(pid: int, limit: int = 50, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    return db.query(Deployment).filter(Deployment.project_id == pid).order_by(Deployment.timestamp.desc()).limit(limit).all()
+
+@router.get("/projects/{pid}/files", response_model=ProjectFilesOut)
+def list_project_files(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    root = Path(p.deploy_path)
+    if not root.exists():
+        return {"files": []}
+    files = []
+    for path in sorted(root.rglob("*")):
+        try:
+            rel = path.relative_to(root).as_posix()
+            files.append({
+                "path": rel,
+                "size": path.stat().st_size if path.is_file() else 0,
+                "is_dir": path.is_dir(),
+            })
+        except Exception:
+            continue
+    return {"files": files}
+
+@router.get("/projects/{pid}/files/{path:path}")
+def read_project_file(pid: int, path: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    target = Path(p.deploy_path) / path
+    target = target.resolve()
+    root = Path(p.deploy_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    if target.is_dir():
+        return {"path": path, "is_dir": True}
+    return {"path": path, "content": target.read_text(encoding="utf-8", errors="replace"), "is_dir": False, "size": target.stat().st_size}
+
+@router.put("/projects/{pid}/files/{path:path}")
+def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    target = (Path(p.deploy_path) / path).resolve()
+    root = Path(p.deploy_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(data.content, encoding="utf-8")
+    # Mirror to DB fields for main config files
+    lower = path.lower()
+    if lower in ("docker-compose.yml", "docker-compose.yaml"):
+        p.compose_content = data.content
+    elif lower == "dockerfile":
+        p.dockerfile_content = data.content
+    elif lower in (".env", "env"):
+        p.env_content = data.content
+    db.commit()
+    AuditService.log(db, "project_file_update", target=f"{p.name}/{path}", user=user)
+    return {"ok": True}
 
 @router.get("/projects/{pid}/health")
 def project_health(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):

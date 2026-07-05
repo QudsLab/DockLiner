@@ -22,11 +22,7 @@
         <td data-label="Status"><span class="status-pill status-{{ p.status }}">{{ p.status }}</span></td>
         <td data-label="Port">{{ p.port or '-' }}</td>
         <td data-label="Actions">
-          <a class="btn btn-primary btn-xs" href="/api/projects/{{ p.id }}/build" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Build</a>
-          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/start" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Start</a>
-          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/restart" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Restart</a>
-          <a class="btn btn-secondary btn-xs" href="/api/projects/{{ p.id }}/stop" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Stop</a>
-          <a class="btn btn-secondary btn-xs" href="/projects/{{ p.id }}/logs">Logs</a>
+          <a class="btn btn-primary btn-xs" href="/projects/{{ p.id }}">Manage</a>
           <button class="btn btn-danger btn-xs" onclick="if(confirm('Delete {{ p.name }}?')) fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button>
         </td>
       </tr>

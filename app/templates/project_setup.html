@@ -1,276 +1,126 @@
 {% extends "base.html" %}
-
+{% block title %}Project Setup — DockLiner{% endblock %}
 {% block content %}
 
+<link id="prismTheme" rel="stylesheet" href="/static/vendor/prism/prism.min.css">
+<script src="/static/vendor/prism/prism.min.js"></script>
+<script src="/static/vendor/prism/prism-yaml.min.js"></script>
+<script src="/static/vendor/prism/prism-docker.min.js"></script>
+<script src="/static/vendor/prism/prism-bash.min.js"></script>
+<script src="/static/vendor/prism/prism-ini.min.js"></script>
+
 <style>
-.setup-card{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:16px;background:var(--surface-card);margin-bottom:14px}
-.editor-wrap{border:1px solid var(--hairline);border-radius:var(--radius-md);overflow:hidden;background:var(--surface-card)}
-.editor-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--hairline);background:var(--surface-soft);font-size:12px;color:var(--muted)}
-.editor-tabs{display:flex;gap:4px}
-.editor-tab{padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;color:var(--muted);border:1px solid transparent}
-.editor-tab.active{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
-.editor-body{position:relative;min-height:180px;max-height:420px;overflow:auto}
-.editor-body textarea{width:100%;min-height:180px;border:none;outline:none;background:transparent;color:var(--ink);font-family:var(--font-mono);font-size:13px;line-height:1.5;padding:12px;resize:vertical;box-sizing:border-box}
-.editor-body pre{margin:0;padding:12px;font-family:var(--font-mono);font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.file-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--hairline);font-size:12px;background:var(--surface-soft);color:var(--ink);margin:4px 4px 0 0}
-.file-chip.ok{border-color:var(--success);background:rgba(34,197,94,.10);color:#4ade80}
-.file-chip.warn{border-color:var(--error);background:rgba(239,68,68,.10);color:var(--error)}
+.editor-outer{display:flex;border:1px solid var(--hairline);border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);min-height:360px}
+.editor-gutter{padding:12px 10px 12px 8px;background:var(--surface-soft);border-right:1px solid var(--hairline);font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;color:var(--muted);text-align:right;user-select:none;white-space:pre;overflow:hidden;min-width:44px;flex-shrink:0}
+.prism-editor-wrap{display:grid;flex:1;overflow:auto;min-height:360px}
+.prism-editor-wrap>pre[class*="language-"],.prism-editor-wrap>textarea{grid-area:1/1;padding:12px!important;margin:0!important;font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;tab-size:2;-moz-tab-size:2;white-space:pre!important;box-sizing:border-box;border:none!important;border-radius:0!important;min-width:100%}
+.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:visible!important;background:transparent!important;text-shadow:none!important}
+.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important}
+.prism-editor-wrap .token{text-shadow:none!important;background:transparent!important}
+.prism-editor-wrap>textarea{background:transparent;color:transparent;caret-color:var(--ink);-webkit-text-fill-color:transparent;outline:none;resize:none;z-index:1;overflow:hidden;height:100%;-webkit-appearance:none;appearance:none}
+html[data-theme="dark"] .editor-outer{background:#1e1e1e;border-color:var(--hairline)}
+html[data-theme="dark"] .editor-gutter{background:#252526;border-color:var(--hairline);color:#6e7681}
+html[data-theme="dark"] .prism-editor-wrap{background:#1e1e1e}
+html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
+.setup-card{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:16px;background:var(--surface-card);margin-bottom:16px}
+.setup-card p{margin:0 0 8px;font-size:13px;color:var(--muted)}
+.setup-card p b{color:var(--ink)}
+.file-tabs{display:flex;gap:6px;border-bottom:2px solid var(--hairline);margin-bottom:0;padding:4px;background:var(--surface-card);border-radius:var(--radius-md) var(--radius-md) 0 0;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.file-tab{padding:10px 18px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:8px;background:transparent;border:none;border-radius:8px 8px 0 0}
+.file-tab.active{color:#ff7300;border-bottom-color:#ff7300;background:rgba(255,115,0,.10)}
+.file-tab .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.file-tab.active .dot{background:#ff7300}
+.editor-card{border:1px solid var(--hairline);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);display:none}
+.editor-card.active{display:block}
+.editor-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
+.editor-header span{font-weight:700;font-size:14px;color:var(--ink)}
+.file-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--hairline);font-size:12px;background:var(--surface-soft);color:var(--ink)}
 .file-chip.missing{border-color:var(--hairline);color:var(--muted)}
-.mode-row{display:flex;gap:8px;margin:12px 0}
-.mode-btn{flex:1;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-card);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center}
-.mode-btn.active{border-color:var(--primary);background:rgba(249,115,22,.12);color:var(--primary)}
-.cfb-section{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:14px;margin-bottom:12px;background:var(--surface-soft)}
-.cfb-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.cfb-title span{font-weight:600;color:var(--ink);font-size:13px}
-.cfb-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}
-.cfb-row .form-col{flex:1;min-width:120px}
-.cfb-list{display:flex;flex-direction:column;gap:8px}
-.cfb-item{display:flex;gap:8px;align-items:center;padding:8px;border-radius:var(--radius-sm);background:var(--surface-card);border:1px solid var(--hairline)}
-.cfb-item input{background:var(--surface-soft)}
-.cfb-item .btn-ghost{padding:4px;color:var(--error)}
-.subtle{color:var(--muted);font-size:12px}
-.toggle-wrap{display:flex;align-items:center;gap:10px;margin:8px 0}
-.toggle-track{position:relative;width:40px;height:22px;border-radius:999px;background:var(--hairline);cursor:pointer;transition:.2s;flex-shrink:0}
-.toggle-track.on{background:var(--primary)}
-.toggle-track .thumb{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--canvas);transition:.2s}
-.toggle-track.on .thumb{transform:translateX(18px)}
-.toggle-label{font-size:13px;color:var(--ink);cursor:pointer}
-.review-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13px}
-.review-row:last-child{border:none}
-.review-row .k{color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-size:11px}
-.review-row .v{color:var(--ink);font-weight:500}
-.advanced-card{margin-top:14px;padding:12px;border-radius:var(--radius-md);border:1px dashed var(--hairline);background:var(--surface-soft)}
-.advanced-title{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:6px}
-.advanced-body{display:none}
-.advanced-body.open{display:block}
-.syn-kw{color:#0066cc;font-weight:700}
-.syn-str{color:#008040}
-.syn-num{color:#b35900}
-.syn-com{color:#6a737d;font-style:italic}
-.syn-sec{color:#8250df;font-weight:700}
-.syn-key{color:#d1242f}
-.syn-arg{color:#0550ae}
-[data-theme="dark"] .syn-kw{color:#38bdf8}
-[data-theme="dark"] .syn-str{color:#7dd3fc}
-[data-theme="dark"] .syn-num{color:#fdba74}
-[data-theme="dark"] .syn-com{color:#94a3b8}
-[data-theme="dark"] .syn-sec{color:#c4b5fd}
-[data-theme="dark"] .syn-key{color:#fca5a5}
-[data-theme="dark"] .syn-arg{color:#38bdf8}
+.file-chip.ok{border-color:var(--success);background:rgba(34,197,94,.10);color:var(--success)}
+.file-chip.warn{border-color:var(--error);background:rgba(239,68,68,.10);color:var(--error)}
 </style>
 
 <h1 class="hero-title">Project Setup</h1>
 <p class="section-subtitle">Configure how DockLiner builds and runs your project.</p>
 
 <div class="setup-card">
-  <p style="color:var(--muted);font-size:13px;margin-bottom:10px;">Source: <b id="sourceDisplay" style="color:var(--ink);">-</b></p>
-  <div id="fileChips" class="file-list" style="margin-bottom:10px;"></div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
-    <div class="form-col" style="min-width:160px;flex:1;">
-      <label style="font-size:12px;color:var(--muted);">Project name *</label>
-      <input class="input" id="projectName" placeholder="my-app" style="margin-top:6px;">
-    </div>
-    <div class="form-col" style="min-width:120px;flex:0;">
-      <label style="font-size:12px;color:var(--muted);">Port</label>
-      <input class="input" id="projectPort" type="number" placeholder="Auto" style="margin-top:6px;min-width:100px;">
-    </div>
-    <div class="form-col" style="min-width:140px;flex:1;">
-      <label style="font-size:12px;color:var(--muted);">Template</label>
-      <select class="select" id="templateSelect" onchange="applyTemplate(this.value)" style="margin-top:6px;">
-        <option value="">Custom</option>
-        <option value="node">Node.js</option>
-        <option value="python">Python</option>
-        <option value="static">Static HTML</option>
-        <option value="php">PHP Apache</option>
-      </select>
-    </div>
-  </div>
+  <p>Source: <b id="sourceDisplay">-</b></p>
+  <label style="font-size:12px;color:var(--muted);">Project name *</label>
+  <input class="input" id="projectName" placeholder="my-app" style="margin-top:6px;max-width:420px;">
 </div>
 
-<!-- Command mode -->
-<div class="setup-card">
-  <h2 class="section-title" style="font-size:16px;margin-bottom:10px;">Deployment mode</h2>
-  <div class="mode-row" style="margin:0;">
-    <button class="mode-btn active" id="cmdCompose" onclick="setCommandMode('compose')">Compose</button>
-    <button class="mode-btn" id="cmdDockerfile" onclick="setCommandMode('dockerfile')">Dockerfile</button>
-    <button class="mode-btn" id="cmdDirect" onclick="setCommandMode('direct')">Direct command</button>
-  </div>
-
-  <!-- Compose editor -->
-  <div id="composeEditor" class="editor-wrap" style="margin-top:14px;">
-    <div class="editor-header">
-      <span>docker-compose.yml</span>
-      <div class="editor-tabs">
-        <span class="editor-tab active" id="tabComposeForm" onclick="setComposeView('form')">Form</span>
-        <span class="editor-tab" id="tabComposeRaw" onclick="setComposeView('raw')">Raw</span>
-      </div>
-    </div>
-    <div class="editor-body" id="composeBody">
-      <div id="composeFormBuilder" style="padding:12px;">
-        <div class="cfb-section">
-          <div class="cfb-title">
-            <span>Services</span>
-            <button class="btn btn-secondary btn-xs has-icon" onclick="addService()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add service</button>
-          </div>
-          <div id="servicesList" class="cfb-list"></div>
-        </div>
-        <div class="cfb-section">
-          <div class="cfb-title">
-            <span>Volumes</span>
-            <button class="btn btn-secondary btn-xs has-icon" onclick="addVolume()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add volume</button>
-          </div>
-          <div id="volumesList" class="cfb-list"></div>
-          <p class="subtle" style="margin-top:8px;">Volumes referenced by services are auto-added.</p>
-        </div>
-        <div class="cfb-section">
-          <div class="cfb-title">
-            <span>Networks</span>
-            <button class="btn btn-secondary btn-xs has-icon" onclick="addNetwork()"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add network</button>
-          </div>
-          <div id="networksList" class="cfb-list"></div>
-        </div>
-      </div>
-      <textarea id="composeRaw" style="display:none;"></textarea>
-    </div>
-    <div style="display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--hairline);">
-      <button class="btn btn-ghost btn-xs" onclick="loadExampleCompose()">Load example</button>
-      <button class="btn btn-ghost btn-xs" onclick="clearCompose()">Clear</button>
-      <span class="subtle" style="margin-left:auto;align-self:center;">Switch to Raw for full YAML control.</span>
-    </div>
-  </div>
-
-  <!-- Dockerfile editor -->
-  <div id="dockerfileEditor" class="editor-wrap" style="display:none;margin-top:14px;">
-    <div class="editor-header">
-      <span>Dockerfile</span>
-      <div class="editor-tabs">
-        <span class="editor-tab active" id="tabDockerfileDeco" onclick="setRaw('dockerfile',false)">Decorated</span>
-        <span class="editor-tab" id="tabDockerfileRaw" onclick="setRaw('dockerfile',true)">Raw</span>
-      </div>
-    </div>
-    <div class="editor-body" id="dockerfileBody">
-      <textarea id="dockerfileRaw" style="display:none;"></textarea>
-    </div>
-    <div style="display:flex;gap:8px;padding:8px 12px;border-top:1px solid var(--hairline);">
-      <button class="btn btn-ghost btn-xs" onclick="loadExampleDockerfile()">Load example</button>
-      <button class="btn btn-ghost btn-xs" onclick="clearDockerfile()">Clear</button>
-    </div>
-  </div>
-
-  <!-- Direct command -->
-  <div id="directEditor" class="editor-wrap" style="display:none;margin-top:14px;">
-    <div class="editor-header">
-      <span>Direct Docker command</span>
-    </div>
-    <div style="padding:12px;">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
-        <div class="form-col" style="flex:1;min-width:140px;">
-          <label style="font-size:12px;color:var(--muted);">Image / Build context</label>
-          <input class="input" id="directImage" placeholder="myimage:latest" style="margin-top:6px;">
-        </div>
-        <div class="form-col" style="flex:1;min-width:120px;">
-          <label style="font-size:12px;color:var(--muted);">Container name</label>
-          <input class="input" id="directName" placeholder="NAME" style="margin-top:6px;">
-        </div>
-      </div>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
-        <div class="form-col" style="flex:1;min-width:100px;">
-          <label style="font-size:12px;color:var(--muted);">Host port</label>
-          <input class="input" id="directHostPort" type="number" placeholder="PORT" style="margin-top:6px;">
-        </div>
-        <div class="form-col" style="flex:1;min-width:100px;">
-          <label style="font-size:12px;color:var(--muted);">Container port</label>
-          <input class="input" id="directContainerPort" type="number" placeholder="3000" style="margin-top:6px;">
-        </div>
-        <div class="toggle-wrap" style="margin-top:20px;flex:1;min-width:120px;">
-          <div class="toggle-track on" id="directBuildToggle" onclick="this.classList.toggle('on'); setTimeout(updateDirectCommand,50)" style="margin-right:8px;">
-            <div class="thumb"></div>
-          </div>
-          <span class="toggle-label" onclick="document.getElementById('directBuildToggle').classList.toggle('on'); setTimeout(updateDirectCommand,50)">Build context .</span>
-        </div>
-      </div>
-      <div class="editor-body" id="directBody" style="min-height:60px;background:var(--surface-soft);border-radius:var(--radius-sm);padding:12px;font-family:var(--font-mono);font-size:13px;white-space:pre-wrap;word-break:break-word;"></div>
-    </div>
-  </div>
-
-  <!-- .env editor -->
-  <div class="editor-wrap" style="margin-top:14px;">
-    <div class="editor-header">
-      <span>.env</span>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-ghost btn-xs" id="copyExampleBtn" onclick="copyExampleToEnv()">Copy from .env.example</button>
-        <button class="btn btn-ghost btn-xs" onclick="clearEnv()">Clear</button>
-      </div>
-    </div>
-    <div class="editor-body">
-      <textarea id="envContent" placeholder="# Environment variables"></textarea>
-    </div>
-  </div>
-
-  <textarea id="exampleEnvContent" style="display:none;"></textarea>
-
-  <div class="advanced-card">
-    <div class="advanced-title" onclick="toggleAdvanced()">
-      <span id="advArrow">▸</span> Advanced runtime options
-    </div>
-    <div class="advanced-body" id="advancedBody">
-      <div style="display:flex;flex-wrap:wrap;gap:12px;">
-        <div class="form-col" style="flex:1;min-width:200px;">
-          <label style="font-size:12px;color:var(--muted);">Build args (one per line)</label>
-          <textarea class="input" id="buildArgs" rows="3" placeholder="--no-cache
---pull" style="margin-top:6px;font-family:var(--font-mono);font-size:12px;"></textarea>
-        </div>
-        <div class="form-col" style="flex:1;min-width:200px;">
-          <label style="font-size:12px;color:var(--muted);">Run options (one per line)</label>
-          <textarea class="input" id="runOptions" rows="3" placeholder="--detach
---remove-orphans" style="margin-top:6px;font-family:var(--font-mono);font-size:12px;"></textarea>
-        </div>
-      </div>
-      <div class="toggle-wrap" style="margin-top:10px;">
-        <div class="toggle-track on" id="pullToggle" onclick="togglePull()">
-          <div class="thumb"></div>
-        </div>
-        <span class="toggle-label" onclick="togglePull()">Pull latest base images on build</span>
-      </div>
-    </div>
-  </div>
+<div class="file-tabs" role="tablist">
+  <button class="file-tab active" onclick="switchTab('compose')" role="tab" aria-selected="true"><span class="dot"></span>compose.yml</button>
+  <button class="file-tab" onclick="switchTab('dockerfile')" role="tab"><span class="dot"></span>Dockerfile</button>
+  <button class="file-tab" onclick="switchTab('env')" role="tab"><span class="dot"></span>.env</button>
 </div>
 
-<div class="setup-card">
-  <h2 class="section-title" style="font-size:16px;margin-bottom:10px;">Review</h2>
-  <div id="reviewCard">
-    <div class="review-row">
-      <span class="k">Name</span>
-      <span class="v" id="rName">-</span>
-    </div>
-    <div class="review-row">
-      <span class="k">Source</span>
-      <span class="v" id="rSource">-</span>
-    </div>
-    <div class="review-row">
-      <span class="k">Command mode</span>
-      <span class="v" id="rMode">-</span>
-    </div>
-    <div class="review-row">
-      <span class="k">Port</span>
-      <span class="v" id="rPort">Auto</span>
-    </div>
-  </div>
-  <div style="margin-top:16px;">
-    <button class="btn btn-primary" onclick="submitProject()">Create Project</button>
-    <button class="btn btn-ghost btn-sm" onclick="history.back()">← Back</button>
-  </div>
+<div class="editor-card active" id="card-compose">
+  <div class="editor-header"><span>compose.yml</span><span class="file-chip" id="composeStatus">will create</span></div>
+  <div id="editor-compose"></div>
+</div>
+
+<div class="editor-card" id="card-dockerfile">
+  <div class="editor-header"><span>Dockerfile</span><span class="file-chip" id="dockerfileStatus">will create</span></div>
+  <div id="editor-dockerfile"></div>
+</div>
+
+<div class="editor-card" id="card-env">
+  <div class="editor-header"><span>.env</span><span class="file-chip" id="envStatus">will create</span></div>
+  <div id="editor-env"></div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px;">
+  <button class="btn btn-primary" onclick="submitProject()">Create Project</button>
+  <button class="btn btn-secondary" onclick="history.back()">← Back</button>
+  <span id="saveMsg" style="font-size:13px;color:var(--muted);"></span>
 </div>
 
 <script>
 let setup={source:'{{ source }}', path:'{{ path | e }}', downloadId:'{{ download_id }}', scan:{{ scan_json | safe if scan_json else '{}' }}};
-let state={commandMode:'compose',composeView:'form',projectName:'',port:null,composeServices:[],composeVolumes:[],composeNetworks:[],pull:true};
+const editors={};
 
-function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-function escapeHtml(t){ return t.replace(/&/g,'\u0026amp;').replace(/\u003c/g,'\u0026lt;').replace(/\u003e/g,'\u0026gt;'); }
-function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB','GB']; let i=0; while(n>=1024 && i<units.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+units[i]; }
-
-// source display
+function switchTab(name){
+  document.querySelectorAll('.file-tab').forEach(t=>{
+    const isActive = t.getAttribute('onclick').includes("'"+name+"'");
+    t.classList.toggle('active', isActive);
+    t.setAttribute('aria-selected', isActive);
+  });
+  document.querySelectorAll('.editor-card').forEach(c=>c.classList.toggle('active', c.id==='card-'+name));
+  setTimeout(()=>{ if(editors[name]) editors[name].refresh(); }, 10);
+}
+function setStatus(id, exists){
+  const el=document.getElementById(id);
+  el.className='file-chip '+(exists?'ok':'missing');
+  el.textContent=exists?'found in source':'will create';
+}
+function makeEditor(mountId, lang, value){
+  const el = document.getElementById(mountId);
+  el.innerHTML = `<div class="editor-outer"><div class="editor-gutter" aria-hidden="true"></div><div class="prism-editor-wrap"><pre class="language-${lang}"><code class="language-${lang}"></code></pre><textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea></div></div>`;
+  const gutter = el.querySelector('.editor-gutter');
+  const wrap = el.querySelector('.prism-editor-wrap');
+  const code = wrap.querySelector('code');
+  const ta = wrap.querySelector('textarea');
+  function update(){
+    code.textContent = ta.value;
+    if(window.Prism) Prism.highlightElement(code);
+    const lines = (ta.value.match(/\n/g)||[]).length + 1;
+    gutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
+    gutter.scrollTop = wrap.scrollTop;
+  }
+  wrap.addEventListener('scroll', ()=>{ gutter.scrollTop = wrap.scrollTop; });
+  ta.value = value || '';
+  ta.addEventListener('input', update);
+  ta.addEventListener('keydown', e=>{
+    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(en); ta.selectionStart=ta.selectionEnd=s+2; update(); }
+  });
+  update();
+  return { getValue:()=>ta.value, setValue:(v)=>{ta.value=v;update();}, refresh:()=>{}, setOption:()=>{}, getOption:()=>'', getWrapperElement:()=>el.querySelector('.editor-outer'), toTextArea:()=>{el.innerHTML='';} };
+}
+function setTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  document.getElementById('prismTheme').href = '/static/vendor/prism/' + (isDark?'prism-dark.min.css':'prism.min.css');
+}
 (function(){
   const s=setup.source;
   let text='Unknown';
@@ -278,250 +128,69 @@ function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB',
   if(s==='local') text='Local directory: '+setup.path;
   if(s==='download') text='Existing download #'+setup.downloadId;
   document.getElementById('sourceDisplay').textContent=text;
-  const chips=document.getElementById('fileChips');
   const d=setup.scan||{};
-  chips.innerHTML=(d.compose_exists?'<span class="file-chip ok">compose.yml</span>':'<span class="file-chip warn">compose.yml missing</span>')+
-    (d.dockerfile_exists?'<span class="file-chip ok">Dockerfile</span>':'<span class="file-chip warn">Dockerfile missing</span>')+
-    (d.env?'<span class="file-chip ok">.env</span>':'<span class="file-chip missing">.env missing</span>')+
-    (d.example_env?'<span class="file-chip ok">.env.example</span>':'');
-  document.getElementById('projectName').value = setup.scan?.repo_name || (s==='local'?setup.path.split(/[\\\\/]/).pop():'');
-  document.getElementById('envContent').value = d.env || d.example_env || '';
-  document.getElementById('exampleEnvContent').value = d.example_env || '';
-  document.getElementById('copyExampleBtn').style.display = d.example_env ? 'inline-flex' : 'none';
-  if(d.compose){
-    const cr=document.getElementById('composeRaw'); cr.value=d.compose;
-    try{ parseComposeToForm(d.compose); }catch(e){ console.warn('compose parse failed',e); }
-  } else { state.composeDefault=defaultCompose(); document.getElementById('composeRaw').value=state.composeDefault; parseComposeToForm(state.composeDefault); }
-  if(d.dockerfile){ document.getElementById('dockerfileRaw').value=d.dockerfile; }
-  renderComposeForm(); setCommandMode('compose');
-  initDirectListeners(); updateDirectCommand();
+  document.getElementById('projectName').value = d.repo_name || (s==='local'?setup.path.split(/[\\/]/).pop():'');
+
+  editors.compose = makeEditor('editor-compose', 'yaml', d.compose || defaultCompose());
+  editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.dockerfile || defaultDockerfile());
+  editors.env = makeEditor('editor-env', 'bash', d.env || d.example_env || '');
+
+  setStatus('composeStatus', !!d.compose_exists);
+  setStatus('dockerfileStatus', !!d.dockerfile_exists);
+  setStatus('envStatus', !!d.env);
+  setTheme();
 })();
 
-function setCommandMode(mode){
-  state.commandMode=mode;
-  ['compose','dockerfile','direct'].forEach(m=>{ const btn=document.getElementById('cmd'+cap(m)); if(btn) btn.classList.toggle('active', m===mode); });
-  document.getElementById('composeEditor').style.display=mode==='compose'?'block':'none';
-  document.getElementById('dockerfileEditor').style.display=mode==='dockerfile'?'block':'none';
-  document.getElementById('directEditor').style.display=mode==='direct'?'block':'none';
-  if(mode==='compose'){ if(state.composeView==='form') renderComposeForm(); else setComposeView('raw'); }
-  if(mode==='dockerfile') fillDockerfileDefault();
-  if(mode==='direct') updateDirectCommand();
-}
-function fillDockerfileDefault(){ const dr=document.getElementById('dockerfileRaw'); if(dr && !dr.value.trim()){ dr.value=defaultDockerfile(); setRaw('dockerfile', false); } }
-function setComposeView(view){
-  state.composeView=view;
-  document.getElementById('tabComposeForm').classList.toggle('active', view==='form');
-  document.getElementById('tabComposeRaw').classList.toggle('active', view==='raw');
-  document.getElementById('composeFormBuilder').style.display=view==='form'?'block':'none';
-  const raw=document.getElementById('composeRaw');
-  if(view==='raw'){ raw.style.display='block'; raw.value=buildComposeYaml(); }
-  else{ raw.style.display='none'; renderComposeForm(); }
-}
-function setRaw(which, raw){
-  if(which==='dockerfile'){
-    const body=document.getElementById('dockerfileBody');
-    const ta=document.getElementById('dockerfileRaw');
-    const decoTab=document.getElementById('tabDockerfileDeco');
-    const rawTab=document.getElementById('tabDockerfileRaw');
-    if(!body || !ta || !decoTab || !rawTab) return;
-    if(raw){ decoTab.classList.remove('active'); rawTab.classList.add('active'); body.innerHTML=''; body.appendChild(ta); ta.style.display='block'; }
-    else{ rawTab.classList.remove('active'); decoTab.classList.add('active'); body.innerHTML='<pre>'+highlight('dockerfile', ta.value)+'</pre>'; }
-  }
-}
-function copyExampleToEnv(){ const ex=document.getElementById('exampleEnvContent'); const env=document.getElementById('envContent'); if(!ex||!env){ alert('No .env editor available'); return; } if(!ex.value){ alert('No .env.example available'); return; } if(!env.value.trim()||confirm('Overwrite current .env with example content?')) env.value=ex.value; }
-function clearEnv(){ if(confirm('Clear .env?')) document.getElementById('envContent').value=''; }
-function toggleAdvanced(){ const body=document.getElementById('advancedBody'); const arrow=document.getElementById('advArrow'); body.classList.toggle('open'); arrow.textContent=body.classList.contains('open')?'▾':'▸'; }
-function togglePull(){ const t=document.getElementById('pullToggle'); t.classList.toggle('on'); state.pull=t.classList.contains('on'); }
-function highlight(which, text){
-  if(which==='compose'){
-    return escapeHtml(text).replace(/\b(version|services|networks|volumes|configs|secrets)\b/g,'<span class="syn-sec">$1</span>').replace(/\b(build|image|container_name|ports|env_file|environment|depends_on|volumes|restart|command|entrypoint|expose)\b/g,'<span class="syn-key">$1</span>').replace(/(\s*#.*$)/gm,'<span class="syn-com">$1</span>').replace(/'[^']*'/g,'<span class="syn-str">$1</span>').replace(/"[^"]*"/g,'<span class="syn-str">$1</span>').replace(/\b\d+\b/g,'<span class="syn-num">$1</span>');
-  } else {
-    return escapeHtml(text).replace(/\b(FROM|RUN|CMD|ENTRYPOINT|COPY|ADD|WORKDIR|ENV|EXPOSE|LABEL|ARG|USER|VOLUME)\b/g,'<span class="syn-kw">$1</span>').replace(/(\s*#.*$)/gm,'<span class="syn-com">$1</span>').replace(/\b\d+\b/g,'<span class="syn-num">$1</span>').replace(/"[^"]*"/g,'<span class="syn-str">$1</span>').replace(/\[([^\]]*)\]/g,'<span class="syn-arg">[$1]</span>');
-  }
-}
+function defaultCompose(){ return `version: '3.8'
 
-// ---- Compose form builder ----
-function defaultCompose(){ return "version: '3.8'\n\nservices:\n  app:\n    build: .\n    container_name: app\n    ports:\n      - \"25600:3000\"\n    env_file:\n      - .env\n    restart: unless-stopped\n"; }
-function defaultDockerfile(){ return 'FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n'; }
-function templates(){
-  const name=state.projectName||'app'; const port=state.port||'25600';
-  return {
-    node:{compose:`version: '3.8'\n\nservices:\n  app:\n    build: .\n    image: node-app\n    container_name: ${name}\n    ports:\n      - "${port}:3000"\n    env_file:\n      - .env\n    restart: unless-stopped\n`, dockerfile:`FROM node:20-alpine\nWORKDIR /app\nCOPY package*.json ./\nRUN npm ci\nCOPY . .\nEXPOSE 3000\nCMD ["node", "server.js"]\n`},
-    python:{compose:`version: '3.8'\n\nservices:\n  app:\n    build: .\n    image: python-app\n    container_name: ${name}\n    ports:\n      - "${port}:8000"\n    env_file:\n      - .env\n    restart: unless-stopped\n`, dockerfile:`FROM python:3.11-slim\nWORKDIR /app\nCOPY requirements.txt ./\nRUN pip install --no-cache-dir -r requirements.txt\nCOPY . .\nEXPOSE 8000\nCMD ["python", "app.py"]\n`},
-    static:{compose:`version: '3.8'\n\nservices:\n  app:\n    image: nginx:alpine\n    container_name: ${name}\n    ports:\n      - "${port}:80"\n    volumes:\n      - ./:/usr/share/nginx/html:ro\n    restart: unless-stopped\n`, dockerfile:`FROM nginx:alpine\nCOPY . /usr/share/nginx/html\nEXPOSE 80\n`},
-    php:{compose:`version: '3.8'\n\nservices:\n  app:\n    image: php:8.2-apache\n    container_name: ${name}\n    ports:\n      - "${port}:80"\n    env_file:\n      - .env\n    restart: unless-stopped\n`, dockerfile:`FROM php:8.2-apache\nCOPY . /var/www/html\nEXPOSE 80\n`}
-  };
-}
-function applyTemplate(key){ if(!key) return; const t=templates()[key]; if(!t) return; if(state.commandMode==='compose'){ state.composeServices=[]; state.composeVolumes=[]; state.composeNetworks=[]; document.getElementById('composeRaw').value=t.compose; try{ parseComposeToForm(t.compose); }catch(e){} if(state.composeView==='form') renderComposeForm(); else setComposeView('raw'); } else { document.getElementById('dockerfileRaw').value=t.dockerfile; setRaw('dockerfile', true); } showToast('Template applied','success'); }
-function loadExampleCompose(){ const name=state.projectName||'app'; const port=state.port||'25600'; const y=defaultCompose().replace(/app/g,name).replace(/25600/g,port); document.getElementById('composeRaw').value=y; state.composeServices=[]; state.composeVolumes=[]; state.composeNetworks=[]; try{ parseComposeToForm(y); }catch(e){} if(state.composeView==='form') renderComposeForm(); else setComposeView('raw'); }
-function loadExampleDockerfile(){ document.getElementById('dockerfileRaw').value=defaultDockerfile(); setRaw('dockerfile', true); }
-function clearCompose(){ if(confirm('Clear docker-compose.yml?')){ state.composeServices=[]; state.composeVolumes=[]; state.composeNetworks=[]; document.getElementById('composeRaw').value=''; renderComposeForm(); } }
-function clearDockerfile(){ if(confirm('Clear Dockerfile?')){ document.getElementById('dockerfileRaw').value=''; setRaw('dockerfile', true); } }
-
-function parseComposeToForm(text){
-  const lines=text.split('\n'); let section=null, currentService=null, currentSub=null;
-  state.composeServices=[]; state.composeVolumes=[]; state.composeNetworks=[];
-  for(let raw of lines){
-    const line=raw.replace(/\r/g,''); const trimmed=line.trim();
-    if(!trimmed || trimmed.startsWith('#')) continue;
-    const indent=(line.match(/^(\s*)/)||['',''])[1].length;
-    if(trimmed==='services:'){ section='services'; currentService=null; currentSub=null; continue; }
-    if(trimmed==='volumes:'){ section='volumes'; currentService=null; currentSub=null; continue; }
-    if(trimmed==='networks:'){ section='networks'; currentService=null; currentSub=null; continue; }
-    if(section==='services' && indent===2 && trimmed.endsWith(':')){ currentService={name:trimmed.slice(0,-1), image:'', build:'', container_name:'', ports:[], env_vars:[], volumes:[], networks:[], restart:''}; state.composeServices.push(currentService); currentSub=null; continue; }
-    if(section==='services' && currentService){
-      if(indent===4 && trimmed.startsWith('image:')){ currentService.image=trimmed.slice(6).trim(); continue; }
-      if(indent===4 && trimmed.startsWith('build:')){ currentService.build=trimmed.slice(5).trim(); continue; }
-      if(indent===4 && trimmed.startsWith('container_name:')){ currentService.container_name=trimmed.slice(15).trim(); continue; }
-      if(indent===4 && trimmed.startsWith('restart:')){ currentService.restart=trimmed.slice(8).trim(); continue; }
-      if(indent===4 && trimmed==='ports:'){ currentSub='ports'; continue; }
-      if(indent===4 && trimmed==='environment:'){ currentSub='environment'; continue; }
-      if(indent===4 && trimmed==='volumes:'){ currentSub='volumes'; continue; }
-      if(indent===4 && trimmed==='networks:'){ currentSub='networks'; continue; }
-      if(indent===6 && currentSub==='ports' && trimmed.startsWith('- ')){ currentService.ports.push(trimmed.slice(2).trim().replace(/^"|"$/g,'')); continue; }
-      if(indent===6 && currentSub==='environment' && trimmed.startsWith('- ')){ currentService.env_vars.push(trimmed.slice(2).trim().replace(/^"|"$/g,'')); continue; }
-      if(indent===6 && currentSub==='volumes' && trimmed.startsWith('- ')){ currentService.volumes.push(trimmed.slice(2).trim().replace(/^"|"$/g,'')); continue; }
-      if(indent===6 && currentSub==='networks' && trimmed.startsWith('- ')){ currentService.networks.push(trimmed.slice(2).trim().replace(/^"|"$/g,'')); continue; }
-    }
-    if(section==='volumes' && indent===2 && trimmed.endsWith(':')){ state.composeVolumes.push({name:trimmed.slice(0,-1), external:false, driver:''}); }
-    if(section==='networks' && indent===2 && trimmed.endsWith(':')){ state.composeNetworks.push({name:trimmed.slice(0,-1), external:false, driver:''}); }
-  }
-  if(!state.composeServices.length) state.composeServices=[{name:'app', image:'', build:'.', container_name:'', ports:[], env_vars:[], volumes:[], networks:[], restart:'unless-stopped'}];
-}
-function renderComposeForm(){
-  const list=document.getElementById('servicesList'); if(!list) return;
-  if(!state.composeServices.length) state.composeServices=[{name:'app', image:'', build:'.', container_name:'', ports:[], env_vars:[], volumes:[], networks:[], restart:'unless-stopped'}];
-  list.innerHTML=state.composeServices.map((svc,si)=>`
-    <div class="cfb-section" style="margin-bottom:10px;">
-      <div class="cfb-title">
-        <input class="input" style="width:140px;font-size:13px;padding:6px 8px;" value="${escapeHtml(svc.name)}" oninput="updateService(${si},'name',this.value)" placeholder="service name">
-        <button class="btn btn-ghost btn-xs" onclick="removeService(${si})" title="Remove service">🗑</button>
-      </div>
-      <div class="cfb-row">
-        <div class="form-col"><label>Image</label><input class="input" value="${escapeHtml(svc.image)}" oninput="updateService(${si},'image',this.value)" placeholder="e.g. nginx:alpine"></div>
-        <div class="form-col"><label>Build</label><input class="input" value="${escapeHtml(svc.build)}" oninput="updateService(${si},'build',this.value)" placeholder=". or Dockerfile path"></div>
-        <div class="form-col"><label>Container name</label><input class="input" value="${escapeHtml(svc.container_name)}" oninput="updateService(${si},'container_name',this.value)" placeholder="optional"></div>
-        <div class="form-col form-col-shrink" style="min-width:110px;"><label>Restart</label><input class="input" value="${escapeHtml(svc.restart)}" oninput="updateService(${si},'restart',this.value)" placeholder="unless-stopped"></div>
-      </div>
-      <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Ports</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'ports')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Port</button></div>
-        ${svc.ports.map((p,pi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(p)}" oninput="updateServiceItem(${si},'ports',${pi},this.value)" placeholder="HOST:CONTAINER"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'ports',${pi})">×</button></div>`).join('')}
-      </div>
-      <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Environment</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'env_vars')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Var</button></div>
-        ${svc.env_vars.map((v,vi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(v)}" oninput="updateServiceItem(${si},'env_vars',${vi},this.value)" placeholder="KEY=VALUE"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'env_vars',${vi})">×</button></div>`).join('')}
-      </div>
-      <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Volumes</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'volumes')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Volume</button></div>
-        ${svc.volumes.map((v,vi)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(v)}" oninput="updateServiceItem(${si},'volumes',${vi},this.value)" placeholder="HOST:CONTAINER[:ro]"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'volumes',${vi})">×</button></div>`).join('')}
-      </div>
-      <div style="margin-bottom:8px;">
-        <div class="cfb-title"><span class="subtle">Networks</span><button class="btn btn-secondary btn-xs has-icon" onclick="addServiceItem(${si},'networks')"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Network</button></div>
-        ${svc.networks.map((n,ni)=>`<div class="cfb-item"><input class="input" value="${escapeHtml(n)}" oninput="updateServiceItem(${si},'networks',${ni},this.value)" placeholder="network-name"><button class="btn btn-ghost" onclick="removeServiceItem(${si},'networks',${ni})">×</button></div>`).join('')}
-      </div>
-    </div>`).join('');
-  const volList=document.getElementById('volumesList');
-  if(volList) volList.innerHTML=state.composeVolumes.map((v,vi)=>`
-    <div class="cfb-item">
-      <input class="input" value="${escapeHtml(v.name)}" oninput="updateVolume(${vi},'name',this.value)" placeholder="volume name">
-      <input class="input" value="${escapeHtml(v.driver)}" oninput="updateVolume(${vi},'driver',this.value)" placeholder="driver (optional)" style="max-width:140px;">
-      <button class="btn btn-ghost" onclick="removeVolume(${vi})">×</button>
-    </div>`).join('');
-  const netList=document.getElementById('networksList');
-  if(netList) netList.innerHTML=state.composeNetworks.map((n,ni)=>`
-    <div class="cfb-item">
-      <input class="input" value="${escapeHtml(n.name)}" oninput="updateNetwork(${ni},'name',this.value)" placeholder="network name">
-      <input class="input" value="${escapeHtml(n.driver)}" oninput="updateNetwork(${ni},'driver',this.value)" placeholder="driver (optional)" style="max-width:140px;">
-      <button class="btn btn-ghost" onclick="removeNetwork(${ni})">×</button>
-    </div>`).join('');
-}
-function addService(){ state.composeServices.push({name:'service'+state.composeServices.length, image:'', build:'.', container_name:'', ports:[], env_vars:[], volumes:[], networks:[], restart:'unless-stopped'}); renderComposeForm(); syncRawFromForm(); }
-function removeService(i){ state.composeServices.splice(i,1); renderComposeForm(); syncRawFromForm(); }
-function updateService(i,field,val){ if(state.composeServices[i]){ state.composeServices[i][field]=val; syncRawFromForm(); } }
-function addServiceItem(si,field){ if(state.composeServices[si]){ state.composeServices[si][field].push(''); renderComposeForm(); syncRawFromForm(); } }
-function updateServiceItem(si,field,idx,val){ if(state.composeServices[si] && state.composeServices[si][field]){ state.composeServices[si][field][idx]=val; syncRawFromForm(); } }
-function removeServiceItem(si,field,idx){ if(state.composeServices[si] && state.composeServices[si][field]){ state.composeServices[si][field].splice(idx,1); renderComposeForm(); syncRawFromForm(); } }
-function addVolume(){ state.composeVolumes.push({name:'data', driver:''}); renderComposeForm(); syncRawFromForm(); }
-function updateVolume(i,field,val){ if(state.composeVolumes[i]){ state.composeVolumes[i][field]=val; syncRawFromForm(); } }
-function removeVolume(i){ state.composeVolumes.splice(i,1); renderComposeForm(); syncRawFromForm(); }
-function addNetwork(){ state.composeNetworks.push({name:'backend', driver:'bridge'}); renderComposeForm(); syncRawFromForm(); }
-function updateNetwork(i,field,val){ if(state.composeNetworks[i]){ state.composeNetworks[i][field]=val; syncRawFromForm(); } }
-function removeNetwork(i){ state.composeNetworks.splice(i,1); renderComposeForm(); syncRawFromForm(); }
-function syncRawFromForm(){ const raw=document.getElementById('composeRaw'); if(raw) raw.value=buildComposeYaml(); }
-function buildComposeYaml(){
-  let y="version: '3.8'\n\n";
-  y+="services:\n";
-  for(const s of state.composeServices){
-    const svcName=s.name||'app';
-    y+=`  ${svcName}:\n`;
-    if(s.image) y+=`    image: ${s.image}\n`;
-    if(s.build) y+=`    build: ${s.build}\n`;
-    if(s.container_name) y+=`    container_name: ${s.container_name}\n`;
-    if(s.ports.length){ y+=`    ports:\n`; for(const p of s.ports){ if(p.trim()) y+=`      - "${p}"\n`; } }
-    if(s.env_vars.length){ y+=`    environment:\n`; for(const e of s.env_vars){ if(e.trim()) y+=`      - "${e}"\n`; } }
-    if(s.volumes.length){ y+=`    volumes:\n`; for(const v of s.volumes){ if(v.trim()) y+=`      - ${v}\n`; } }
-    if(s.networks.length){ y+=`    networks:\n`; for(const n of s.networks){ if(n.trim()) y+=`      - ${n}\n`; } }
-    if(s.restart) y+=`    restart: ${s.restart}\n`;
-    if(!y.includes('env_file')) y+=`    env_file:\n      - .env\n`;
-  }
-  if(state.composeVolumes.length){ y+=`\nvolumes:\n`; for(const v of state.composeVolumes){ if(v.name.trim()) y+=`  ${v.name}:\n${v.driver?`    driver: ${v.driver}\n`:''}`; } }
-  if(state.composeNetworks.length){ y+=`\nnetworks:\n`; for(const n of state.composeNetworks){ if(n.name.trim()) y+=`  ${n.name}:\n${n.driver?`    driver: ${n.driver}\n`:''}`; } }
-  return y;
-}
-
-// ---- Direct command ----
-function updateDirectCommand(){
-  const name=(document.getElementById('directName')?.value.trim()) || state.projectName || 'app';
-  const hostPort=document.getElementById('directHostPort')?.value || state.port || '25600';
-  const containerPort=document.getElementById('directContainerPort')?.value || '3000';
-  const image=(document.getElementById('directImage')?.value.trim()) || state.projectName || 'app';
-  const build=document.getElementById('directBuildToggle')?.classList.contains('on');
-  let cmd=build?`docker build -t ${image} .\n`:'';
-  cmd+=`docker run -d --name ${name} -p ${hostPort}:${containerPort} --env-file .env --restart unless-stopped ${image}`;
-  document.getElementById('directBody').textContent=cmd;
-}
-function initDirectListeners(){
-  ['directName','directHostPort','directContainerPort','directImage'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', updateDirectCommand); });
-  const t=document.getElementById('directBuildToggle'); if(t) t.addEventListener('click', ()=>setTimeout(updateDirectCommand,50));
-  const pn=document.getElementById('projectName'); const pp=document.getElementById('projectPort');
-  if(pn) pn.addEventListener('input', ()=>{ state.projectName=pn.value.trim(); updateDirectCommand(); updateReview(); });
-  if(pp) pp.addEventListener('input', ()=>{ state.port=pp.value?parseInt(pp.value):null; updateDirectCommand(); updateReview(); });
-}
-
-function updateReview(){
-  document.getElementById('rName').textContent=state.projectName||'-';
-  document.getElementById('rSource').textContent=document.getElementById('sourceDisplay').textContent;
-  document.getElementById('rMode').textContent=state.commandMode;
-  document.getElementById('rPort').textContent=state.port||'Auto';
-}
+services:
+  app:
+    build: .
+    container_name: app
+    ports:
+      - "25600:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
+`; }
+function defaultDockerfile(){ return `FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+CMD ["node", "server.js"]
+`; }
 
 async function submitProject(){
   const name=document.getElementById('projectName').value.trim();
-  if(!name){ alert('Project name is required'); return; }
-  state.projectName=name; state.port=document.getElementById('projectPort').value?parseInt(document.getElementById('projectPort').value):null;
-  const env=document.getElementById('envContent').value;
-  const example=document.getElementById('exampleEnvContent').value;
-  const compose=state.commandMode==='compose'?buildComposeYaml():document.getElementById('composeRaw').value;
-  const dockerfile=state.commandMode==='dockerfile'?document.getElementById('dockerfileRaw').value:'';
-  const direct=state.commandMode==='direct'?document.getElementById('directBody').textContent:'';
+  if(!name){ showModal('Project name is required'); return; }
   const payload={
-    name, port:state.port||null, env_content:env, example_env_content:example,
-    compose_file:'docker-compose.yml', compose_content:compose, dockerfile_content:dockerfile,
-    direct_command:direct, command_mode:state.commandMode,
-    deploy_method:state.commandMode==='compose'?'compose':(state.commandMode==='direct'?'direct':'build'),
-    source_type:setup.source, source_path:setup.downloadId||setup.path||'',
-    raw_mode:state.commandMode==='compose'?(state.composeView==='raw'):false
+    name,
+    compose_file:'docker-compose.yml',
+    compose_content:editors.compose.getValue(),
+    dockerfile_content:editors.dockerfile.getValue(),
+    env_content:editors.env.getValue(),
+    command_mode:'compose',
+    deploy_method:'compose',
+    source_type:setup.source,
+    source_path:setup.downloadId||setup.path||'',
+    github_repo_url:setup.scan?.clone_url||''
   };
-  if(setup.source==='github') payload.github_repo_url=setup.scan?.clone_url||'';
   try{
     const r=await fetch('/api/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    if(r.ok) location.href='/projects';
-    else{ const d=await r.json(); alert(d.detail||'Failed'); }
-  }catch(e){ alert('Error: '+e.message); }
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){ location.href='/projects'; }
+    else{ showModal(d.detail||'Failed to create project'); }
+  }catch(e){ showModal('Error: '+e.message); }
 }
 
-function showToast(msg, type='info'){ console.log('['+type+']', msg); }
-updateReview();
+function showModal(msg){
+  if(typeof showInfoModal==='function') showInfoModal('Error', msg);
+  else alert(msg);
+}
+
+window.addEventListener('themeChanged', setTheme);
 </script>
 
 {% endblock %}

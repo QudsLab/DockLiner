@@ -121,6 +121,13 @@ def logs_page(request: Request, pid: int, db: Session = Depends(get_db), user: s
         logs = DeployService.project_logs(p, 200)
     return templates.TemplateResponse(request, "logs.html", {"request": request, "project": p, "logs": logs})
 
+@router.get("/projects/{pid}", response_class=HTMLResponse)
+def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p})
+
 @router.get("/logout", response_class=HTMLResponse)
 def logout_page(request: Request):
     return templates.TemplateResponse(request, "login.html", {"request": request})
