@@ -4,7 +4,8 @@
 <img src="app/static/img/logo_light.svg" width="35%" alt="DockLiner Banner" />
 <br>
 <br>
-<code style="color: #ff7300; font-size:34px">DockLiner</code>
+<h1>
+<code style="color: #ff7300">DockLiner</code></h1>
 </div>
 
 <br>
