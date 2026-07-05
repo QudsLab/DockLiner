@@ -5,7 +5,7 @@
       .ship-light { fill: #94a3b8; }
       .ship-deep { fill: #475569; }
       .building { fill: #f8fafc; }
-      .window { fill: #1e293b; }
+      .window { fill: #5e697b; }
       .wave { fill: #f97316; }
       .water { fill: #38bdf8; opacity: 0.12; }
     </style>
