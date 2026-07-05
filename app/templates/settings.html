@@ -47,62 +47,62 @@
     <h2 class="section-title">Appearance</h2>
 
     <label style="font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin:4px 0 12px;display:block;">Color theme</label>
-    <div class="preset-grid" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:24px;">
-      <div class="preset-card" data-preset="mono" role="button" tabindex="0" onclick="choosePreset('mono')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('mono')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#0a0a0a;border:1px solid #3a3a3a;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#f5f5f5;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#757575;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#e5e5e5;"></div>
+    <div class="preset-grid">
+      <div class="preset-card" data-preset="mono" role="button" tabindex="0" onclick="choosePreset('mono')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('mono')">
+        <div class="preset-preview" data-preset="mono" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Mono</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Clean grayscale — minimal and focused</div>
       </div>
 
-      <div class="preset-card" data-preset="clay" role="button" tabindex="0" onclick="choosePreset('clay')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('clay')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#241f1d;border:1px solid #4a423e;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#faf9f5;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#8a817a;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+      <div class="preset-card" data-preset="clay" role="button" tabindex="0" onclick="choosePreset('clay')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('clay')">
+        <div class="preset-preview" data-preset="clay" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Clay</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Warm earthen neutrals with amber accents</div>
       </div>
 
-      <div class="preset-card" data-preset="obsidian" role="button" tabindex="0" onclick="choosePreset('obsidian')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('obsidian')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#181818;border:1px solid #333333;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#fafafa;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#6e6e6e;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#f97316;"></div>
+      <div class="preset-card" data-preset="obsidian" role="button" tabindex="0" onclick="choosePreset('obsidian')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('obsidian')">
+        <div class="preset-preview" data-preset="obsidian" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Obsidian</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Pure charcoal with forge-orange accents</div>
       </div>
 
-      <div class="preset-card" data-preset="ember" role="button" tabindex="0" onclick="choosePreset('ember')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('ember')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#160c0c;border:1px solid #4d3330;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#ffffff;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#a07c71;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+      <div class="preset-card" data-preset="ember" role="button" tabindex="0" onclick="choosePreset('ember')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('ember')">
+        <div class="preset-preview" data-preset="ember" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Ember</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Warm crimson and bronze — forge vibes</div>
       </div>
 
-      <div class="preset-card" data-preset="terminal" role="button" tabindex="0" onclick="choosePreset('terminal')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('terminal')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#030703;border:1px solid #1a3d1a;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#e2fbe2;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#22c55e;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#22c55e;"></div>
+      <div class="preset-card" data-preset="terminal" role="button" tabindex="0" onclick="choosePreset('terminal')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('terminal')">
+        <div class="preset-preview" data-preset="terminal" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Terminal</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Brand-success green on black — console feel</div>
       </div>
 
-      <div class="preset-card" data-preset="slate" role="button" tabindex="0" onclick="choosePreset('slate')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('slate')" style="background:var(--surface-card);border:2px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s;">
-        <div style="height:70px;border-radius:var(--radius-md);background:#0b101a;border:1px solid #33425c;position:relative;overflow:hidden;margin-bottom:12px;">
-          <div style="position:absolute;top:12px;left:12px;right:40%;height:10px;border-radius:999px;background:#ffffff;"></div>
-          <div style="position:absolute;top:28px;left:12px;right:55%;height:10px;border-radius:999px;background:#6d819c;"></div>
-          <div style="position:absolute;bottom:12px;right:12px;width:38px;height:22px;border-radius:var(--radius-md);background:#fb923c;"></div>
+      <div class="preset-card" data-preset="slate" role="button" tabindex="0" onclick="choosePreset('slate')" onkeydown="if(event.key==='Enter'||event.key===' ')choosePreset('slate')">
+        <div class="preset-preview" data-preset="slate" aria-hidden="true">
+          <div class="pp-bar pp-bar-a"></div>
+          <div class="pp-bar pp-bar-b"></div>
+          <div class="pp-accent"></div>
         </div>
         <div style="font-weight:600;color:var(--ink);">Slate</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">Cool slate with amber accent — default</div>
@@ -199,9 +199,7 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a class="btn btn-secondary btn-sm" href="/api/docker/security" onclick="event.preventDefault();fetch(this.href).then(r=>r.json()).then(d=>showInfoModal('Security Check', JSON.stringify(d,null,2)))" style="text-decoration:none;">Security Check</a>
-    </div>
-    {% if not docker_installed %}
+      {% if not docker_installed %}
     <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
       Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.
     </div>
@@ -210,6 +208,7 @@
       Docker is installed but the daemon is not running. Start Docker Desktop or the docker service.
     </div>
     {% endif %}
+  </div>
   </div>
 
   <div class="card" style="margin-bottom:24px;">

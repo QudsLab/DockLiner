@@ -11,8 +11,8 @@
   <link rel="manifest" href="/static/manifest.json">
   <title>{% block title %}DockLiner{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="/static/img/icon.svg">
-  <link rel="stylesheet" href="/static/css/root.css">
-  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/root.css?v=3">
+  <link rel="stylesheet" href="/static/css/components.css?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Cormorant+Garamond:wght@400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
@@ -314,6 +314,8 @@
       html.style.setProperty('--surface-dark', p.card);
       html.style.setProperty('--surface-dark-elevated', mix(p.card, 0.9, p.ink));
       html.style.setProperty('--surface-dark-soft', mix(p.card, 0.85, p.canvas));
+      html.style.setProperty('--on-dark', isDark ? '#ffffff' : p.ink);
+      html.style.setProperty('--on-dark-soft', isDark ? p.muted : p.body);
       html.style.setProperty('--hairline', p.border);
       html.style.setProperty('--hairline-soft', mix(p.border, 0.75, p.canvas));
       html.style.setProperty('--primary', p.accent);
