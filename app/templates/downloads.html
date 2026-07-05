@@ -3,7 +3,8 @@
 {% block content %}
 
 <style>
-.dl-card{padding:14px 16px;border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--surface-card);margin-bottom:12px;animation:slideIn .35s ease-out both}
+.dl-card{padding:14px 16px;border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--surface-card);margin-bottom:12px;animation:slideIn .35s ease-out both;transition:transform .25s ease,opacity .25s ease,height .25s ease,margin .25s ease,padding .25s ease;overflow:hidden}
+.dl-card.deleting{transform:translateX(-100%);opacity:0;height:0!important;margin:0!important;padding-top:0!important;padding-bottom:0!important;border-color:transparent!important;pointer-events:none}
 @keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:100;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
 .modal-box{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-xl);padding:24px;max-width:360px;width:100%;box-shadow:0 16px 40px rgba(0,0,0,0.35)}
@@ -62,6 +63,8 @@ function fmtBytes(n){ if(!n && n!==0) return '-'; const units=['B','KB','MB','GB
 function fmtDate(d){ if(!d) return '-'; return new Date(d+'Z').toLocaleString(); }
 function fmtHash(h){ return h || '-'; }
 
+function isUntracked(d){ return d.status === 'untracked' || d.id === null; }
+
 async function loadDownloads(){
   const res = await fetch('/api/downloads');
   if(!res.ok){ document.getElementById('downloads-list').innerHTML='<div class="empty">Could not load downloads.</div>'; return; }
@@ -78,33 +81,44 @@ async function loadDownloads(){
   updateDownloadList(data.downloads);
 }
 
+let deletingIds = new Set();
+let recentlyDeleted = new Set();
+
 let lastDownloadsJson = '';
 function updateDownloadList(downloads){
   const list = document.getElementById('downloads-list');
-  const json = JSON.stringify(downloads.map(d => ({id:d.id,status:d.status,size_bytes:d.size_bytes,total_bytes:d.total_bytes,md5_hash:d.md5_hash,sha256_hash:d.sha256_hash,error_message:d.error_message})));
+  // Filter out items that are currently animating out or were just deleted.
+  const visible = downloads.filter(d => {
+    const key = d.id === null ? `folder:${d.repo}` : `db:${d.id}`;
+    return !deletingIds.has(key) && !recentlyDeleted.has(key);
+  });
+  const json = JSON.stringify(visible.map(d => ({id:d.id,status:d.status,size_bytes:d.size_bytes,total_bytes:d.total_bytes,md5_hash:d.md5_hash,sha256_hash:d.sha256_hash,error_message:d.error_message,compose_file:d.compose_file,dockerfile_exists:d.dockerfile_exists,env_exists:d.env_exists,example_env_exists:d.example_env_exists,repo:d.repo,extracted_path:d.extracted_path})));
   if(json === lastDownloadsJson) return;
   lastDownloadsJson = json;
 
   const existing = new Map();
-  list.querySelectorAll('.dl-card').forEach(el => existing.set(parseInt(el.dataset.id), el));
+  list.querySelectorAll('.dl-card').forEach(el => existing.set(parseInt(el.dataset.id) || el.dataset.key, el));
 
-  downloads.forEach((d, index) => {
-    const id = d.id;
-    let el = existing.get(id);
+  visible.forEach((d, index) => {
+    const key = d.id === null ? `folder:${d.repo}` : `db:${d.id}`;
+    let el = existing.get(key);
     if(!el){
       el = document.createElement('div');
       el.className = 'dl-card';
-      el.dataset.id = id;
+      el.dataset.key = key;
+      el.dataset.id = d.id === null ? '' : d.id;
       el.style.animationDelay = (index * 0.05) + 's';
       list.appendChild(el);
-      existing.delete(id);
+      existing.delete(key);
     } else {
-      existing.delete(id);
+      existing.delete(key);
     }
     renderCard(el, d);
   });
 
-  existing.forEach(el => el.remove());
+  existing.forEach(el => {
+    if(!el.classList.contains('deleting')) el.remove();
+  });
 }
 
 function renderCard(el, d){
@@ -116,22 +130,30 @@ function renderCard(el, d){
                     <div class="meta">${pct}% · ${fmtBytes(d.size_bytes)} / ${fmtBytes(d.total_bytes)}</div>`;
   }
   let buttons = '';
-  if(d.status==='done'){
+  if(!isUntracked(d) && d.status==='done'){
     buttons += `<a href="/projects/setup?source=download&download_id=${d.id}" class="btn btn-primary btn-sm" style="text-decoration:none;">Create project</a>`;
     if(d.compose_file || d.dockerfile_exists){
       const tags = [d.compose_file?'compose':'', d.dockerfile_exists?'dockerfile':''].filter(Boolean).join(', ');
       buttons += ` <span class="tag">${tags}</span>`;
     }
   }
-  buttons += ` <button class="btn btn-danger btn-sm" onclick="deleteDownload(${d.id})">Delete</button>`;
+  const deleteTarget = isUntracked(d) ? escapeHtml(d.repo||'') : d.id;
+  const deleteLabel = isUntracked(d) ? 'Remove folder' : 'Delete';
+  const deleteCall = isUntracked(d)
+    ? `deleteDownload('${deleteTarget.replace(/'/g, "\\'")}', true)`
+    : `deleteDownload(${deleteTarget}, false)`;
+  buttons += ` <button class="btn btn-danger btn-sm" onclick="${deleteCall}">${deleteLabel}</button>`;
   const hashes = (d.md5_hash || d.sha256_hash) ? `<div class="hashes">
     <div class="hash-row md5" title="MD5"><span class="hash-label">MD5:</span> ${escapeHtml(d.md5_hash||'-')}</div>
     <div class="hash-row sha256" title="SHA256"><span class="hash-label">SHA256:</span> ${escapeHtml(d.sha256_hash||'-')}</div>
   </div>` : '';
   const errorBlock = d.error_message ? `<div class="error-message">${escapeHtml(d.error_message)}</div>` : '';
+  const name = isUntracked(d)
+    ? escapeHtml(d.repo || d.extracted_path?.split(/[\\/]/).pop() || 'untracked folder')
+    : `${escapeHtml(d.owner||'-')}/${escapeHtml(d.repo||'-')} @ ${escapeHtml(d.ref||'-')}`;
   el.innerHTML = `
     <div class="dl-header">
-      <div class="name">${escapeHtml(d.owner||'-')}/${escapeHtml(d.repo||'-')} @ ${escapeHtml(d.ref||'-')}</div>
+      <div class="name">${name}</div>
       <div class="actions">${buttons}</div>
     </div>
     <div class="dl-body">
@@ -143,8 +165,8 @@ function renderCard(el, d){
 }
 
 let pendingDeleteId = null;
-function showConfirm(id){
-  pendingDeleteId = id;
+function showConfirm(target){
+  pendingDeleteId = target;
   const modal = document.getElementById('confirm-modal');
   modal.style.display = 'flex';
 }
@@ -159,9 +181,41 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && pendingDeleteId !== null) hideConfirm();
 });
 
-async function deleteDownload(id){
-  showConfirm(id);
+async function deleteDownload(id, isFolder=false){
+  showConfirm({id, isFolder});
 }
+
+document.getElementById('confirm-ok').addEventListener('click', async () => {
+  if(pendingDeleteId === null) return;
+  const {id, isFolder} = pendingDeleteId;
+  hideConfirm();
+
+  const key = isFolder ? `folder:${id}` : `db:${id}`;
+  deletingIds.add(key);
+
+  const list = document.getElementById('downloads-list');
+  const card = list.querySelector(`.dl-card[data-key="${CSS.escape(key)}"]`);
+  if(card){
+    card.classList.add('deleting');
+    // Let the CSS transition run before hitting the API.
+    await new Promise(r => setTimeout(r, 280));
+  }
+
+  try {
+    const url = isFolder ? `/api/downloads/folder/${encodeURIComponent(id)}` : `/api/downloads/${id}`;
+    const res = await fetch(url, {method: 'DELETE'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    recentlyDeleted.add(key);
+    setTimeout(() => recentlyDeleted.delete(key), 2000);
+    loadDownloads();
+  } catch(e) {
+    deletingIds.delete(key);
+    if(card) card.classList.remove('deleting');
+    showToast(`Delete failed: ${e.message}`);
+  }
+});
+
+document.getElementById('confirm-cancel').addEventListener('click', hideConfirm);
 
 loadDownloads();
 setInterval(loadDownloads, 3000);

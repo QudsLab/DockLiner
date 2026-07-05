@@ -53,6 +53,7 @@ def projects_setup_page(
         raise HTTPException(status_code=400, detail="Invalid source")
 
     scan_data = {}
+    file_map = {}
     tokens = db.query(AccessToken).all()
 
     if source == "download":
@@ -61,6 +62,7 @@ def projects_setup_page(
             raise HTTPException(status_code=404, detail="Download not ready")
         scan_data = scan_local_dir(dl.extracted_path)
         scan_data["clone_url"] = f"https://github.com/{dl.owner}/{dl.repo}.git"
+        file_map = _build_file_map(dl.extracted_path, scan_data.get("files", []))
     elif source == "local":
         decoded_path = urllib.parse.unquote(path)
         if not decoded_path:
@@ -68,6 +70,7 @@ def projects_setup_page(
         if not Path(decoded_path).exists():
             raise HTTPException(status_code=400, detail="Directory does not exist")
         scan_data = scan_local_dir(decoded_path)
+        file_map = _build_file_map(decoded_path, scan_data.get("files", []))
     else:
         # github source requires a download_id in this flow too; otherwise just show empty builder
         if download_id:
@@ -75,6 +78,9 @@ def projects_setup_page(
             if dl and dl.extracted_path:
                 scan_data = scan_local_dir(dl.extracted_path)
                 scan_data["clone_url"] = f"https://github.com/{dl.owner}/{dl.repo}.git"
+                file_map = _build_file_map(dl.extracted_path, scan_data.get("files", []))
+
+    scan_data["file_map"] = file_map
 
     return templates.TemplateResponse(request, "project_setup.html", {
         "request": request,
@@ -84,6 +90,30 @@ def projects_setup_page(
         "scan_json": json.dumps(scan_data),
         "tokens": tokens,
     })
+
+
+def _build_file_map(root: str, files: list) -> dict:
+    """Read contents for likely compose/Dockerfile/env candidates so the setup picker can switch between them."""
+    root_path = Path(root)
+    map_data = {}
+    for f in files:
+        lower = f.lower()
+        is_candidate = (
+            lower.endswith("compose.yml") or lower.endswith("compose.yaml") or
+            lower.endswith("docker-compose.yml") or lower.endswith("docker-compose.yaml") or
+            lower == "dockerfile" or lower.endswith("/dockerfile") or
+            lower == ".env" or lower == "env" or lower.endswith("/.env") or lower.endswith("/env")
+        )
+        if not is_candidate:
+            continue
+        try:
+            target = (root_path / f).resolve()
+            if not str(target).startswith(str(root_path.resolve())):
+                continue
+            map_data[f] = target.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+    return map_data
 
 @router.get("/downloads", response_class=HTMLResponse)
 def downloads_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):

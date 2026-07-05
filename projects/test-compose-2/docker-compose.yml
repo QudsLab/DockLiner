@@ -1,1 +1,0 @@
-version: '3.8'\nservices:\n  app:\n    image: nginx:alpine\n    ports:\n      - '25601:80'\n

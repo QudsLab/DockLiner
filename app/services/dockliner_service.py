@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from app.core.config import settings
+from app.services.file_scanner import scan_downloaded_repo
 
 class DockLinerService:
     """Central service layer: Docker operations + project downloads."""
@@ -290,17 +291,75 @@ class DockLinerService:
     def list_downloads(cls, db) -> List[Dict[str, Any]]:
         from app.models.project import Download
         rows = db.query(Download).order_by(Download.created_at.desc()).all()
+        db_by_folder: Dict[str, Download] = {}
         out = []
         for dl in rows:
             entry = dl.to_dict()
-            entry.update(cls.scan_download(dl))
+            try:
+                entry.update(cls.scan_download(dl))
+            except Exception:
+                entry.update({"exists": False, "size_bytes": dl.size_bytes or 0, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False})
             out.append(entry)
+            if dl.extracted_path:
+                # Track both inner extracted folder and outer container so orphans are not duplicated.
+                p = Path(dl.extracted_path)
+                db_by_folder[p.name] = dl
+                if p.parent.name == Path(settings.DOWNLOADS_DIR).name or str(p.parent) == str(Path(settings.DOWNLOADS_DIR)):
+                    db_by_folder[p.parent.name] = dl
+
+        # Merge any physical download folders that have no DB record (orphaned / unfinished).
+        downloads_root = Path(settings.DOWNLOADS_DIR)
+        if downloads_root.exists():
+            for folder in sorted(downloads_root.iterdir()):
+                if not folder.is_dir() or folder.name in db_by_folder:
+                    continue
+                scan_target = folder
+                # GitHub zipballs extract as outer_timestamp/repo-commitshort/. If the outer is just a shell, use inner.
+                subdirs = [d for d in folder.iterdir() if d.is_dir()]
+                if len(subdirs) == 1:
+                    inner = subdirs[0]
+                    if any((inner / f).exists() for f in ['compose.yml','compose.yaml','docker-compose.yml','docker-compose.yaml','Dockerfile']):
+                        scan_target = inner
+                info = scan_downloaded_repo(str(scan_target))
+                out.append({
+                    "id": None,
+                    "token_id": None,
+                    "owner": "",
+                    "repo": scan_target.name,
+                    "ref": "",
+                    "status": "untracked",
+                    "size_bytes": info.get("size_bytes", 0),
+                    "total_bytes": None,
+                    "error_message": "",
+                    "download_path": None,
+                    "extracted_path": str(scan_target),
+                    "md5_hash": None,
+                    "sha256_hash": None,
+                    "created_at": None,
+                    "updated_at": None,
+                    "exists": True,
+                    "compose_file": info.get("compose_file"),
+                    "dockerfile_exists": bool(info.get("dockerfile")),
+                    "env_exists": bool(info.get("env")),
+                    "example_env_exists": bool(info.get("example_env")),
+                })
         return out
 
     @classmethod
     def delete_download(cls, dl, db) -> None:
-        if dl.extracted_path and Path(dl.extracted_path).exists():
-            shutil.rmtree(dl.extracted_path, ignore_errors=True)
+        # Remove the whole outer download container, not just the inner extracted folder.
+        if dl.extracted_path:
+            p = Path(dl.extracted_path).resolve()
+            root = Path(settings.DOWNLOADS_DIR).resolve()
+            if p.exists():
+                shutil.rmtree(p, ignore_errors=True)
+            # If extracted_path is nested inside downloads/, delete the outer timestamp container too.
+            if str(p).startswith(str(root)) and p != root and p.parent != root:
+                try:
+                    if p.parent.exists():
+                        shutil.rmtree(p.parent, ignore_errors=True)
+                except Exception:
+                    pass
         if dl.download_path and Path(dl.download_path).exists():
             try:
                 p = Path(dl.download_path)
@@ -314,8 +373,24 @@ class DockLinerService:
         db.commit()
 
     @classmethod
+    def delete_download_folder(cls, folder_name: str) -> bool:
+        """Delete an untracked download folder directly from disk."""
+        downloads_root = Path(settings.DOWNLOADS_DIR)
+        target = downloads_root / folder_name
+        try:
+            # Resolve and guard against path traversal.
+            resolved = target.resolve()
+            root = downloads_root.resolve()
+            if not str(resolved).startswith(str(root)) or resolved == root:
+                return False
+            if resolved.exists():
+                shutil.rmtree(resolved, ignore_errors=True)
+            return True
+        except Exception:
+            return False
+
+    @classmethod
     def scan_download(cls, dl) -> Dict[str, Any]:
-        from app.services.file_scanner import scan_downloaded_repo
         if not dl.extracted_path or not Path(dl.extracted_path).exists():
             return {"exists": False, "size_bytes": dl.size_bytes or 0, "total_bytes": dl.total_bytes, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False}
         info = scan_downloaded_repo(dl.extracted_path)

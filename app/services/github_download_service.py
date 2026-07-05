@@ -2,12 +2,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 from urllib.request import Request, urlopen
-from app.core.config import settings
-from app.models.project import Download
-from app.services.file_scanner import scan_downloaded_repo
 import zipfile
 import threading
 import hashlib
+import shutil
+from app.core.config import settings
+from app.models.project import Download
+from app.services.file_scanner import scan_downloaded_repo
 
 class GitHubDownloadService:
     _lock = threading.Lock()
@@ -107,9 +108,21 @@ class GitHubDownloadService:
 
         zip_path.unlink()
 
+        # Flatten GitHub's zipball: owner_repo_ref_timestamp/repo-commitshort/* -> owner_repo_ref_timestamp/*
         subdirs = [d for d in base.iterdir() if d.is_dir()]
-        root = subdirs[0] if subdirs else base
-        dl.extracted_path = str(root)
+        if subdirs:
+            inner = subdirs[0]
+            for child in inner.iterdir():
+                dest = base / child.name
+                if dest.exists():
+                    if dest.is_dir():
+                        shutil.rmtree(dest, ignore_errors=True)
+                    else:
+                        dest.unlink()
+                shutil.move(str(child), str(dest))
+            shutil.rmtree(inner, ignore_errors=True)
+
+        dl.extracted_path = str(base)
         dl.status = "done"
         dl.updated_at = datetime.utcnow()
         if db:
@@ -230,7 +243,6 @@ class GitHubDownloadService:
                 p = Path(dl.download_path)
                 if p.exists():
                     if p.is_dir():
-                        import shutil
                         shutil.rmtree(p)
                     else:
                         p.unlink()
@@ -238,7 +250,6 @@ class GitHubDownloadService:
                 pass
         if dl.extracted_path:
             try:
-                import shutil
                 shutil.rmtree(dl.extracted_path)
             except Exception:
                 pass

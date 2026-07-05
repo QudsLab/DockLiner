@@ -14,8 +14,8 @@
 .editor-gutter{padding:12px 10px 12px 8px;background:var(--surface-soft);border-right:1px solid var(--hairline);font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;color:var(--muted);text-align:right;user-select:none;white-space:pre;overflow:hidden;min-width:44px;flex-shrink:0}
 .prism-editor-wrap{display:grid;flex:1;overflow:auto;min-height:360px}
 .prism-editor-wrap>pre[class*="language-"],.prism-editor-wrap>textarea{grid-area:1/1;padding:12px!important;margin:0!important;font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;tab-size:2;-moz-tab-size:2;white-space:pre!important;box-sizing:border-box;border:none!important;border-radius:0!important;min-width:100%}
-.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:visible!important;background:transparent!important;text-shadow:none!important}
-.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important}
+.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:auto!important;background:transparent!important;text-shadow:none!important;height:100%}
+.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;min-height:100%}
 .prism-editor-wrap .token{text-shadow:none!important;background:transparent!important}
 .prism-editor-wrap>textarea{background:transparent;color:transparent;caret-color:var(--ink);-webkit-text-fill-color:transparent;outline:none;resize:none;z-index:1;overflow:hidden;height:100%;-webkit-appearance:none;appearance:none}
 html[data-theme="dark"] .editor-outer{background:#1e1e1e;border-color:var(--hairline)}
@@ -27,7 +27,7 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 .detail-tab{padding:10px 18px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:8px;background:transparent;border:none;border-radius:8px 8px 0 0}
 .detail-tab.active{color:#ff7300;border-bottom-color:#ff7300;background:rgba(255,115,0,.10)}
 .editor-card{border:1px solid var(--hairline);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);display:none}
-.editor-card.active{display:block}
+.editor-card.active,.panel.active>.editor-card{display:block}
 .editor-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
 .editor-header span{font-weight:700;font-size:14px;color:var(--ink)}
 .panel{display:none}
@@ -60,6 +60,14 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
   </div>
 </div>
 
+{% set needs_build = project.status in ('idle','error','stopped') %}
+{% if needs_build %}
+<div id="buildHint" class="hint-banner" style="margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,115,0,.12);border:1px solid rgba(255,115,0,.35);color:var(--ink);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+  <span>Project files are ready. <b>Build/Deploy</b> clones the repo, builds the image and starts the container.</span>
+  <button class="btn btn-primary btn-sm" onclick="doAction('build')">Build/Deploy now</button>
+</div>
+{% endif %}
+
 <div class="detail-tabs">
   <button class="detail-tab active" onclick="showTab('compose')">compose.yml</button>
   <button class="detail-tab" onclick="showTab('dockerfile')">Dockerfile</button>
@@ -71,7 +79,7 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 
 <div id="tab-compose" class="panel active">
   <div class="editor-card">
-    <div class="editor-header"><span>compose.yml</span><button class="btn btn-primary btn-sm" onclick="saveFile('docker-compose.yml','compose')">Save</button></div>
+    <div class="editor-header"><span>compose.yml</span><button id="saveComposeBtn" class="btn btn-primary btn-sm">Save</button></div>
     <div id="editor-compose"></div>
   </div>
 </div>
@@ -120,6 +128,7 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 <script>
 const pid={{ project.id }};
 let currentFilePath='';
+let composeFileName='compose.yml';
 const editors={};
 
 function showTab(id){
@@ -165,13 +174,31 @@ function setTheme(){
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
   document.getElementById('prismTheme').href = '/static/vendor/prism/' + (isDark?'prism-dark.min.css':'prism.min.css');
 }
+
+async function loadComposeFile(){
+  const candidates = ['compose.yml','compose.yaml','docker-compose.yml','docker-compose.yaml'];
+  for(const name of candidates){
+    const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(name)}`);
+    if(r.ok){
+      const data=await r.json();
+      if(!data.is_dir){
+        composeFileName = name;
+        document.querySelector('#tab-compose .editor-header span').textContent = name;
+        document.getElementById('saveComposeBtn').onclick = ()=>saveFile(name,'compose');
+        return data.content || '';
+      }
+    }
+  }
+  return '';
+}
+
 (async function(){
   const [c,d,e] = await Promise.all([
-    fetch(`/api/projects/${pid}/files/docker-compose.yml`).then(r=>r.ok?r.json():{content:''}),
+    loadComposeFile(),
     fetch(`/api/projects/${pid}/files/Dockerfile`).then(r=>r.ok?r.json():{content:''}),
     fetch(`/api/projects/${pid}/files/.env`).then(r=>r.ok?r.json():{content:''})
   ]);
-  editors.compose = makeEditor('editor-compose', 'yaml', c.content||'');
+  editors.compose = makeEditor('editor-compose', 'yaml', typeof c === 'string' ? c : (c.content||''));
   editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.content||'');
   editors.env = makeEditor('editor-env', 'bash', e.content||'');
   setTheme();

@@ -37,6 +37,43 @@ from app.services.file_scanner import scan_downloaded_repo
 from app.services.error_log_service import ErrorLogService
 import yaml, urllib.parse, shutil
 
+
+def _extract_host_port_from_compose(content: str) -> Optional[int]:
+    """Parse compose YAML and return the first host port found in services.*.ports."""
+    if not content:
+        return None
+    try:
+        doc = yaml.safe_load(content)
+    except Exception:
+        return None
+    if not isinstance(doc, dict):
+        return None
+    services = doc.get("services") or {}
+    if not isinstance(services, dict):
+        return None
+    for svc in services.values():
+        if not isinstance(svc, dict):
+            continue
+        ports = svc.get("ports") or []
+        if not isinstance(ports, list):
+            continue
+        for entry in ports:
+            if isinstance(entry, int):
+                return entry
+            if isinstance(entry, str):
+                host_part = entry.split(":")[-2] if entry.count(":") >= 2 else entry.split(":")[0]
+                host_part = host_part.split("/")[0].strip()
+                if host_part.isdigit():
+                    return int(host_part)
+            if isinstance(entry, dict):
+                published = entry.get("published") or entry.get("target")
+                if isinstance(published, int):
+                    return published
+                if isinstance(published, str) and published.isdigit():
+                    return int(published)
+    return None
+
+
 router = APIRouter(prefix="/api", tags=["api"])
 
 class LoginBody(BaseModel):
@@ -79,6 +116,8 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
         raise HTTPException(status_code=409, detail="Project name exists")
     deploy_path = str(Path(settings.PROJECTS_DIR) / data.name)
     port = data.port
+    if port is None:
+        port = _extract_host_port_from_compose(data.compose_content or "")
     if port is None:
         free = find_free_ports(25600, 1)
         port = free[0] if free else 25600
@@ -265,8 +304,12 @@ def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Sessio
     target.write_text(data.content, encoding="utf-8")
     # Mirror to DB fields for main config files
     lower = path.lower()
-    if lower in ("docker-compose.yml", "docker-compose.yaml"):
+    if lower in ("compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"):
         p.compose_content = data.content
+        p.compose_file = path
+        parsed_port = _extract_host_port_from_compose(data.content)
+        if parsed_port is not None:
+            p.port = parsed_port
     elif lower == "dockerfile":
         p.dockerfile_content = data.content
     elif lower in (".env", "env"):
@@ -605,6 +648,15 @@ def api_download_delete(dl_id: int, db: Session = Depends(get_db), user: str = D
     if not dl:
         raise HTTPException(status_code=404, detail="Download not found")
     DockLinerService.delete_download(dl, db)
+    return {"ok": True}
+
+@router.delete("/downloads/folder/{folder_name}")
+def api_download_folder_delete(folder_name: str, user: str = Depends(require_auth)):
+    if not folder_name or folder_name in (".", "..", "/"):
+        raise HTTPException(status_code=400, detail="Invalid folder name")
+    ok = DockLinerService.delete_download_folder(folder_name)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Folder not found or could not be deleted")
     return {"ok": True}
 
 @router.get("/github/download/{dl_id}")

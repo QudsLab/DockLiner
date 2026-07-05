@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, List
 import os
 
+COMPOSE_CANDIDATES = ["compose.yml", "compose.yaml", "docker-compose.yml", "docker-compose.yaml"]
 ENV_CANDIDATES = [".env", "env", "ENV"]
 EXAMPLE_ENV_CANDIDATES = [".env.example", "env.example", ".env.sample", "env.sample", ".env.template", "env.template"]
 
@@ -34,13 +35,16 @@ def scan_downloaded_repo(root: str) -> Dict:
 
     dockerfile_p = r / "Dockerfile"
     dockerfile = _read(dockerfile_p)
-    compose_path = r / "docker-compose.yml"
-    compose = _read(compose_path)
-    compose_file = "docker-compose.yml"
-    if not compose:
-        compose_path = r / "docker-compose.yaml"
+
+    compose = ""
+    compose_path = ""
+    compose_file = None
+    for name in COMPOSE_CANDIDATES:
+        compose_path = r / name
         compose = _read(compose_path)
-        compose_file = "docker-compose.yaml"
+        if compose:
+            compose_file = name
+            break
 
     files = [str(p.relative_to(r)) for p in r.rglob("*") if p.is_file()]
     size_bytes = sum(os.path.getsize(p) for p in r.rglob("*") if p.is_file()) if r.exists() else 0
@@ -56,8 +60,9 @@ def scan_downloaded_repo(root: str) -> Dict:
         "dockerfile": dockerfile,
         "dockerfile_exists": bool(dockerfile),
         "compose": compose,
+        "compose_path": str(compose_path) if compose_path else "",
         "compose_exists": bool(compose),
-        "compose_file": compose_file if compose else None,
+        "compose_file": compose_file,
         "files": files,
         "size_bytes": size_bytes,
         "repo_name": repo_name,

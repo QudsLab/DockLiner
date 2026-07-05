@@ -14,8 +14,8 @@
 .editor-gutter{padding:12px 10px 12px 8px;background:var(--surface-soft);border-right:1px solid var(--hairline);font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;color:var(--muted);text-align:right;user-select:none;white-space:pre;overflow:hidden;min-width:44px;flex-shrink:0}
 .prism-editor-wrap{display:grid;flex:1;overflow:auto;min-height:360px}
 .prism-editor-wrap>pre[class*="language-"],.prism-editor-wrap>textarea{grid-area:1/1;padding:12px!important;margin:0!important;font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;tab-size:2;-moz-tab-size:2;white-space:pre!important;box-sizing:border-box;border:none!important;border-radius:0!important;min-width:100%}
-.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:visible!important;background:transparent!important;text-shadow:none!important}
-.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important}
+.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:auto!important;background:transparent!important;text-shadow:none!important;height:100%}
+.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;min-height:100%}
 .prism-editor-wrap .token{text-shadow:none!important;background:transparent!important}
 .prism-editor-wrap>textarea{background:transparent;color:transparent;caret-color:var(--ink);-webkit-text-fill-color:transparent;outline:none;resize:none;z-index:1;overflow:hidden;height:100%;-webkit-appearance:none;appearance:none}
 html[data-theme="dark"] .editor-outer{background:#1e1e1e;border-color:var(--hairline)}
@@ -50,23 +50,35 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 </div>
 
 <div class="file-tabs" role="tablist">
-  <button class="file-tab active" onclick="switchTab('compose')" role="tab" aria-selected="true"><span class="dot"></span>compose.yml</button>
+  <button class="file-tab active" onclick="switchTab('compose')" role="tab" aria-selected="true"><span class="dot"></span><span id="composeTabLabel">compose</span></button>
   <button class="file-tab" onclick="switchTab('dockerfile')" role="tab"><span class="dot"></span>Dockerfile</button>
   <button class="file-tab" onclick="switchTab('env')" role="tab"><span class="dot"></span>.env</button>
 </div>
 
 <div class="editor-card active" id="card-compose">
-  <div class="editor-header"><span>compose.yml</span><span class="file-chip" id="composeStatus">will create</span></div>
+  <div class="editor-header"><span id="composeHeader">compose.yml</span><span class="file-chip" id="composeStatus">will create</span></div>
+  <div style="padding:10px 12px 0;display:none;" id="composePickerWrap">
+    <label style="font-size:12px;color:var(--muted);">No compose file found. Select one from the repo or leave default to create new:</label>
+    <select id="composePicker" class="input" style="margin-top:6px;" onchange="pickFile('compose', this.value)"></select>
+  </div>
   <div id="editor-compose"></div>
 </div>
 
 <div class="editor-card" id="card-dockerfile">
   <div class="editor-header"><span>Dockerfile</span><span class="file-chip" id="dockerfileStatus">will create</span></div>
+  <div style="padding:10px 12px 0;display:none;" id="dockerfilePickerWrap">
+    <label style="font-size:12px;color:var(--muted);">No Dockerfile found. Select one from the repo or leave default to create new:</label>
+    <select id="dockerfilePicker" class="input" style="margin-top:6px;" onchange="pickFile('dockerfile', this.value)"></select>
+  </div>
   <div id="editor-dockerfile"></div>
 </div>
 
 <div class="editor-card" id="card-env">
   <div class="editor-header"><span>.env</span><span class="file-chip" id="envStatus">will create</span></div>
+  <div style="padding:10px 12px 0;display:none;" id="envPickerWrap">
+    <label style="font-size:12px;color:var(--muted);">No .env found. Select one from the repo or leave default to create new:</label>
+    <select id="envPicker" class="input" style="margin-top:6px;" onchange="pickFile('env', this.value)"></select>
+  </div>
   <div id="editor-env"></div>
 </div>
 
@@ -79,6 +91,7 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 <script>
 let setup={source:'{{ source }}', path:'{{ path | e }}', downloadId:'{{ download_id }}', scan:{{ scan_json | safe if scan_json else '{}' }}};
 const editors={};
+let selectedComposeFile='docker-compose.yml';
 
 function switchTab(name){
   document.querySelectorAll('.file-tab').forEach(t=>{
@@ -93,6 +106,30 @@ function setStatus(id, exists){
   const el=document.getElementById(id);
   el.className='file-chip '+(exists?'ok':'missing');
   el.textContent=exists?'found in source':'will create';
+}
+function populatePicker(id, files, kind){
+  const wrap=document.getElementById(id+'PickerWrap');
+  const sel=document.getElementById(id+'Picker');
+  if(!wrap || !sel) return;
+  const candidates = files.filter(f => {
+    const lower=f.toLowerCase();
+    if(kind==='compose') return lower.endsWith('compose.yml')||lower.endsWith('compose.yaml')||lower.endsWith('docker-compose.yml')||lower.endsWith('docker-compose.yaml');
+    if(kind==='dockerfile') return lower==='dockerfile' || lower.endsWith('/dockerfile');
+    if(kind==='env') return lower==='.env' || lower==='env' || lower.endsWith('/.env') || lower.endsWith('/env');
+    return false;
+  });
+  if(candidates.length===0){ wrap.style.display='none'; return; }
+  sel.innerHTML = `<option value="">-- create new --</option>` + candidates.map(f=>`<option value="${f.replace(/"/g,'&quot;')}">${f}</option>`).join('');
+  wrap.style.display='block';
+}
+function pickFile(kind, path){
+  if(!path) return;
+  const d=setup.scan||{};
+  const content = (d.file_map || {})[path] || '';
+  if(kind==='compose'){ selectedComposeFile=path; document.getElementById('composeHeader').textContent=path; if(content) editors.compose.setValue(content); }
+  if(kind==='dockerfile'){ if(content) editors.dockerfile.setValue(content); }
+  if(kind==='env'){ if(content) editors.env.setValue(content); }
+  setStatus(kind+'Status', true);
 }
 function makeEditor(mountId, lang, value){
   const el = document.getElementById(mountId);
@@ -127,9 +164,14 @@ function setTheme(){
   if(s==='github') text='GitHub clone';
   if(s==='local') text='Local directory: '+setup.path;
   if(s==='download') text='Existing download #'+setup.downloadId;
-  document.getElementById('sourceDisplay').textContent=text;
   const d=setup.scan||{};
+  document.getElementById('sourceDisplay').textContent=text;
   document.getElementById('projectName').value = d.repo_name || (s==='local'?setup.path.split(/[\\/]/).pop():'');
+
+  selectedComposeFile = d.compose_file || 'docker-compose.yml';
+  const composeName = selectedComposeFile;
+  document.getElementById('composeTabLabel').textContent = composeName;
+  document.getElementById('composeHeader').textContent = composeName;
 
   editors.compose = makeEditor('editor-compose', 'yaml', d.compose || defaultCompose());
   editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.dockerfile || defaultDockerfile());
@@ -138,6 +180,9 @@ function setTheme(){
   setStatus('composeStatus', !!d.compose_exists);
   setStatus('dockerfileStatus', !!d.dockerfile_exists);
   setStatus('envStatus', !!d.env);
+  populatePicker('compose', d.files || [], 'compose');
+  populatePicker('dockerfile', d.files || [], 'dockerfile');
+  populatePicker('env', d.files || [], 'env');
   setTheme();
 })();
 
@@ -167,7 +212,7 @@ async function submitProject(){
   if(!name){ showModal('Project name is required'); return; }
   const payload={
     name,
-    compose_file:'docker-compose.yml',
+    compose_file: selectedComposeFile,
     compose_content:editors.compose.getValue(),
     dockerfile_content:editors.dockerfile.getValue(),
     env_content:editors.env.getValue(),
