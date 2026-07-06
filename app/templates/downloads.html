@@ -137,7 +137,7 @@ function renderCard(el, d){
       buttons += ` <span class="tag">${tags}</span>`;
     }
   }
-  const deleteTarget = isUntracked(d) ? escapeHtml(d.repo||'') : d.id;
+  const deleteTarget = isUntracked(d) ? escapeHtml(d.folder_name||d.repo||'') : d.id;
   const deleteLabel = isUntracked(d) ? 'Remove folder' : 'Delete';
   const deleteCall = isUntracked(d)
     ? `deleteDownload('${deleteTarget.replace(/'/g, "\\'")}', true)`

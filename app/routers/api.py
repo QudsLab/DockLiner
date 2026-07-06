@@ -149,6 +149,25 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
     # Persist files
     ppath = Path(str(p.deploy_path))
     ppath.mkdir(parents=True, exist_ok=True)
+
+    # If created from an existing local/download source, mirror it first.
+    if p.source_type == "download" and p.source_path:
+        src = Path(p.source_path)
+        if src.exists():
+            if ppath.exists():
+                shutil.rmtree(ppath, ignore_errors=True)
+            shutil.copytree(src, ppath)
+        else:
+            p.status = "error"
+            p.error_message = f"Source path missing: {src}"
+    elif p.source_type == "local" and p.source_path:
+        src = Path(p.source_path)
+        if src.exists():
+            if ppath.exists():
+                shutil.rmtree(ppath, ignore_errors=True)
+            shutil.copytree(src, ppath)
+
+    # Overwrite with editor-provided content.
     env_txt = str(p.env_content or "")
     if len(env_txt):
         (ppath / ".env").write_text(env_txt, encoding="utf-8")
@@ -202,8 +221,12 @@ def build_project(pid: int, db: Session = Depends(get_db), user: str = Depends(r
         tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
     if not tok:
         tok = db.query(AccessToken).first()
-    dep = DeployService.build_image(p, db)
-    return {'deployment_id': dep.id, 'status': dep.status}
+    dep = DeployService.build(p, tok.token if tok else None)
+    db_dep = Deployment(project_id=p.id, status="success" if dep else "error", logs="\n".join(dep))
+    db.add(db_dep)
+    db.commit()
+    db.refresh(db_dep)
+    return {'deployment_id': db_dep.id, 'status': db_dep.status}
 
 @router.post("/projects/{pid}/deploy")
 def deploy_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -223,15 +246,20 @@ def run_project(pid: int, db: Session = Depends(get_db), user: str = Depends(req
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail='Not found')
-    dep = DeployService.run_container(p, db)
-    return {'deployment_id': dep.id, 'status': dep.status}
+    dep = DeployService.up(p)
+    db_dep = Deployment(project_id=p.id, status="success" if dep else "error", logs="\n".join(dep))
+    db.add(db_dep)
+    db.commit()
+    db.refresh(db_dep)
+    return {'deployment_id': db_dep.id, 'status': db_dep.status}
 
 @router.post("/projects/{pid}/start")
 def start_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
-    out = DeployService.start_project(p)
+    rc, out = DockLinerService.compose_up(str(p.deploy_path), p.compose_file)
+    p.status = "running" if rc == 0 else "error"
     db.commit()
     AuditService.log(db, "start", target=p.name, user=user, ip=request.client.host if request.client else "")
     return {"status": p.status, "output": out}
@@ -241,7 +269,8 @@ def stop_project(pid: int, request: Request, db: Session = Depends(get_db), user
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
-    out = DeployService.stop_project(p)
+    rc, out = DockLinerService.compose_down(str(p.deploy_path), p.compose_file)
+    p.status = "stopped" if rc == 0 else "error"
     db.commit()
     AuditService.log(db, "stop", target=p.name, user=user, ip=request.client.host if request.client else "")
     return {"status": p.status, "output": out}
@@ -251,7 +280,9 @@ def restart_project(pid: int, request: Request, db: Session = Depends(get_db), u
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
-    out = DeployService.restart_project(p)
+    DockLinerService.compose_down(str(p.deploy_path), p.compose_file)
+    rc, out = DockLinerService.compose_up(str(p.deploy_path), p.compose_file)
+    p.status = "running" if rc == 0 else "error"
     db.commit()
     AuditService.log(db, "restart", target=p.name, user=user, ip=request.client.host if request.client else "")
     return {"status": p.status, "output": out}
@@ -261,7 +292,7 @@ def project_logs(pid: int, tail: int = 200, db: Session = Depends(get_db), user:
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
-    return {"logs": DeployService.project_logs(p, tail)}
+    return {"logs": DockLinerService.compose_logs(str(p.deploy_path), p.compose_file, tail=tail)}
 
 @router.get("/projects/{pid}/deployments", response_model=List[DeploymentOut])
 def list_deployments(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):

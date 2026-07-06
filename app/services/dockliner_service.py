@@ -343,7 +343,6 @@ class DockLinerService:
     @classmethod
     def ensure_dirs(cls) -> None:
         Path(settings.PROJECTS_DIR).mkdir(parents=True, exist_ok=True)
-        Path(settings.GITHUB_CACHE).mkdir(parents=True, exist_ok=True)
         Path(settings.DOWNLOADS_DIR).mkdir(parents=True, exist_ok=True)
 
     # ---- Downloads ----
@@ -359,6 +358,16 @@ class DockLinerService:
                 entry.update(cls.scan_download(dl))
             except Exception:
                 entry.update({"exists": False, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False})
+            # folder_name = the actual folder under downloads/ (outer container)
+            if dl.extracted_path:
+                p = Path(dl.extracted_path)
+                root = Path(settings.DOWNLOADS_DIR)
+                if str(p.parent).startswith(str(root)) and p.parent != root:
+                    entry["folder_name"] = p.parent.name
+                else:
+                    entry["folder_name"] = p.name
+            else:
+                entry["folder_name"] = ""
             out.append(entry)
             if dl.extracted_path:
                 p = Path(dl.extracted_path)
@@ -385,6 +394,7 @@ class DockLinerService:
                     "owner": "",
                     "repo": scan_target.name,
                     "ref": "",
+                    "folder_name": folder.name,
                     "status": "untracked",
                     "size_bytes": info.get("size_bytes", 0),
                     "total_bytes": None,
