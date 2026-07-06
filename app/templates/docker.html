@@ -24,7 +24,7 @@
         <td>
           <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
           <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
-          <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>alert(JSON.stringify(d,null,2)))">Ports</button>
+          <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>showInfoModal('Container ports', JSON.stringify(d,null,2)))">Ports</button>
         </td>
       </tr>
     {% endfor %}

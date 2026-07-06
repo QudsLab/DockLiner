@@ -241,8 +241,7 @@ async function submitProject(){
 }
 
 function showModal(msg){
-  if(typeof showInfoModal==='function') showInfoModal('Error', msg);
-  else alert(msg);
+  showErrorModal('Error', msg);
 }
 
 window.addEventListener('themeChanged', setTheme);

@@ -23,7 +23,7 @@
         <td data-label="Port">{{ p.port or '-' }}</td>
         <td data-label="Actions">
           <a class="btn btn-primary btn-xs" href="/projects/{{ p.id }}">Manage</a>
-          <button class="btn btn-danger btn-xs" onclick="if(confirm('Delete {{ p.name }}?')) fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload())">Delete</button>
+          <button class="btn btn-danger btn-xs" onclick="showConfirmModal('Delete project?', 'Delete {{ p.name | e }}? This cannot be undone.', 'Delete', 'btn-danger', ()=>{ fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload()); })">Delete</button>
         </td>
       </tr>
     {% endfor %}

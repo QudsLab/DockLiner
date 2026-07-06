@@ -193,7 +193,7 @@ function renderOrgs(items){
 
 async function searchUser(){
   const username=document.getElementById('orgInput').value.trim();
-  if(!username){ alert('Enter a username'); return; }
+  if(!username){ showErrorModal('Missing username', 'Enter a username'); return; }
   const resultDiv=document.getElementById('searchResult');
   resultDiv.innerHTML='<div class="loading">Searching...</div>';
   try{
@@ -314,7 +314,7 @@ function updateProgressUI(data){
 }
 async function startDownload(){
   if(state.mode==='branch') state.branch=document.getElementById('branchSelect').value;
-  else if(!state.release){ alert('Select a release'); return; }
+  else if(!state.release){ showErrorModal('Missing release', 'Select a release'); return; }
   const ref=state.mode==='branch'?state.branch:state.release.tag_name;
   const [owner,name]=state.repo.full_name.split('/');
   const btn=document.getElementById('downloadBtn');
@@ -369,7 +369,7 @@ function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB',
 // ---- Local directory ----
 function continueLocal(){
   const path=document.getElementById('localPath').value.trim();
-  if(!path){ alert('Enter a directory path'); return; }
+  if(!path){ showErrorModal('Missing path', 'Enter a directory path'); return; }
   location.href='/projects/setup?source=local&path='+encodeURIComponent(path);
 }
 

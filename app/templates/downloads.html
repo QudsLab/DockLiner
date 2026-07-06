@@ -44,13 +44,13 @@
 <div id="downloads-list"></div>
 
 <!-- Custom confirm modal -->
-<div id="confirm-modal" class="modal-overlay">
+<div id="dl-confirm-modal" class="modal-overlay">
   <div class="modal-box">
     <h3 class="modal-title">Delete download?</h3>
     <p class="modal-text">This will remove the downloaded archive and extracted files. This action cannot be undone.</p>
     <div class="modal-actions">
-      <button class="btn btn-secondary" id="confirm-cancel">Cancel</button>
-      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+      <button class="btn btn-secondary" id="dl-confirm-cancel">Cancel</button>
+      <button class="btn btn-danger" id="dl-confirm-ok">Delete</button>
     </div>
   </div>
 </div>
@@ -167,25 +167,21 @@ function renderCard(el, d){
 let pendingDeleteId = null;
 function showConfirm(target){
   pendingDeleteId = target;
-  const modal = document.getElementById('confirm-modal');
+  const modal = document.getElementById('dl-confirm-modal');
   modal.style.display = 'flex';
 }
 function hideConfirm(){
   pendingDeleteId = null;
-  document.getElementById('confirm-modal').style.display = 'none';
+  document.getElementById('dl-confirm-modal').style.display = 'none';
 }
-document.getElementById('confirm-modal').addEventListener('click', e => {
-  if(e.target.id === 'confirm-modal') hideConfirm();
+document.getElementById('dl-confirm-modal').addEventListener('click', e => {
+  if(e.target.id === 'dl-confirm-modal') hideConfirm();
 });
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && pendingDeleteId !== null) hideConfirm();
 });
 
-async function deleteDownload(id, isFolder=false){
-  showConfirm({id, isFolder});
-}
-
-document.getElementById('confirm-ok').addEventListener('click', async () => {
+document.getElementById('dl-confirm-ok').addEventListener('click', async () => {
   if(pendingDeleteId === null) return;
   const {id, isFolder} = pendingDeleteId;
   hideConfirm();
@@ -197,7 +193,6 @@ document.getElementById('confirm-ok').addEventListener('click', async () => {
   const card = list.querySelector(`.dl-card[data-key="${CSS.escape(key)}"]`);
   if(card){
     card.classList.add('deleting');
-    // Let the CSS transition run before hitting the API.
     await new Promise(r => setTimeout(r, 280));
   }
 
@@ -215,7 +210,11 @@ document.getElementById('confirm-ok').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('confirm-cancel').addEventListener('click', hideConfirm);
+async function deleteDownload(id, isFolder=false){
+  showConfirm({id, isFolder});
+}
+
+document.getElementById('dl-confirm-cancel').addEventListener('click', hideConfirm);
 
 loadDownloads();
 setInterval(loadDownloads, 3000);

@@ -344,37 +344,6 @@
     </div>
   </div>
 </div>
-
-<div id="error-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:420px; width:90vw; border-radius:var(--radius-xl); padding:28px;">
-    <h3 class="modal-title" id="error-modal-title" style="margin-bottom:12px;">Docker daemon</h3>
-    <p class="modal-text" id="error-modal-text" style="line-height:1.6;"></p>
-    <div class="modal-actions" style="margin-top:24px;">
-      <button class="btn btn-secondary" id="error-modal-ok">OK</button>
-    </div>
-  </div>
-</div>
-
-<div id="info-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:640px;">
-    <h3 class="modal-title" id="info-modal-title">Info</h3>
-    <pre id="info-modal-text" style="background:var(--surface-dark);color:var(--on-dark);padding:16px;border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;line-height:1.55;max-height:60vh;overflow:auto;white-space:pre-wrap;"></pre>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" id="info-modal-ok">OK</button>
-    </div>
-  </div>
-</div>
-
-<div id="confirm-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box" style="max-width:420px;">
-    <h3 class="modal-title" id="confirm-modal-title">Confirm</h3>
-    <p class="modal-text" id="confirm-modal-text" style="line-height:1.6;"></p>
-    <div class="modal-actions" style="margin-top:24px;">
-      <button class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
-      <button class="btn btn-danger" id="confirm-modal-ok">Confirm</button>
-    </div>
-  </div>
-</div>
 {% endblock %}
 {% block scripts %}<script>
 function createToken(form){
@@ -526,11 +495,6 @@ const daemonText = document.getElementById('daemon-modal-text');
 const daemonOk = document.getElementById('daemon-modal-ok');
 const daemonCancel = document.getElementById('daemon-modal-cancel');
 
-const errorModal = document.getElementById('error-modal');
-const errorTitle = document.getElementById('error-modal-title');
-const errorText = document.getElementById('error-modal-text');
-const errorOk = document.getElementById('error-modal-ok');
-
 function showDaemonModal(action){
   pendingDaemonAction = action;
   const label = action === 'stop' ? 'Stop' : 'Start';
@@ -543,14 +507,6 @@ function showDaemonModal(action){
 function hideDaemonModal(){
   pendingDaemonAction = null;
   daemonModal.style.display = 'none';
-}
-function showErrorModal(title, text){
-  errorTitle.textContent = title;
-  errorText.textContent = text;
-  errorModal.style.display = 'flex';
-}
-function hideErrorModal(){
-  errorModal.style.display = 'none';
 }
 
 daemonCancel.addEventListener('click', hideDaemonModal);
@@ -565,47 +521,6 @@ daemonOk.addEventListener('click', () => {
 });
 daemonModal.addEventListener('click', e=>{ if(e.target === daemonModal) hideDaemonModal(); });
 document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && daemonModal.style.display === 'flex') hideDaemonModal(); });
-
-errorOk.addEventListener('click', hideErrorModal);
-errorModal.addEventListener('click', e=>{ if(e.target === errorModal) hideErrorModal(); });
-document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && errorModal.style.display === 'flex') hideErrorModal(); });
-
-const infoModal = document.getElementById('info-modal');
-const infoTitle = document.getElementById('info-modal-title');
-const infoText = document.getElementById('info-modal-text');
-const infoOk = document.getElementById('info-modal-ok');
-function showInfoModal(title, text){
-  infoTitle.textContent = title;
-  infoText.textContent = text;
-  infoModal.style.display = 'flex';
-}
-function hideInfoModal(){ infoModal.style.display = 'none'; }
-infoOk.addEventListener('click', hideInfoModal);
-infoModal.addEventListener('click', e=>{ if(e.target === infoModal) hideInfoModal(); });
-document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && infoModal.style.display === 'flex') hideInfoModal(); });
-
-const confirmModal = document.getElementById('confirm-modal');
-const confirmTitle = document.getElementById('confirm-modal-title');
-const confirmText = document.getElementById('confirm-modal-text');
-const confirmOk = document.getElementById('confirm-modal-ok');
-const confirmCancel = document.getElementById('confirm-modal-cancel');
-let confirmCallback = null;
-function showConfirmModal(title, text, okText, okClass, callback){
-  confirmTitle.textContent = title;
-  confirmText.textContent = text;
-  confirmOk.textContent = okText || 'Confirm';
-  confirmOk.className = 'btn ' + (okClass || 'btn-danger');
-  confirmCallback = callback;
-  confirmModal.style.display = 'flex';
-}
-function hideConfirmModal(){
-  confirmCallback = null;
-  confirmModal.style.display = 'none';
-}
-confirmCancel.addEventListener('click', hideConfirmModal);
-confirmOk.addEventListener('click', ()=>{ if(confirmCallback) confirmCallback(); hideConfirmModal(); });
-confirmModal.addEventListener('click', e=>{ if(e.target === confirmModal) hideConfirmModal(); });
-document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && confirmModal.style.display === 'flex') hideConfirmModal(); });
 
 function confirmDeleteToken(id){
   showConfirmModal('Delete token?', 'This token will be removed permanently.', 'Delete', 'btn-danger', ()=>{
