@@ -87,6 +87,7 @@ def projects_setup_page(
         "source": source,
         "path": urllib.parse.unquote(path),
         "download_id": download_id,
+        "source_path": (dl.extracted_path if dl and dl.extracted_path else urllib.parse.unquote(path)) if source in ("download", "local") else "",
         "scan_json": json.dumps(scan_data),
         "tokens": tokens,
     })
@@ -110,7 +111,12 @@ def _build_file_map(root: str, files: list) -> dict:
             target = (root_path / f).resolve()
             if not str(target).startswith(str(root_path.resolve())):
                 continue
-            map_data[f] = target.read_text(encoding="utf-8", errors="replace")
+            # Use relative path as key so the picker matches scan data keys.
+            try:
+                key = str(target.relative_to(root_path.resolve()))
+            except Exception:
+                key = f
+            map_data[key] = target.read_text(encoding="utf-8", errors="replace")
         except Exception:
             continue
     return map_data
