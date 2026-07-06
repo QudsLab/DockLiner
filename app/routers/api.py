@@ -202,7 +202,28 @@ def build_project(pid: int, db: Session = Depends(get_db), user: str = Depends(r
         tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
     if not tok:
         tok = db.query(AccessToken).first()
+    dep = DeployService.build_image(p, db)
+    return {'deployment_id': dep.id, 'status': dep.status}
+
+@router.post("/projects/{pid}/deploy")
+def deploy_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    tok = None
+    if p.token_id:
+        tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
+    if not tok:
+        tok = db.query(AccessToken).first()
     dep = DeployService.deploy_project(p, tok.token if tok else None, db)
+    return {'deployment_id': dep.id, 'status': dep.status}
+
+@router.post("/projects/{pid}/run")
+def run_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    dep = DeployService.run_container(p, db)
     return {'deployment_id': dep.id, 'status': dep.status}
 
 @router.post("/projects/{pid}/start")

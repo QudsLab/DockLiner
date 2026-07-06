@@ -10,4 +10,12 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
     from app.core.config import settings
-    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)
+    uvicorn.run(
+        "main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=True,
+        reload_dirs=["app"],
+        reload_includes=["*.py"],
+        reload_excludes=["downloads", "github-cache", "projects", "doc", "__pycache__", "*.db", "*.log"],
+    )

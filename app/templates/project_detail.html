@@ -32,11 +32,6 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 .editor-header span{font-weight:700;font-size:14px;color:var(--ink)}
 .panel{display:none}
 .panel.active{display:block}
-.file-list{display:flex;flex-direction:column;gap:6px}
-.file-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--hairline);background:var(--surface-card);cursor:pointer}
-.file-row:hover{border-color:var(--primary)}
-.file-row .name{font-size:13px;color:var(--ink);font-family:var(--font-mono)}
-.file-row .meta{font-size:11px;color:var(--muted)}
 .log-window{min-height:220px;max-height:420px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:12px;border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .deploy-entry{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:10px 12px;background:var(--surface-card);margin-bottom:8px}
 .deploy-entry .meta{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px}
@@ -44,6 +39,28 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 .status-error{color:var(--error)}
 .status-started{color:var(--warning)}
 .action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.hint-banner{margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,115,0,.12);border:1px solid rgba(255,115,0,.35);color:var(--ink);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+
+/* VSCode-like file viewer */
+.file-explorer{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:420px;background:var(--surface-card)}
+.file-tree{padding:8px 0;background:var(--surface-soft);border-right:1px solid var(--hairline);overflow:auto;max-height:540px;font-size:13px}
+.tree-item{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 14px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.tree-item:hover{background:rgba(255,115,0,.08)}
+.tree-item.active{background:rgba(255,115,0,.15);color:#ff7300}
+.tree-item .icon{font-size:12px;width:14px;text-align:center;color:var(--muted)}
+.tree-item .label{font-family:var(--font-mono);font-size:12px}
+.tree-indent{width:14px;flex-shrink:0}
+.collapsed{display:none}
+.file-tabs{display:flex;gap:0;background:var(--surface-soft);border-bottom:1px solid var(--hairline);min-height:32px;overflow-x:auto}
+.file-tab{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--muted);border-right:1px solid var(--hairline);cursor:pointer;background:transparent;white-space:nowrap}
+.file-tab.active{color:var(--ink);background:var(--surface-card);border-top:2px solid #ff7300}
+.file-tab .close{font-size:14px;line-height:1;color:var(--muted);margin-left:4px}
+.file-tab .close:hover{color:var(--error)}
+.editor-area{display:flex;flex-direction:column;min-height:420px;position:relative}
+.editor-status{display:flex;align-items:center;justify-content:space-between;padding:4px 12px;background:var(--primary);color:#fff;font-size:11px;font-family:var(--font-mono)}
+.editor-status .left{display:flex;gap:12px}
+.editor-status .right{display:flex;gap:12px}
+.save-hint{color:rgba(255,255,255,.75)}
 </style>
 
 <div class="detail-header">
@@ -52,7 +69,9 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
     <p style="color:var(--muted);font-size:13px;margin:4px 0 0;">Status: <span class="status-pill status-{{ project.status }}">{{ project.status }}</span> · Port: {{ project.port or '-' }} · Mode: {{ project.command_mode }}</p>
   </div>
   <div class="action-bar">
-    <button class="btn btn-primary btn-sm" onclick="doAction('build')">Build/Deploy</button>
+    <button class="btn btn-primary btn-sm" onclick="doAction('deploy')">Quick Deploy</button>
+    <button class="btn btn-primary btn-sm" style="background:transparent;border:1px solid var(--primary);color:var(--primary);" onclick="doAction('build')">Build</button>
+    <button class="btn btn-secondary btn-sm" onclick="doAction('run')">Run</button>
     <button class="btn btn-secondary btn-sm" onclick="doAction('start')">Start</button>
     <button class="btn btn-secondary btn-sm" onclick="doAction('restart')">Restart</button>
     <button class="btn btn-secondary btn-sm" onclick="doAction('stop')">Stop</button>
@@ -62,9 +81,9 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 
 {% set needs_build = project.status in ('idle','error','stopped') %}
 {% if needs_build %}
-<div id="buildHint" class="hint-banner" style="margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,115,0,.12);border:1px solid rgba(255,115,0,.35);color:var(--ink);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-  <span>Project files are ready. <b>Build/Deploy</b> clones the repo, builds the image and starts the container.</span>
-  <button class="btn btn-primary btn-sm" onclick="doAction('build')">Build/Deploy now</button>
+<div id="buildHint" class="hint-banner">
+  <span>Quick Deploy = sync source + build + start. Or use Build / Run separately.</span>
+  <button class="btn btn-primary btn-sm" onclick="doAction('deploy')">Quick Deploy now</button>
 </div>
 {% endif %}
 
@@ -100,13 +119,23 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 
 <div id="tab-files" class="panel">
   <div class="editor-card">
-    <div class="editor-header"><span>Project Files</span><span id="currentFileLabel" class="subtle" style="font-size:12px;color:var(--muted);"></span></div>
-    <div style="display:grid;grid-template-columns:260px 1fr;gap:12px;padding:12px;">
-      <div id="fileList" class="file-list" style="max-height:420px;overflow:auto;"></div>
-      <div id="editor-file"></div>
-    </div>
-    <div style="padding:0 12px 12px;">
-      <button class="btn btn-primary btn-sm" id="saveFileBtn" onclick="saveCurrentFile()" disabled>Save File</button>
+    <div class="editor-header"><span>Project Files</span><div><button class="btn btn-primary btn-sm" id="saveFileBtn" onclick="saveCurrentFile()" disabled>Save</button></div></div>
+    <div class="file-explorer">
+      <div id="fileTree" class="file-tree"></div>
+      <div class="editor-area">
+        <div id="fileTabs" class="file-tabs"></div>
+        <div id="editor-file" style="flex:1;"></div>
+        <div class="editor-status">
+          <div class="left">
+            <span id="statusPath">-</span>
+            <span id="statusLang">-</span>
+          </div>
+          <div class="right">
+            <span id="statusLines">0 lines</span>
+            <span class="save-hint">Ctrl+S to save</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -131,6 +160,9 @@ let currentFilePath='';
 let composeFileName='compose.yml';
 const editors={};
 
+let openFiles=[];
+let activeFile=null;
+
 function showTab(id){
   document.querySelectorAll('.detail-tab').forEach(t=>t.classList.toggle('active', t.getAttribute('onclick').includes("'"+id+"'")));
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+id));
@@ -145,7 +177,28 @@ function guessLang(path){
   if(p.endsWith('.env')||p.endsWith('.ini')) return 'ini';
   if(p.endsWith('.yml')||p.endsWith('.yaml')) return 'yaml';
   if(p.endsWith('.sh')||p.endsWith('.bash')) return 'bash';
+  if(p.endsWith('.py')) return 'python';
+  if(p.endsWith('.js')) return 'javascript';
+  if(p.endsWith('.json')) return 'json';
+  if(p.endsWith('.html')) return 'html';
+  if(p.endsWith('.css')) return 'css';
+  if(p.endsWith('.md')) return 'markdown';
+  if(p.endsWith('.sql')) return 'sql';
+  if(p.endsWith('.xml')) return 'xml';
+  if(p.endsWith('.toml')) return 'toml';
   return 'none';
+}
+function fileIcon(path){
+  if(path.toLowerCase().includes('dockerfile')) return '🐳';
+  if(path.endsWith('.yml')||path.endsWith('.yaml')) return '⚙';
+  if(path.endsWith('.env')) return '🔒';
+  if(path.endsWith('.py')) return '🐍';
+  if(path.endsWith('.js')) return '📜';
+  if(path.endsWith('.html')) return '🌐';
+  if(path.endsWith('.css')) return '🎨';
+  if(path.endsWith('.md')) return '📝';
+  if(path.endsWith('.json')) return '📋';
+  return '📄';
 }
 function makeEditor(mountId, lang, value){
   const el = document.getElementById(mountId);
@@ -154,21 +207,38 @@ function makeEditor(mountId, lang, value){
   const wrap = el.querySelector('.prism-editor-wrap');
   const code = wrap.querySelector('code');
   const ta = wrap.querySelector('textarea');
-  function update(){
+  function update(dirty=true){
     code.textContent = ta.value;
     if(window.Prism) Prism.highlightElement(code);
     const lines = (ta.value.match(/\n/g)||[]).length + 1;
     gutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
     gutter.scrollTop = wrap.scrollTop;
+    updateStatus(lines);
+    if(dirty) markDirty(mountId, true);
   }
   wrap.addEventListener('scroll', ()=>{ gutter.scrollTop = wrap.scrollTop; });
   ta.value = value || '';
-  ta.addEventListener('input', update);
+  ta.addEventListener('input', ()=>update(true));
   ta.addEventListener('keydown', e=>{
-    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(en); ta.selectionStart=ta.selectionEnd=s+2; update(); }
+    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(en); ta.selectionStart=ta.selectionEnd=s+2; update(true); }
+    if(e.ctrlKey && e.key==='s'){ e.preventDefault(); if(mountId==='editor-file') saveCurrentFile(); else if(mountId==='editor-compose') saveFile(composeFileName,'compose'); else if(mountId==='editor-dockerfile') saveFile('Dockerfile','dockerfile'); else if(mountId==='editor-env') saveFile('.env','env'); }
   });
-  update();
-  return { getValue:()=>ta.value, setValue:(v)=>{ta.value=v;update();}, refresh:()=>{}, setOption:()=>{}, getOption:()=>'', getWrapperElement:()=>el.querySelector('.editor-outer'), toTextArea:()=>{el.innerHTML='';} };
+  update(false);
+  return { getValue:()=>ta.value, setValue:(v)=>{ta.value=v;update(false);}, refresh:()=>{}, setOption:()=>{}, getOption:()=>'', getWrapperElement:()=>el.querySelector('.editor-outer'), toTextArea:()=>{el.innerHTML='';} };
+}
+function updateStatus(lines){
+  const sp=document.getElementById('statusPath');
+  const sl=document.getElementById('statusLang');
+  const ln=document.getElementById('statusLines');
+  if(sp) sp.textContent = activeFile || '-';
+  if(sl) sl.textContent = activeFile ? guessLang(activeFile).toUpperCase() : '-';
+  if(ln) ln.textContent = `${lines} lines`;
+}
+function markDirty(mountId, dirty){
+  if(mountId==='editor-file' && activeFile){
+    const f=openFiles.find(x=>x.path===activeFile);
+    if(f){ f.dirty=dirty; renderTabs(); }
+  }
 }
 function setTheme(){
   const isDark = document.documentElement.getAttribute('data-theme')==='dark';
@@ -215,34 +285,124 @@ async function saveFile(path, key){
 async function loadFiles(){
   const r=await fetch(`/api/projects/${pid}/files`);
   const data=await r.json();
-  const list=document.getElementById('fileList');
-  list.innerHTML=data.files.filter(f=>!f.is_dir).map(f=>`
-    <div class="file-row" onclick="openFile('${f.path.replace(/'/g,"\\'")}')">
-      <span class="name">${f.path}</span>
-      <span class="meta">${humanSize(f.size)}</span>
-    </div>`).join('');
+  const tree=document.getElementById('fileTree');
+  if(!tree) return;
+  tree.innerHTML='';
+  const root={};
+  data.files.filter(f=>!f.is_dir).forEach(f=>{
+    const parts=f.path.split('/');
+    let cur=root;
+    for(let i=0;i<parts.length-1;i++){
+      const p=parts[i];
+      if(!cur[p]) cur[p]={_files:[],_dirs:{}};
+      cur=cur[p]._dirs;
+    }
+    const base=parts[parts.length-1];
+    cur[base]=cur[base]||{_files:[]};
+    cur[base]._files.push(f);
+  });
+
+  function renderDir(name,node,depth,pathPrefix){
+    const dirPath = pathPrefix ? `${pathPrefix}/${name}` : name;
+    const div=document.createElement('div');
+    div.innerHTML=`<div class="tree-item" style="padding-left:${12+depth*14}px" onclick="this.nextElementSibling.classList.toggle('collapsed')"><span class="icon">▾</span><span class="label">${name}</span></div>`;
+    const child=document.createElement('div');
+    Object.entries(node._dirs||{}).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,v])=>{
+      child.appendChild(renderDir(k,v,depth+1,dirPath));
+    });
+    (node._files||[]).sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{
+      const row=document.createElement('div');
+      row.className='tree-item';
+      row.style.paddingLeft=`${12+(depth+1)*14}px`;
+      row.innerHTML=`<span class="icon">${fileIcon(f.path)}</span><span class="label">${f.path.split('/').pop()}</span>`;
+      row.onclick=()=>openFile(f.path);
+      child.appendChild(row);
+    });
+    div.appendChild(child);
+    return div;
+  }
+
+  const flat = data.files.filter(f=>!f.is_dir).sort((a,b)=>a.path.localeCompare(b.path));
+  flat.forEach(f=>{
+    const parts=f.path.split('/');
+    if(parts.length===1){
+      const row=document.createElement('div');
+      row.className='tree-item';
+      row.innerHTML=`<span class="icon">${fileIcon(f.path)}</span><span class="label">${f.path}</span>`;
+      row.onclick=()=>openFile(f.path);
+      tree.appendChild(row);
+    }
+  });
+  Object.entries(root).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,v])=>{
+    tree.appendChild(renderDir(k,v,0,''));
+  });
 }
 
 async function openFile(path){
-  currentFilePath=path;
+  if(!openFiles.find(f=>f.path===path)){
+    openFiles.push({path, dirty:false});
+  }
+  activeFile=path;
+  renderTabs();
   const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`);
   const d=await r.json();
   const el=document.getElementById('editor-file');
   el.innerHTML='';
   if(editors.file){ editors.file.toTextArea(); editors.file=null; }
   editors.file = makeEditor('editor-file', guessLang(path), d.content||'');
-  document.getElementById('currentFileLabel').textContent=path;
   document.getElementById('saveFileBtn').disabled=false;
+  // mark clean after initial load
+  const f=openFiles.find(x=>x.path===path);
+  if(f) f.dirty=false;
+  renderTabs();
   setTheme();
 }
 
+function renderTabs(){
+  const box=document.getElementById('fileTabs');
+  if(!box) return;
+  box.innerHTML=openFiles.map(f=>{
+    const name=f.path.split('/').pop();
+    const isActive=f.path===activeFile;
+    return `<div class="file-tab ${isActive?'active':''}" onclick="switchTab('${f.path.replace(/'/g,"\\'")}')">
+      <span>${name}${f.dirty?' •':''}</span>
+      <span class="close" onclick="closeTab(event,'${f.path.replace(/'/g,"\\'")}')">×</span>
+    </div>`;
+  }).join('');
+}
+
+function switchTab(path){
+  activeFile=path;
+  renderTabs();
+  openFile(path);
+}
+
+function closeTab(e,path){
+  e.stopPropagation();
+  openFiles=openFiles.filter(f=>f.path!==path);
+  if(activeFile===path){
+    activeFile=openFiles.length?openFiles[0].path:null;
+    if(activeFile) openFile(activeFile);
+    else{
+      const el=document.getElementById('editor-file');
+      if(el) el.innerHTML='';
+      if(editors.file){ editors.file.toTextArea(); editors.file=null; }
+      document.getElementById('saveFileBtn').disabled=true;
+    }
+  }
+  renderTabs();
+}
+
 async function saveCurrentFile(){
-  if(!currentFilePath || !editors.file) return;
+  if(!activeFile || !editors.file) return;
   const content=editors.file.getValue();
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(currentFilePath)}`,{
+  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(activeFile)}`,{
     method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})
   });
-  showToast(r.ok?currentFilePath+' saved':'Save failed', r.ok?'success':'error');
+  const f=openFiles.find(x=>x.path===activeFile);
+  if(f) f.dirty=false;
+  renderTabs();
+  showToast(r.ok?activeFile.split('/').pop()+' saved':'Save failed', r.ok?'success':'error');
 }
 
 async function loadDeployLogs(){

@@ -231,6 +231,12 @@ class DockLinerService:
         return []
 
     @classmethod
+    def compose_build(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
+        cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["build"]
+        r = cls._run(cmd, cwd=project_path, timeout=300)
+        return r.returncode, r.stdout + r.stderr
+
+    @classmethod
     def compose_up(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
         cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["up", "-d", "--build"]
         r = cls._run(cmd, cwd=project_path, timeout=300)
