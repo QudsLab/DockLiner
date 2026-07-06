@@ -24,13 +24,13 @@ def scan_downloaded_repo(root: str) -> Dict:
         p = r / name
         if p.exists():
             env = _read(p)
-            env_path = str(p)
+            env_path = str(p.relative_to(r))
             break
     for name in EXAMPLE_ENV_CANDIDATES:
         p = r / name
         if p.exists():
             example = _read(p)
-            example_path = str(p)
+            example_path = str(p.relative_to(r))
             break
 
     dockerfile_p = r / "Dockerfile"
@@ -40,9 +40,10 @@ def scan_downloaded_repo(root: str) -> Dict:
     compose_path = ""
     compose_file = None
     for name in COMPOSE_CANDIDATES:
-        compose_path = r / name
-        compose = _read(compose_path)
+        p = r / name
+        compose = _read(p)
         if compose:
+            compose_path = str(p.relative_to(r))
             compose_file = name
             break
 
