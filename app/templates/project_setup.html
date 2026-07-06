@@ -89,7 +89,7 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
 </div>
 
 <script>
-let setup={source:'{{ source }}', path:'{{ path | e }}', downloadId:'{{ download_id }}', scan:{{ scan_json | safe if scan_json else '{}' }}};
+let setup={source:'{{ source }}', path:'{{ path | e }}', source_path:'{{ source_path | e }}', downloadId:'{{ download_id }}', scan:{{ scan_json | safe if scan_json else '{}' }}};
 const editors={};
 let selectedComposeFile='docker-compose.yml';
 
@@ -107,9 +107,10 @@ function setStatus(id, exists){
   el.className='file-chip '+(exists?'ok':'missing');
   el.textContent=exists?'found in source':'will create';
 }
-function populatePicker(id, files, kind){
+function populatePicker(id, files, kind, selectedPath){
   const wrap=document.getElementById(id+'PickerWrap');
   const sel=document.getElementById(id+'Picker');
+  const label=document.getElementById(id+'PickerWrap').querySelector('label');
   if(!wrap || !sel) return;
   const candidates = files.filter(f => {
     const lower=f.toLowerCase();
@@ -118,9 +119,18 @@ function populatePicker(id, files, kind){
     if(kind==='env') return lower==='.env' || lower==='env' || lower.endsWith('/.env') || lower.endsWith('/env');
     return false;
   });
-  if(candidates.length===0){ wrap.style.display='none'; return; }
-  sel.innerHTML = `<option value="">-- create new --</option>` + candidates.map(f=>`<option value="${f.replace(/"/g,'&quot;')}">${f}</option>`).join('');
+  if(candidates.length===0){
+    sel.innerHTML = `<option value="">-- create new --</option>`;
+    label.textContent = `No ${kind==='compose'?'compose file':kind} found. Select one from the repo or leave default to create new:`;
+    label.style.display='block';
+    wrap.style.display='block';
+    return;
+  }
+  const first = selectedPath || candidates[0];
+  sel.innerHTML = candidates.map(f=>`<option value="${f.replace(/"/g,'&quot;')}" ${f===first?'selected':''}>${f}</option>`).join('');
+  label.style.display='none';
   wrap.style.display='block';
+  pickFile(kind, first);
 }
 function pickFile(kind, path){
   if(!path) return;
@@ -177,12 +187,12 @@ function setTheme(){
   editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.dockerfile || defaultDockerfile());
   editors.env = makeEditor('editor-env', 'bash', d.env || d.example_env || '');
 
-  setStatus('composeStatus', !!d.compose_exists);
+  setStatus('composeStatus', !!(d.compose_file && d.compose));
   setStatus('dockerfileStatus', !!d.dockerfile_exists);
-  setStatus('envStatus', !!d.env);
-  populatePicker('compose', d.files || [], 'compose');
-  populatePicker('dockerfile', d.files || [], 'dockerfile');
-  populatePicker('env', d.files || [], 'env');
+  setStatus('envStatus', !!(d.env || d.example_env));
+  populatePicker('compose', d.files || [], 'compose', d.compose_file);
+  populatePicker('dockerfile', d.files || [], 'dockerfile', 'Dockerfile');
+  populatePicker('env', d.files || [], 'env', d.env_path || d.example_env_path);
   setTheme();
 })();
 
@@ -219,7 +229,7 @@ async function submitProject(){
     command_mode:'compose',
     deploy_method:'compose',
     source_type:setup.source,
-    source_path:setup.downloadId||setup.path||'',
+    source_path:setup.source_path||setup.path||'',
     github_repo_url:setup.scan?.clone_url||''
   };
   try{
