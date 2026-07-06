@@ -1,4 +1,8 @@
-import os, subprocess, shutil, json, re
+import os
+import shutil
+import json
+import time
+import subprocess
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -8,7 +12,6 @@ from app.services.file_scanner import scan_downloaded_repo
 class DockLinerService:
     """Central service layer: Docker operations + project downloads."""
 
-    # Cached docker executable path (expensive to resolve on Windows)
     _docker_exe: Optional[str] = None
 
     @classmethod
@@ -22,9 +25,9 @@ class DockLinerService:
         if not exe:
             exe = shutil.which("docker")
         if not exe and os.name == "nt":
-            # Common Docker Desktop Windows locations
             candidates = [
                 Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Docker" / "Docker" / "resources" / "bin" / "docker.exe",
+                Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Docker" / "Docker" / "resources" / "docker.exe",
                 Path(os.environ.get("LOCALAPPDATA", r"C:\Users\Ahmad Bin Haque\AppData\Local")) / "Microsoft" / "WindowsApps" / "docker.exe",
                 Path(r"C:\ProgramData\DockerDesktop\version-bin") / "docker.exe",
             ]
@@ -36,18 +39,56 @@ class DockLinerService:
         return exe
 
     @classmethod
-    def _run(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 15) -> subprocess.CompletedProcess:
-        """Run a shell command robustly.  Returns a synthetic failed result if docker is missing."""
+    def _wait_for_daemon(cls, timeout: int = 20) -> bool:
         exe = cls._find_docker()
         if not exe:
-            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="docker executable not found")
+            return False
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            r = subprocess.run([exe, "info"], capture_output=True, text=True, timeout=5)
+            if r.returncode == 0:
+                return True
+            time.sleep(1)
+        return False
+
+    @classmethod
+    def _diagnose(cls, err: str) -> str:
+        err_l = err.lower()
+        if os.name == "nt" and ("cannot find the file specified" in err or "npipe" in err_l or "named pipe" in err_l):
+            return "Docker Desktop is not running or the Windows named pipe is not available. Start Docker Desktop and make sure it is set to Linux containers."
+        if "dockerdesktoplinuxengine" in err_l:
+            return "Docker Desktop is using the wrong engine context. Switch to Linux containers or set DOCKER_HOST to the default pipe."
+        if "permission denied" in err_l:
+            if os.name == "nt":
+                return "Permission denied accessing Docker. Run the terminal as Administrator."
+            return "Permission denied accessing Docker. Add your user to the `docker` group or use sudo."
+        if "connection refused" in err_l or "is the docker daemon running" in err_l:
+            return "Docker daemon is not reachable. Start Docker and try again."
+        return err.strip() or "Docker command failed."
+
+    @classmethod
+    def _run(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 15) -> subprocess.CompletedProcess:
+        exe = cls._find_docker()
+        if not exe:
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker executable not found. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
         resolved = [exe if c == "docker" else c for c in cmd]
         try:
-            return subprocess.run(resolved, capture_output=True, text=True, cwd=cwd, timeout=timeout, check=False)
+            r = subprocess.run(resolved, capture_output=True, text=True, cwd=cwd, timeout=timeout, check=False)
         except Exception as e:
             return subprocess.CompletedProcess(args=resolved, returncode=1, stdout="", stderr=str(e))
+        if r.returncode != 0 and r.stderr:
+            r._dockliner_diag = cls._diagnose(r.stderr)  # type: ignore[attr-defined]
+        return r
 
-    # ---- Docker info ----
+    @classmethod
+    def _with_preflight(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 300) -> subprocess.CompletedProcess:
+        if not cls.docker_installed():
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker is not installed. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
+        if not cls.docker_running():
+            if not cls._wait_for_daemon(timeout=15):
+                return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux).")
+        return cls._run(cmd, cwd=cwd, timeout=timeout)
+
     @classmethod
     def docker_installed(cls) -> bool:
         return cls._find_docker() is not None
@@ -65,7 +106,7 @@ class DockLinerService:
     # ---- Containers ----
     @classmethod
     def list_containers(cls) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "ps", "-a", "--format", "{{json .}}"], timeout=15)
+        r = cls._with_preflight(["docker", "ps", "-a", "--format", "{{json .}}"], timeout=15)
         out: List[Dict[str, Any]] = []
         if r.returncode != 0:
             return out
@@ -78,7 +119,7 @@ class DockLinerService:
 
     @classmethod
     def container_stats(cls) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "stats", "--no-stream", "--format", "{{json .}}"], timeout=60)
+        r = cls._with_preflight(["docker", "stats", "--no-stream", "--format", "{{json .}}"], timeout=60)
         out: List[Dict[str, Any]] = []
         if r.returncode != 0:
             return out
@@ -91,20 +132,22 @@ class DockLinerService:
 
     @classmethod
     def stop_container(cls, cid: str) -> tuple:
-        r = cls._run(["docker", "stop", cid], timeout=30)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(["docker", "stop", cid], timeout=30)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def remove_container(cls, cid: str, force: bool = False) -> tuple:
         cmd = ["docker", "rm", cid]
         if force:
             cmd.append("-f")
-        r = cls._run(cmd, timeout=30)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, timeout=30)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def inspect_container_ports(cls, cid: str) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "inspect", cid], timeout=15)
+        r = cls._with_preflight(["docker", "inspect", cid], timeout=15)
         if r.returncode != 0:
             return []
         try:
@@ -119,12 +162,15 @@ class DockLinerService:
 
     @classmethod
     def container_logs(cls, cid: str, tail: int = 200) -> str:
-        r = cls._run(["docker", "logs", "--tail", str(tail), cid], timeout=15)
+        r = cls._with_preflight(["docker", "logs", "--tail", str(tail), cid], timeout=15)
+        if r.returncode != 0:
+            diag = getattr(r, "_dockliner_diag", r.stderr)
+            return f"Docker error: {diag}"
         return r.stdout + r.stderr
 
     @classmethod
     def container_top(cls, cid: str) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "top", cid], timeout=15)
+        r = cls._with_preflight(["docker", "top", cid], timeout=15)
         if r.returncode != 0:
             return []
         lines = r.stdout.strip().splitlines()
@@ -136,7 +182,7 @@ class DockLinerService:
     # ---- Images ----
     @classmethod
     def list_images(cls) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "images", "--format", "{{json .}}"], timeout=15)
+        r = cls._with_preflight(["docker", "images", "--format", "{{json .}}"], timeout=15)
         out = []
         if r.returncode != 0:
             return out
@@ -152,13 +198,14 @@ class DockLinerService:
         cmd = ["docker", "rmi", iid]
         if force:
             cmd.append("-f")
-        r = cls._run(cmd, timeout=30)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, timeout=30)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     # ---- Networks / Volumes ----
     @classmethod
     def list_networks(cls) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "network", "ls", "--format", "{{json .}}"], timeout=15)
+        r = cls._with_preflight(["docker", "network", "ls", "--format", "{{json .}}"], timeout=15)
         out = []
         if r.returncode != 0:
             return out
@@ -171,7 +218,7 @@ class DockLinerService:
 
     @classmethod
     def list_volumes(cls) -> List[Dict[str, Any]]:
-        r = cls._run(["docker", "volume", "ls", "--format", "{{json .}}"], timeout=15)
+        r = cls._with_preflight(["docker", "volume", "ls", "--format", "{{json .}}"], timeout=15)
         out = []
         if r.returncode != 0:
             return out
@@ -186,29 +233,25 @@ class DockLinerService:
     @classmethod
     def start_daemon(cls) -> tuple:
         if os.name == "nt":
-            # Prefer Docker Desktop CLI commands (no admin needed) then Windows service
-            for ps_cmd in ["Start-Process -FilePath \"%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe\"", "Start-Service com.docker.service"]:
-                r = subprocess.run(["powershell.exe", "-Command", ps_cmd], capture_output=True, text=True, timeout=30)
-                if r.returncode == 0:
-                    return 0, "Docker Desktop start command sent."
-            err = (r.stderr or r.stdout or "").strip()
-            if "access is denied" in err.lower() or "cannot open" in err.lower() or "servicecontroller" in err.lower():
-                return 1, "Permission denied: could not start Docker Desktop service. Please run PowerShell as Administrator, or start Docker Desktop manually from the Start menu."
-            return r.returncode, err or "Could not start Docker daemon."
+            dd = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Docker" / "Docker" / "Docker Desktop.exe"
+            if dd.exists():
+                subprocess.Popen([str(dd)], shell=False)
+                if cls._wait_for_daemon(timeout=30):
+                    return 0, "Docker Desktop started"
+            return 1, "Could not start Docker Desktop. Start it manually from the system tray."
         r = subprocess.run(["sudo", "systemctl", "start", "docker"], capture_output=True, text=True, timeout=30)
         return r.returncode, r.stdout + r.stderr
 
     @classmethod
     def stop_daemon(cls) -> tuple:
         if os.name == "nt":
-            # Try Docker Desktop CLI stop first, then Windows service
             for ps_cmd in ["Start-Process -FilePath \"%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe\" -ArgumentList \"--quit\"", "Stop-Service com.docker.service"]:
                 r = subprocess.run(["powershell.exe", "-Command", ps_cmd], capture_output=True, text=True, timeout=30)
                 if r.returncode == 0:
                     return 0, "Docker Desktop stop command sent."
             err = (r.stderr or r.stdout or "").strip()
             if "access is denied" in err.lower() or "cannot open" in err.lower() or "servicecontroller" in err.lower():
-                return 1, "Permission denied: could not stop Docker Desktop service. Please run PowerShell as Administrator and run: Stop-Service com.docker.service, or quit Docker Desktop from the system tray."
+                return 1, "Permission denied: could not stop Docker Desktop service. Run PowerShell as Administrator."
             return r.returncode, err or "Could not stop Docker daemon."
         r = subprocess.run(["sudo", "systemctl", "stop", "docker"], capture_output=True, text=True, timeout=30)
         return r.returncode, r.stdout + r.stderr
@@ -233,57 +276,68 @@ class DockLinerService:
     @classmethod
     def compose_build(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
         cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["build"]
-        r = cls._run(cmd, cwd=project_path, timeout=300)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, cwd=project_path, timeout=300)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def compose_up(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
         cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["up", "-d", "--build"]
-        r = cls._run(cmd, cwd=project_path, timeout=300)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, cwd=project_path, timeout=300)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def compose_down(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
         cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["down"]
-        r = cls._run(cmd, cwd=project_path, timeout=120)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, cwd=project_path, timeout=120)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def compose_logs(cls, project_path: str, compose_file: Optional[str] = None, tail: int = 200) -> str:
         cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["logs", "--tail", str(tail)]
-        r = cls._run(cmd, cwd=project_path, timeout=60)
+        r = cls._with_preflight(cmd, cwd=project_path, timeout=60)
+        if r.returncode != 0:
+            diag = getattr(r, "_dockliner_diag", r.stderr)
+            return f"Docker error: {diag}"
         return r.stdout + r.stderr
 
     # ---- Dockerfile / direct helpers ----
     @classmethod
     def docker_build(cls, project_path: str, tag: str) -> tuple:
         cmd = ["docker", "build", "-t", tag, "."]
-        r = cls._run(cmd, cwd=project_path, timeout=300)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, cwd=project_path, timeout=300)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def run_image(cls, tag: str, port: int) -> tuple:
         cmd = ["docker", "run", "-d", "-p", f"{port}:{port}", "--name", tag, tag]
-        r = cls._run(cmd, timeout=60)
-        return r.returncode, r.stdout + r.stderr
+        r = cls._with_preflight(cmd, timeout=60)
+        err = getattr(r, "_dockliner_diag", r.stderr)
+        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
     def run_shell_command(cls, project_path: str, command: str) -> tuple:
+        if not command.strip():
+            return (1, "No direct command provided")
         r = cls._run(["bash", "-c", command], cwd=project_path, timeout=120)
         return r.returncode, r.stdout + r.stderr
 
     @classmethod
     def rsync_delete(cls, src: str, dst: str) -> tuple:
-        # Fallback to robocopy on Windows and rsync elsewhere
-        if os.name == "nt":
-            dst_path = Path(dst)
-            dst_path.mkdir(parents=True, exist_ok=True)
-            r = subprocess.run(["robocopy", src, dst, "/MIR", "/MT:4"], capture_output=True, text=True, timeout=300)
-            # robocopy exit codes 0-7 are generally success-ish
-            rc = 0 if r.returncode <= 7 else r.returncode
-            return rc, r.stdout + r.stderr
-        r = subprocess.run(["rsync", "-a", "--delete", str(src) + "/", str(dst) + "/"], capture_output=True, text=True, timeout=300)
-        return r.returncode, r.stdout + r.stderr
+        src_p = Path(src)
+        dst_p = Path(dst)
+        if not src_p.exists():
+            return (1, f"Source path does not exist: {src}")
+        try:
+            if dst_p.exists():
+                shutil.rmtree(dst_p)
+            shutil.copytree(src_p, dst_p)
+            return (0, "synced")
+        except Exception as e:
+            return (1, f"sync failed: {e}")
 
     # ---- Directories ----
     @classmethod
@@ -297,30 +351,28 @@ class DockLinerService:
     def list_downloads(cls, db) -> List[Dict[str, Any]]:
         from app.models.project import Download
         rows = db.query(Download).order_by(Download.created_at.desc()).all()
-        db_by_folder: Dict[str, Download] = {}
         out = []
+        db_by_folder: Dict[str, Download] = {}
         for dl in rows:
             entry = dl.to_dict()
             try:
                 entry.update(cls.scan_download(dl))
             except Exception:
-                entry.update({"exists": False, "size_bytes": dl.size_bytes or 0, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False})
+                entry.update({"exists": False, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False})
             out.append(entry)
             if dl.extracted_path:
-                # Track both inner extracted folder and outer container so orphans are not duplicated.
                 p = Path(dl.extracted_path)
                 db_by_folder[p.name] = dl
                 if p.parent.name == Path(settings.DOWNLOADS_DIR).name or str(p.parent) == str(Path(settings.DOWNLOADS_DIR)):
                     db_by_folder[p.parent.name] = dl
 
-        # Merge any physical download folders that have no DB record (orphaned / unfinished).
+        # Merge physical folders without DB record as untracked entries.
         downloads_root = Path(settings.DOWNLOADS_DIR)
         if downloads_root.exists():
             for folder in sorted(downloads_root.iterdir()):
                 if not folder.is_dir() or folder.name in db_by_folder:
                     continue
                 scan_target = folder
-                # GitHub zipballs extract as outer_timestamp/repo-commitshort/. If the outer is just a shell, use inner.
                 subdirs = [d for d in folder.iterdir() if d.is_dir()]
                 if len(subdirs) == 1:
                     inner = subdirs[0]
@@ -352,6 +404,19 @@ class DockLinerService:
         return out
 
     @classmethod
+    def scan_download(cls, dl) -> Dict[str, Any]:
+        if not dl.extracted_path or not Path(dl.extracted_path).exists():
+            return {"exists": False, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False}
+        info = scan_downloaded_repo(dl.extracted_path)
+        return {
+            "exists": True,
+            "compose_file": info.get("compose_file"),
+            "dockerfile_exists": bool(info.get("dockerfile")),
+            "env_exists": bool(info.get("env")),
+            "example_env_exists": bool(info.get("example_env")),
+        }
+
+    @classmethod
     def delete_download(cls, dl, db) -> None:
         # Remove the whole outer download container, not just the inner extracted folder.
         if dl.extracted_path:
@@ -359,7 +424,6 @@ class DockLinerService:
             root = Path(settings.DOWNLOADS_DIR).resolve()
             if p.exists():
                 shutil.rmtree(p, ignore_errors=True)
-            # If extracted_path is nested inside downloads/, delete the outer timestamp container too.
             if str(p).startswith(str(root)) and p != root and p.parent != root:
                 try:
                     if p.parent.exists():
@@ -368,11 +432,11 @@ class DockLinerService:
                     pass
         if dl.download_path and Path(dl.download_path).exists():
             try:
-                p = Path(dl.download_path)
-                if p.is_dir():
-                    shutil.rmtree(p, ignore_errors=True)
+                pp = Path(dl.download_path)
+                if pp.is_dir():
+                    shutil.rmtree(pp, ignore_errors=True)
                 else:
-                    p.unlink()
+                    pp.unlink()
             except Exception:
                 pass
         db.delete(dl)
@@ -384,7 +448,6 @@ class DockLinerService:
         downloads_root = Path(settings.DOWNLOADS_DIR)
         target = downloads_root / folder_name
         try:
-            # Resolve and guard against path traversal.
             resolved = target.resolve()
             root = downloads_root.resolve()
             if not str(resolved).startswith(str(root)) or resolved == root:
@@ -395,19 +458,16 @@ class DockLinerService:
         except Exception:
             return False
 
+    # ---- Deprecated aliases kept for compatibility ----
     @classmethod
-    def scan_download(cls, dl) -> Dict[str, Any]:
-        if not dl.extracted_path or not Path(dl.extracted_path).exists():
-            return {"exists": False, "size_bytes": dl.size_bytes or 0, "total_bytes": dl.total_bytes, "compose_file": None, "dockerfile_exists": False, "env_exists": False, "example_env_exists": False}
-        info = scan_downloaded_repo(dl.extracted_path)
-        return {
-            "exists": True,
-            "size_bytes": info.get("size_bytes", 0),
-            "compose_file": info.get("compose_file"),
-            "dockerfile_exists": bool(info.get("dockerfile")),
-            "env_exists": bool(info.get("env")),
-            "example_env_exists": bool(info.get("example_env")),
-        }
+    def docker_info(cls) -> Dict[str, Any]:
+        r = cls._run(["docker", "info", "--format", "json"], timeout=15)
+        if r.returncode == 0 and r.stdout.strip():
+            try:
+                return json.loads(r.stdout.strip())
+            except Exception:
+                pass
+        return {}
 
     @classmethod
     def download_size(cls, dl) -> int:
