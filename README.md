@@ -10,55 +10,51 @@
 <br>
 <br>
 
-A lightweight, self-hosted deployment management system for personal Docker-based projects. DockLiner provides centralized management of multiple GitHub repositories, automated deployment via Docker Compose, and monitoring all running natively on the host server alongside aaPanel.
+A lightweight, self-hosted deployment manager for personal Docker-based projects. DockLiner manages projects from GitHub, local folders, or downloaded archives, and deploys them with Docker Compose or a plain Dockerfile. It runs natively on the host beside aaPanel.
 
 ## Core Goals
 
-- **Single GitHub PAT** - One Personal Access Token to access all repositories.
-- **Clean, reproducible deployments** - Aggressive cleanup with no junk files left behind.
-- **Simple web dashboard** - One-click deploy, restart, stop, and view logs.
-- **SQLite-backed state management** - Lightweight, no external database required.
-- **High safety & minimal overhead** - Runs as non-root user with limited Docker socket access.
-- **Full aaPanel compatibility** - Works alongside existing aaPanel setup with reverse proxy support.
+- **One-click deployments** — Quick Deploy, Build, and Run actions per project.
+- **Multiple source types** — GitHub repos, local directories, or downloaded archives.
+- **No leftover cache** — Source is mirrored directly into the project deploy path; no `github-cache` or intermediate clone directories.
+- **Clear Docker errors** — Actionable messages when Docker is missing, not running, or using the wrong engine context.
+- **SQLite-backed state** — Lightweight, no external database.
+- **PWA-ready** — Works as an installable web app with a responsive UI.
+- **aaPanel friendly** — Runs on a custom port and sits behind an Nginx reverse proxy.
 
 ## Technology Stack
 
 | Component | Technology |
 |---|---|
 | Backend | Python 3.11+ / FastAPI |
-| ASGI Server | Gunicorn + Uvicorn workers |
-| Database | SQLite (via SQLAlchemy + Alembic) |
-| Git Operations | GitPython |
-| Docker Management | Docker Python SDK |
-| Frontend | HTMX + Tailwind CSS |
+| ASGI Server | Uvicorn (with auto-reload in dev) |
+| Database | SQLite (SQLAlchemy + Alembic) |
+| Docker Control | Docker CLI via subprocess |
+| Frontend | Jinja2 templates + vanilla JS |
+| Auth | Cookie-based session |
 | Environment | `.env` + python-dotenv |
-| Deployment | Systemd service (native host) |
-| Logging | Structured logging to `/data/logs/` |
 
 ## Directory Structure
 
 ```
 /data/
-├── dockliner/                  # Main application
+├── dockliner/                  # Application code
 │   ├── main.py
 │   ├── app/
 │   │   ├── core/               # Config, database, security
 │   │   ├── models/             # SQLAlchemy models
-│   │   ├── schemas/            # Pydantic models
-│   │   ├── routers/            # API endpoints
-│   │   ├── services/           # Business logic (git, docker, deploy)
-│   │   ├── templates/          # Jinja2 + HTMX templates
-│   │   └── utils/
+│   │   ├── routers/            # API + page routes
+│   │   ├── services/           # Git, Docker, deploy, file scanning
+│   │   ├── templates/          # Jinja2 HTML templates
+│   │   └── static/             # CSS, JS, logo
 │   ├── alembic/                # Database migrations
-│   ├── static/                 # CSS, JS
-│   ├── logs/
+│   ├── downloads/              # Imported archive sources
+│   ├── projects/               # Live project deploy directories
 │   ├── .env
 │   ├── requirements.txt
 │   └── gunicorn.conf.py
-├── projects/                   # Live project directories
-├── github-cache/               # Temporary clone area (cleaned after deploy)
 ├── dockliner.db                # SQLite database
-└── logs/                       # Deployment logs
+└── logs/                       # Application logs
 ```
 
 ## Data Model
@@ -69,91 +65,59 @@ A lightweight, self-hosted deployment management system for personal Docker-base
 |---|---|
 | `id` | Primary key |
 | `name` | Unique project name |
-| `github_repo_url` | GitHub repository URL |
-| `branch` | Git branch (default: `main`) |
-| `deploy_path` | Deployment path (`/data/projects/{name}`) |
-| `compose_file` | Compose file name (default: `docker-compose.yml`) |
+| `source_type` | `github`, `download`, or `local` |
+| `source_url` / `source_path` | Origin reference |
+| `deploy_path` | Destination directory (`/data/projects/{name}`) |
+| `compose_file` | Detected or chosen compose file |
+| `dockerfile` | Detected or chosen Dockerfile |
+| `env_file` | Detected or chosen `.env` file |
+| `port` | Primary project port |
 | `status` | Current status (`running` / `stopped` / `error`) |
-| `last_deployed` | Timestamp of last deployment |
+| `last_deployed` | Last deployment timestamp |
 | `env_vars` | Environment variables (JSON) |
-| `labels` | Tags / labels |
-
-### Deployments Table (History)
-
-| Field | Description |
-|---|---|
-| `project_id` | Foreign key to Projects |
-| `timestamp` | Deployment time |
-| `status` | Deployment result |
-| `logs` | Deployment log output |
 
 ## Deployment Flow
 
-1. User selects a project in the dashboard → clicks **Deploy**.
-2. System clones/pulls the repo into a temporary clean directory using the GitHub PAT.
-3. Rsyncs (with `--delete`) to `/data/projects/{name}/`.
-4. Runs `docker compose down --rmi local --remove-orphans`.
-5. Runs `docker compose up -d --build`.
-6. Updates SQLite status and logs.
-7. **Aggressive cleanup**:
-   - `rm -rf` temporary clone files.
-   - `docker system prune -f`.
+1. User creates a project from GitHub, a local directory, or a downloaded archive.
+2. Source is copied/mirrored into `deploy_path`.
+3. User edits compose, Dockerfile, and `.env` on the Project Setup page; detected files are auto-selected.
+4. Project Detail page provides **Quick Deploy**, **Build**, **Run**, **Start**, **Restart**, **Stop**, and **Logs**.
+5. Deploy runs `docker compose build` then `docker compose up -d` (or direct `docker build` / `docker run` when no compose is present).
+
+## UI Layout
+
+- **Dashboard** — Project list, Docker engine status, running containers, images, networks, and volumes.
+- **Projects** — All projects with status and delete action.
+- **Project Detail** — VSCode-like file viewer, multi-step deploy controls, live logs.
+- **Project Setup** — Compose / Dockerfile / `.env` detection with auto-selection.
+- **Downloads** — Manage imported archives.
+- **Settings** — Single-page theme, access tokens, and system info. No sub-pages.
+- **Custom modals** — All confirmation/error/info dialogs use the in-app modal system; native `alert` / `confirm` are gone.
 
 ## Security
 
-- Runs as non-root user (`dockliner`) in the `docker` group.
-- GitHub PAT with minimal scope (`repo` read-only).
-- Limited Docker socket access.
-- Input validation on all GitHub URLs and commands.
-- No exposed sensitive credentials in the UI.
+- Runs as a non-root user in the `docker` group.
+- GitHub PAT is stored as an access token and used only for repo cloning.
+- Docker socket access is limited to the `docker` group.
+- No secrets rendered in the UI.
 
 ## aaPanel Integration
 
-- aaPanel handles traditional sites, domains, and SSL.
-- DockLiner runs on a separate port (e.g., `8080`).
-- Use aaPanel reverse proxy to expose the dashboard securely.
-- Docker containers managed by DockLiner appear in aaPanel Docker module.
+- aaPanel handles sites, domains, and SSL.
+- DockLiner runs on a separate port (default `8080`).
+- Point an aaPanel reverse-proxy site to `http://127.0.0.1:8080`.
 
-## Development Phases
+## Development Quick Start
 
-### Phase 1 - Foundation
+1. Clone the repository to `/data/dockliner/`.
+2. Copy `.env.example` to `.env` and set `SECRET_KEY`.
+3. Install dependencies: `pip install -r requirements.txt`.
+4. Run: `python main.py`.
+5. Open `http://localhost:8080` and log in.
 
-- Project structure, dependencies, SQLite models, Git/Docker services, basic API routes, systemd service.
+## Status
 
-### Phase 2 - Core Deployment Engine
-
-- Full deployment pipeline, aggressive cleanup, `.env` per project, deployment history, error handling & rollback.
-
-### Phase 3 - Web Dashboard
-
-- Project list with status, one-click actions, add/edit forms, simple authentication, responsive UI.
-
-### Phase 4 - Polish & Safety
-
-- Validation, background tasks, rate limiting, security headers, backup utility, monitoring endpoints.
-
-### Phase 5 - Advanced Features (Future)
-
-- GitHub webhook support, Portainer integration, resource monitoring, one-click templates, preview/staging environments.
-
-## Quick Start
-
-1. Create non-root user `dockliner` and add to the `docker` group.
-2. Clone this repository and set up the project skeleton in `/data/dockliner/`.
-3. Copy `.env.example` to `.env` and configure your GitHub PAT and settings.
-4. Install dependencies: `pip install -r requirements.txt`.
-5. Run the application: `python main.py`.
-6. Create and enable the systemd service for auto-start on reboot.
-
-## Success Criteria
-
-- Deploy a test project from GitHub in under 2 minutes.
-- Survives server reboot (auto-start via systemd).
-- Clean directory structure with no junk files.
-- Easy to manage 5–10 personal projects.
-- Works smoothly with aaPanel Nginx reverse proxy.
-
----
-
-**Status**: Planning Complete
-**Last Updated**: June 2026
+- **Dashboard** redesign proposal pending approval (`doc/0004.md`).
+- **Docker error diagnosis** and daemon status caching implemented.
+- **Settings** flattened to a single page.
+- **Last Updated**: July 2026
