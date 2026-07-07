@@ -4,41 +4,11 @@
 <!-- Desktop: all sections visible. Mobile: home view visible, sheet opens from bottom nav. -->
 <div class="settings-home">
   <h1 class="hero-title">Settings</h1>
-  <p class="section-subtitle">System configuration, tokens, and updates.</p>
-</div>
-
-<!-- Mobile bottom sheet menu -->
-<div id="settingsSheet" class="settings-sheet" aria-hidden="true">
-  <div class="settings-sheet-backdrop"></div>
-  <div class="settings-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="settingsSheetTitle">
-    <div class="settings-sheet-handle"></div>
-    <h2 id="settingsSheetTitle" class="settings-sheet-title">Settings</h2>
-    <div class="settings-sheet-grid">
-      <button type="button" class="settings-sheet-item" data-view="appearance">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-        <span>Theme</span>
-      </button>
-      <button type="button" class="settings-sheet-item" data-view="tokens">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m0 0h-3"/></svg>
-        <span>Tokens</span>
-      </button>
-      <button type="button" class="settings-sheet-item" data-view="system">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>
-        <span>System</span>
-      </button>
-    </div>
-    <button type="button" class="settings-sheet-close" id="settingsSheetClose">Cancel</button>
-  </div>
+  <p class="section-subtitle">All settings on one page.</p>
 </div>
 
 <!-- Appearance -->
 <div class="settings-view" data-view="appearance" id="appearance">
-  <div class="settings-view-header">
-    <button type="button" class="settings-back" aria-label="Back to settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </button>
-    <h2 class="settings-view-title">Theme</h2>
-  </div>
   <div class="card">
     <h2 class="section-title">Appearance</h2>
 
@@ -158,12 +128,6 @@
 
 <!-- Access Tokens -->
 <div class="settings-view" data-view="tokens" id="tokens">
-  <div class="settings-view-header">
-    <button type="button" class="settings-back" aria-label="Back to settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </button>
-    <h2 class="settings-view-title">Tokens</h2>
-  </div>
   <div class="card" id="tokens">
     <h2 class="section-title">Access Tokens</h2>
     <form onsubmit="return createToken(this)" style="margin-top:12px;">
@@ -188,12 +152,6 @@
 
 <!-- System / Update / About -->
 <div class="settings-view" data-view="system" id="system">
-  <div class="settings-view-header">
-    <button type="button" class="settings-back" aria-label="Back to settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </button>
-    <h2 class="settings-view-title">System</h2>
-  </div>
   <div class="card" id="system">
     <h2 class="section-title">System</h2>
     <div class="grid grid-3">
@@ -293,79 +251,6 @@ function setCookie(name, value){
 }
 
 loadAppearance();
-
-// ---- Mobile settings bottom sheet / sub-page navigation ----
-(function(){
-  const sheet = document.getElementById('settingsSheet');
-  const closeBtn = document.getElementById('settingsSheetClose');
-  const items = document.querySelectorAll('.settings-sheet-item');
-  const views = document.querySelectorAll('.settings-view');
-  const home = document.querySelector('.settings-home');
-  const backBtns = document.querySelectorAll('.settings-back');
-  const settingsTab = document.getElementById('bottomNavSettings');
-
-  function isMobile(){
-    return window.matchMedia('(max-width:768px)').matches;
-  }
-  function openSheet(){
-    if (!isMobile()) return;
-    sheet.classList.add('open');
-    sheet.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeSheet(){
-    sheet.classList.remove('open');
-    sheet.setAttribute('aria-hidden','true');
-    document.body.style.overflow = '';
-  }
-  function showView(name){
-    closeSheet();
-    if (home) home.style.display = 'none';
-    views.forEach(v => {
-      if (v.dataset.view === name){
-        v.classList.add('active');
-        v.style.display = 'block';
-      } else {
-        v.classList.remove('active');
-        v.style.display = 'none';
-      }
-    });
-  }
-  function showHome(){
-    if (home) home.style.display = 'block';
-    views.forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
-  }
-
-  items.forEach(btn => {
-    btn.addEventListener('click', () => showView(btn.dataset.view));
-  });
-
-  backBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      showHome();
-      openSheet();
-    });
-  });
-
-  if (closeBtn) closeBtn.addEventListener('click', closeSheet);
-  sheet.querySelector('.settings-sheet-backdrop').addEventListener('click', closeSheet);
-
-  if (settingsTab){
-    settingsTab.addEventListener('click', e => {
-      if (isMobile() && location.pathname === '/settings'){
-        e.preventDefault();
-        openSheet();
-      }
-    });
-  }
-
-  // On mobile, start at home with sheet closed; desktop shows everything.
-  if (isMobile()){
-    showHome();
-  } else {
-    views.forEach(v => v.style.display = 'block');
-  }
-})();
 
 // ---- Custom modals for daemon control ----
 // NOTE: Docker daemon controls moved to Dashboard; no daemon UI in Settings anymore.
