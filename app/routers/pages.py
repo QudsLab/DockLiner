@@ -23,10 +23,16 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: str = Depen
     projects = db.query(Project).all()
     containers = DockLinerService.list_containers()
     images = DockLinerService.list_images()
+    networks = DockLinerService.list_networks()
+    volumes = DockLinerService.list_volumes()
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request, "projects": projects, "containers": containers,
-        "images": images, "tokens": tokens,
+        "images": images, "networks": networks, "volumes": volumes,
+        "tokens": tokens,
+        "docker_installed": DockLinerService.docker_installed(),
+        "docker_running": DockLinerService.docker_running(),
+        "docker_version": DockLinerService.docker_version(),
     })
 
 @router.get("/projects", response_class=HTMLResponse)
@@ -129,10 +135,6 @@ def downloads_page(request: Request, db: Session = Depends(get_db), user: str = 
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     tokens = db.query(AccessToken).all()
-    containers = DockLinerService.list_containers()
-    images = DockLinerService.list_images()
-    networks = DockLinerService.list_networks()
-    volumes = DockLinerService.list_volumes()
     sec = DockLinerService.security_summary()
     version = {"current": "dev", "latest": "unknown", "has_update": False}
     vf = Path(__file__).resolve().parents[2] / "VERSION"
@@ -140,12 +142,7 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: str = D
         version["current"] = vf.read_text().strip()
     return templates.TemplateResponse(request, "settings.html", {
         "request": request, "tokens": tokens,
-        "containers": containers, "images": images,
-        "networks": networks, "volumes": volumes,
         "sec": sec, "version": version,
-        "docker_installed": DockLinerService.docker_installed(),
-        "docker_running": DockLinerService.docker_running(),
-        "docker_version": DockLinerService.docker_version(),
     })
 
 @router.get("/projects/{pid}/logs", response_class=HTMLResponse)

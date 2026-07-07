@@ -4,7 +4,7 @@
 <!-- Desktop: all sections visible. Mobile: home view visible, sheet opens from bottom nav. -->
 <div class="settings-home">
   <h1 class="hero-title">Settings</h1>
-  <p class="section-subtitle">System configuration, tokens, Docker management, and updates.</p>
+  <p class="section-subtitle">System configuration, tokens, and updates.</p>
 </div>
 
 <!-- Mobile bottom sheet menu -->
@@ -17,10 +17,6 @@
       <button type="button" class="settings-sheet-item" data-view="appearance">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <span>Theme</span>
-      </button>
-      <button type="button" class="settings-sheet-item" data-view="docker">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
-        <span>Docker</span>
       </button>
       <button type="button" class="settings-sheet-item" data-view="tokens">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m0 0h-3"/></svg>
@@ -158,113 +154,7 @@
 </div>
 
 <!-- Docker -->
-<div class="settings-view" data-view="docker" id="docker">
-  <div class="settings-view-header">
-    <button type="button" class="settings-back" aria-label="Back to settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-    </button>
-    <h2 class="settings-view-title">Docker</h2>
-  </div>
-  <div class="card">
-    <h2 class="section-title">Docker</h2>
-    <div class="grid grid-3" style="margin-bottom:16px;">
-      <div class="card">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Docker Engine</label>
-        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">
-          {% if docker_installed and docker_running %}
-            {{ docker_version or info.ServerVersion or 'Running' }}
-          {% elif docker_installed and not docker_running %}
-            <span style="color:var(--error);">Daemon stopped</span>
-          {% else %}
-            <span style="color:var(--error);">Not installed</span>
-          {% endif %}
-        </div>
-        {% if docker_installed %}
-        <div style="margin-top:10px;">
-          {% if docker_running %}
-            <button class="btn btn-danger btn-sm" onclick="controlDaemon('stop')">Turn Off Daemon</button>
-          {% else %}
-            <button class="btn btn-success btn-sm" onclick="controlDaemon('start')">Turn On Daemon</button>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
-      <div class="card">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Containers</label>
-        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ containers|length }}</div>
-      </div>
-      <div class="card">
-        <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
-        <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ images|length }}</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      {% if not docker_installed %}
-    <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-      Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.
-    </div>
-    {% elif docker_installed and not docker_running %}
-    <div style="margin-top:12px;padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-      Docker is installed but the daemon is not running. Start Docker Desktop or the docker service.
-    </div>
-    {% endif %}
-  </div>
-  </div>
-
-  <div class="card" style="margin-bottom:24px;">
-    <h2 class="section-title">Containers</h2>
-    {% if containers %}
-    <table class="table">
-      <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>State</th><th>Ports</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for c in containers %}
-        <tr>
-          <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.State }}</td><td>{{ c.Ports or '-' }}</td>
-          <td>
-            <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
-            <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
-            <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>showInfoModal('Container ports', JSON.stringify(d,null,2)))">Ports</button>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% else %}<p style="color:var(--muted)">No containers.</p>{% endif %}
-  </div>
-
-  <div class="card" style="margin-bottom:24px;">
-    <h2 class="section-title">Images</h2>
-    {% if images %}
-    <table class="table">
-      <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Created</th><th>Actions</th></tr></thead>
-      <tbody>
-      {% for i in images %}
-        <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td>{{ i.CreatedAt }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% else %}<p style="color:var(--muted)">No images.</p>{% endif %}
-  </div>
-
-  <div class="grid grid-2" style="margin-bottom:24px;">
-    <div class="card">
-      <h2 class="section-title">Networks</h2>
-      {% if networks %}
-      <table class="table"><thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-        {% for n in networks %}<tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>{% endfor %}
-      </tbody></table>
-      {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
-    </div>
-    <div class="card">
-      <h2 class="section-title">Volumes</h2>
-      {% if volumes %}
-      <table class="table"><thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-        {% for v in volumes %}<tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>{% endfor %}
-      </tbody></table>
-      {% else %}<p class="muted">No volumes.</p>{% endif %}
-    </div>
-  </div>
-</div>
+<!-- Docker resources moved to Dashboard; daemon controls now on Dashboard too -->
 
 <!-- Access Tokens -->
 <div class="settings-view" data-view="tokens" id="tokens">
@@ -333,17 +223,7 @@
   </div>
 </div>
 
-<!-- Custom styled modals for settings -->
-<div id="daemon-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-box">
-    <h3 class="modal-title" id="daemon-modal-title">Stop Docker daemon?</h3>
-    <p class="modal-text" id="daemon-modal-text">This will stop the Docker Desktop service.</p>
-    <div class="modal-actions">
-      <button class="btn btn-secondary" id="daemon-modal-cancel">Cancel</button>
-      <button class="btn btn-danger" id="daemon-modal-ok">Stop</button>
-    </div>
-  </div>
-</div>
+<!-- System / Update / About -->
 {% endblock %}
 {% block scripts %}<script>
 function createToken(form){
@@ -488,39 +368,7 @@ loadAppearance();
 })();
 
 // ---- Custom modals for daemon control ----
-let pendingDaemonAction = null;
-const daemonModal = document.getElementById('daemon-modal');
-const daemonTitle = document.getElementById('daemon-modal-title');
-const daemonText = document.getElementById('daemon-modal-text');
-const daemonOk = document.getElementById('daemon-modal-ok');
-const daemonCancel = document.getElementById('daemon-modal-cancel');
-
-function showDaemonModal(action){
-  pendingDaemonAction = action;
-  const label = action === 'stop' ? 'Stop' : 'Start';
-  daemonTitle.textContent = label + ' Docker daemon?';
-  daemonText.textContent = 'This will ' + (action === 'stop' ? 'stop' : 'start') + ' the Docker Desktop service.';
-  daemonOk.textContent = label;
-  daemonOk.className = 'btn ' + (action === 'stop' ? 'btn-danger' : 'btn-success');
-  daemonModal.style.display = 'flex';
-}
-function hideDaemonModal(){
-  pendingDaemonAction = null;
-  daemonModal.style.display = 'none';
-}
-
-daemonCancel.addEventListener('click', hideDaemonModal);
-daemonOk.addEventListener('click', () => {
-  if(!pendingDaemonAction) return;
-  const action = pendingDaemonAction;
-  hideDaemonModal();
-  fetch('/api/docker/'+action+'-daemon',{method:'POST'}).then(r=>{
-    if(r.ok){ location.reload(); }
-    else{ r.json().then(d=>showErrorModal('Docker daemon', d.detail || 'Failed')); }
-  }).catch(e=>showErrorModal('Docker daemon', 'Error: '+e.message));
-});
-daemonModal.addEventListener('click', e=>{ if(e.target === daemonModal) hideDaemonModal(); });
-document.addEventListener('keydown', e=>{ if(e.key === 'Escape' && daemonModal.style.display === 'flex') hideDaemonModal(); });
+// NOTE: Docker daemon controls moved to Dashboard; no daemon UI in Settings anymore.
 
 function confirmDeleteToken(id){
   showConfirmModal('Delete token?', 'This token will be removed permanently.', 'Delete', 'btn-danger', ()=>{
@@ -533,8 +381,6 @@ function showLogoutModal(){
   });
 }
 
-function controlDaemon(action){
-  showDaemonModal(action);
-}
+// Docker daemon controls moved to Dashboard
 </script>
 {% endblock %}

@@ -13,6 +13,20 @@ class DockLinerService:
     """Central service layer: Docker operations + project downloads."""
 
     _docker_exe: Optional[str] = None
+    _docker_cache: Dict[str, Any] = {}
+    _docker_cache_ttl: float = 5.0  # seconds
+
+    @classmethod
+    def _cache_get(cls, key: str) -> Any:
+        now = time.time()
+        entry = cls._docker_cache.get(key)
+        if entry and (now - entry[0]) < cls._docker_cache_ttl:
+            return entry[1]
+        return None
+
+    @classmethod
+    def _cache_set(cls, key: str, value: Any) -> None:
+        cls._docker_cache[key] = (time.time(), value)
 
     @classmethod
     def _find_docker(cls) -> Optional[str]:
@@ -82,26 +96,48 @@ class DockLinerService:
 
     @classmethod
     def _with_preflight(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 300) -> subprocess.CompletedProcess:
-        if not cls.docker_installed():
-            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker is not installed. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
-        if not cls.docker_running():
-            if not cls._wait_for_daemon(timeout=15):
+        cached = cls._cache_get("running")
+        if cached is None:
+            installed = cls.docker_installed()
+            running = cls.docker_running()
+            cls._cache_set("installed", installed)
+            cls._cache_set("running", running)
+            if not installed:
+                return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker is not installed. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
+            if not running:
                 return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux).")
+        elif cached is False:
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux).")
         return cls._run(cmd, cwd=cwd, timeout=timeout)
 
     @classmethod
     def docker_installed(cls) -> bool:
-        return cls._find_docker() is not None
+        cached = cls._cache_get("installed")
+        if cached is not None:
+            return cached
+        v = cls._find_docker() is not None
+        cls._cache_set("installed", v)
+        return v
 
     @classmethod
     def docker_running(cls) -> bool:
+        cached = cls._cache_get("running")
+        if cached is not None:
+            return cached
         r = cls._run(["docker", "info"], timeout=5)
-        return r.returncode == 0
+        v = r.returncode == 0
+        cls._cache_set("running", v)
+        return v
 
     @classmethod
     def docker_version(cls) -> str:
+        cached = cls._cache_get("version")
+        if cached is not None:
+            return cached
         r = cls._run(["docker", "version", "--format", "{{.Client.Version}}"], timeout=5)
-        return r.stdout.strip() if r.returncode == 0 else "unknown"
+        v = r.stdout.strip() if r.returncode == 0 else "unknown"
+        cls._cache_set("version", v)
+        return v
 
     # ---- Containers ----
     @classmethod
