@@ -13,11 +13,7 @@ from app.core.auth import verify, login_user, logout_user, get_session_user, req
 from app.core.utils import find_free_ports
 from app.models.project import (
     Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
-    HealthCheck, Metric, AuditLog, Webhook, Notification
-)
-from app.models.project import (
-    Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
-    HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog
+    HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog, SystemLog
 )
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectOut,
@@ -28,10 +24,10 @@ from app.schemas.monitoring import (
     HealthCheckCreate, HealthCheckUpdate, HealthCheckOut,
     MetricOut, AuditLogOut, WebhookCreate, WebhookOut, NotificationOut,
 )
-
-from app.services.deploy_service import DeployService
 from app.services.dockliner_service import DockLinerService
+from app.services.deploy_service import DeployService
 from app.services.github_download_service import GitHubDownloadService
+from app.services.log_service import LogService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
 from app.services.file_scanner import scan_downloaded_repo
 from app.services.error_log_service import ErrorLogService
@@ -241,6 +237,13 @@ def deploy_project(pid: int, db: Session = Depends(get_db), user: str = Depends(
     dep = DeployService.deploy_project(p, tok.token if tok else None, db)
     return {'deployment_id': dep.id, 'status': dep.status}
 
+@router.get("/projects/{pid}/deploy-preview")
+def deploy_preview(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    return {'commands': p.deploy_commands or DeployService.preview_commands(p)}
+
 @router.post("/projects/{pid}/run")
 def run_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
@@ -257,7 +260,7 @@ def run_project(pid: int, db: Session = Depends(get_db), user: str = Depends(req
 def start_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail='Not found')
     rc, out = DockLinerService.compose_up(str(p.deploy_path), p.compose_file)
     p.status = "running" if rc == 0 else "error"
     db.commit()
@@ -938,6 +941,55 @@ def log_js_error(data: JsErrorBody, request: Request, db: Session = Depends(get_
 def list_error_logs(source: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     return ErrorLogService.list(db, limit=limit, source=source)
 
+# ---------- Open error API (rescue even when server startup fails) ----------
+
+import hashlib
+from datetime import date
+
+def _today_error_token() -> str:
+    if settings.ERROR_API_TOKEN:
+        return settings.ERROR_API_TOKEN
+    return hashlib.md5(f"{date.today().isoformat()}{settings.SECRET_KEY}".encode()).hexdigest()
+
+async def _open_error_api_auth(request: Request):
+    token = request.query_params.get("token")
+    if not token:
+        try:
+            payload = await request.json()
+            token = payload.get("token") if isinstance(payload, dict) else None
+        except Exception:
+            try:
+                form = await request.form()
+                token = form.get("token")
+            except Exception:
+                token = None
+    if not token or token != _today_error_token():
+        raise HTTPException(status_code=401, detail="invalid token")
+
+@router.get("/errors")
+async def open_get_errors(request: Request, limit: int = 100, source: Optional[str] = None, db: Session = Depends(get_db)):
+    await _open_error_api_auth(request)
+    return ErrorLogService.list(db, limit=limit, source=source)
+
+@router.post("/errors")
+async def open_post_error(request: Request, db: Session = Depends(get_db)):
+    await _open_error_api_auth(request)
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    ErrorLogService.log(
+        db,
+        source=str(payload.get("source", "external"))[:64],
+        message=str(payload.get("message", ""))[:4000],
+        level=str(payload.get("level", "error"))[:16],
+        stack=str(payload.get("stack", ""))[:8000],
+        url=str(payload.get("url", ""))[:500],
+        user=str(payload.get("user", ""))[:100],
+        user_agent=request.headers.get("user-agent", "")[:500],
+    )
+    return {"ok": True}
+
 # ---------- Poll trigger ----------
 
 @router.post("/system/poll")
@@ -945,3 +997,47 @@ def system_poll(db: Session = Depends(get_db), user: str = Depends(require_auth)
     MonitoringService.poll_all_health(db)
     MonitoringService.record_docker_stats(db)
     return {"ok": True}
+
+# ---------- Logs ----------
+
+class LogsQuery(BaseModel):
+    source: Optional[str] = None
+    limit_days: int = 30
+
+@router.get("/logs")
+def list_logs(source: Optional[str] = None, limit_days: int = 30, user: str = Depends(require_auth)):
+    groups = LogService.grouped_by_day(limit_days=limit_days, source=source)
+    return {"groups": groups}
+
+@router.delete("/logs")
+def clear_logs(db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    db.query(SystemLog).delete()
+    db.commit()
+    AuditService.log(db, "system_logs_clear", target="system_logs", user=user)
+    return {"ok": True}
+
+# ---------- Migrations ----------
+
+from app.services.migration_service import MigrationService
+from app.core.db import Base
+
+@router.get("/migrations")
+def list_migrations(user: str = Depends(require_auth)):
+    ops = MigrationService.diff_schema(Base)
+    high = [o for o in ops if o["risk"] == "high"]
+    return {"pending": len(ops), "high_risk": len(high), "ops": ops}
+
+class MigrationRunBody(BaseModel):
+    sql: List[str] = []
+
+@router.post("/migrations/run")
+def run_migrations(body: MigrationRunBody, user: str = Depends(require_auth)):
+    if not body.sql:
+        raise HTTPException(status_code=400, detail="No SQL provided")
+    ops = MigrationService.diff_schema(Base)
+    allowed = {o["sql"] for o in ops}
+    for sql in body.sql:
+        if sql not in allowed:
+            raise HTTPException(status_code=400, detail="SQL does not match pending migration")
+    result = MigrationService.run_ops([{"sql": s} for s in body.sql])
+    return result

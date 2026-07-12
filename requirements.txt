@@ -6,8 +6,10 @@ sqlalchemy>=2.0.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 httpx>=0.25.0
-gitpython>=3.1.0
 python-dotenv>=1.0.0
 aiofiles>=23.0.0
 blake3>=0.3.0
 pyyaml>=6.0
+PyMySQL>=1.1.0
+psycopg2-binary>=2.9.0
+# gitpython removed — deploys now use GitHub zip downloads, not git clone

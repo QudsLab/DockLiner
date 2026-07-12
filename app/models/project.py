@@ -32,6 +32,7 @@ class Project(Base):
     direct_command = Column(Text, default="")
     source_type = Column(String, default="github")  # github|local|download
     source_path = Column(String, nullable=True)  # local path or download_id
+    deploy_commands = Column(JSON, default=list)  # editable command list for Quick Deploy preview
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     def to_dict(self) -> dict:
@@ -59,6 +60,28 @@ class Project(Base):
             "direct_command": self.direct_command or "",
             "source_type": self.source_type or "github",
             "source_path": self.source_path,
+            "deploy_commands": self.deploy_commands or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+class SystemLog(Base):
+    __tablename__ = "system_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    source = Column(String, nullable=False)  # docker|system|deploy|daemon
+    level = Column(String, default="info")  # info|warn|error
+    message = Column(Text, default="")
+    details = Column(Text, default="")
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "source": self.source,
+            "level": self.level,
+            "message": self.message or "",
+            "details": self.details or "",
+            "project_id": self.project_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

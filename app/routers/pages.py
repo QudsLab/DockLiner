@@ -4,9 +4,10 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.auth import require_auth
-from app.models.project import Project, Deployment, AccessToken, Download
+from app.models.project import Project, Deployment, AccessToken, Download, SystemLog
 from app.services.dockliner_service import DockLinerService
 from app.services.file_scanner import scan_local_dir
+from app.services.log_service import LogService
 from pathlib import Path
 import json
 import urllib.parse
@@ -154,12 +155,18 @@ def logs_page(request: Request, pid: int, db: Session = Depends(get_db), user: s
         logs = DeployService.project_logs(p, 200)
     return templates.TemplateResponse(request, "logs.html", {"request": request, "project": p, "logs": logs})
 
+@router.get("/logs", response_class=HTMLResponse)
+def system_logs_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    groups = LogService.grouped_by_day(limit_days=30)
+    return templates.TemplateResponse(request, "system_logs.html", {"request": request, "groups": groups})
+
 @router.get("/projects/{pid}", response_class=HTMLResponse)
 def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Project not found")
-    return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p})
+    tokens = db.query(AccessToken).all()
+    return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p, "tokens": tokens})
 
 @router.get("/logout", response_class=HTMLResponse)
 def logout_page(request: Request):

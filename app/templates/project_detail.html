@@ -79,18 +79,19 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
   </div>
 </div>
 
-{% set needs_build = project.status in ('idle','error','stopped') %}
-{% if needs_build %}
-<div id="buildHint" class="hint-banner">
+<div id="qdeployHint" class="hint-banner" style="display:none;">
   <span>Quick Deploy = sync source + build + start. Or use Build / Run separately.</span>
-  <button class="btn btn-primary btn-sm" onclick="doAction('deploy')">Quick Deploy now</button>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn btn-primary btn-sm" onclick="doAction('deploy')">Quick Deploy now</button>
+    <button class="btn btn-secondary btn-sm" onclick="dismissQdeployHint()">Dismiss</button>
+  </div>
 </div>
-{% endif %}
 
 <div class="detail-tabs">
   <button class="detail-tab active" onclick="showTab('compose')">compose.yml</button>
   <button class="detail-tab" onclick="showTab('dockerfile')">Dockerfile</button>
   <button class="detail-tab" onclick="showTab('env')">.env</button>
+  <button class="detail-tab" onclick="showTab('qdeploy')">Quick Deploy</button>
   <button class="detail-tab" onclick="showTab('files')">Files</button>
   <button class="detail-tab" onclick="showTab('logs')">Deploy Logs</button>
   <button class="detail-tab" onclick="showTab('runtime')">Runtime Logs</button>
@@ -107,6 +108,13 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
   <div class="editor-card">
     <div class="editor-header"><span>Dockerfile</span><button class="btn btn-primary btn-sm" onclick="saveFile('Dockerfile','dockerfile')">Save</button></div>
     <div id="editor-dockerfile"></div>
+  </div>
+</div>
+
+<div id="tab-qdeploy" class="panel">
+  <div class="editor-card">
+    <div class="editor-header"><span>Quick Deploy</span><button class="btn btn-primary btn-sm" onclick="saveDeployCommands()">Save</button></div>
+    <div id="editor-qdeploy"></div>
   </div>
 </div>
 
@@ -263,16 +271,55 @@ async function loadComposeFile(){
 }
 
 (async function(){
-  const [c,d,e] = await Promise.all([
+  const [c,d,e,p] = await Promise.all([
     loadComposeFile(),
     fetch(`/api/projects/${pid}/files/Dockerfile`).then(r=>r.ok?r.json():{content:''}),
-    fetch(`/api/projects/${pid}/files/.env`).then(r=>r.ok?r.json():{content:''})
+    fetch(`/api/projects/${pid}/files/.env`).then(r=>r.ok?r.json():{content:''}),
+    fetch(`/api/projects/${pid}`).then(r=>r.ok?r.json():{})
   ]);
   editors.compose = makeEditor('editor-compose', 'yaml', typeof c === 'string' ? c : (c.content||''));
   editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.content||'');
   editors.env = makeEditor('editor-env', 'bash', e.content||'');
+  editors.qdeploy = makeEditor('editor-qdeploy', 'shell', buildQdeployCommandPreview(p));
   setTheme();
 })();
+
+function buildQdeployCommandPreview(p){
+  if(p.deploy_commands && p.deploy_commands.length){
+    return p.deploy_commands.join('\n');
+  }
+  let lines=[];
+  if(p.source_type==='github') lines.push(`# sync source to ${p.deploy_path}`);
+  else if((p.source_type==='download' || p.source_type==='local') && p.source_path) lines.push(`cp -r ${p.source_path} ${p.deploy_path}`);
+  else lines.push(`# no source configured; deploy_path left empty`);
+  lines.push('# write .env');
+  const mode=p.command_mode || p.deploy_method || 'compose';
+  const deployPath=p.deploy_path;
+  if(mode==='compose'){
+    const cf=p.compose_file || 'compose.yml';
+    lines.push(`cd ${deployPath}`);
+    lines.push(`docker compose -f ${cf} build`);
+    lines.push(`docker compose -f ${cf} up -d --build`);
+  }else if(mode==='dockerfile'){
+    lines.push(`cd ${deployPath}`);
+    lines.push(`docker build -t ${p.name} .`);
+    lines.push(`docker run -d -p ${p.port || 0}:${p.port || 0} --name ${p.name} ${p.name}`);
+  }else if(mode==='direct'){
+    lines.push(`cd ${deployPath}`);
+    lines.push(p.direct_command || '# no direct command provided');
+  }
+  return lines.join('\n');
+}
+
+async function saveDeployCommands(){
+  const raw=editors.qdeploy.getValue().trim();
+  const commands=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  const r=await fetch(`/api/projects/${pid}`,{
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({deploy_commands:commands})
+  });
+  const d=await r.json().catch(()=>({}));
+  showToast(r.ok?'Deploy commands saved':'Save failed: '+(d.detail||r.statusText), r.ok?'success':'error');
+}
 
 async function saveFile(path, key){
   const content=editors[key].getValue();
@@ -430,7 +477,22 @@ async function doAction(action){
   const d=await r.json().catch(()=>({}));
   showToast(d.status||action, r.ok?'success':'error');
   if(r.ok && action==='build') loadDeployLogs();
+  if(r.ok && action==='deploy') loadDeployLogs();
 }
+
+function dismissQdeployHint(){
+  localStorage.setItem('dockliner-qdeploy-hint-'+pid, '1');
+  const el=document.getElementById('qdeployHint');
+  if(el) el.style.display='none';
+}
+function maybeShowQdeployHint(){
+  const el=document.getElementById('qdeployHint');
+  if(!el) return;
+  const shown=localStorage.getItem('dockliner-qdeploy-hint-'+pid);
+  if(!shown) el.style.display='flex';
+}
+
+maybeShowQdeployHint();
 
 function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB','GB']; let i=0; while(n>=1024 && i<units.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+units[i]; }
 function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

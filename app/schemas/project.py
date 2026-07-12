@@ -22,6 +22,7 @@ class ProjectCreate(BaseModel):
     direct_command: Optional[str] = None
     source_type: Optional[str] = "github"  # github|local|download
     source_path: Optional[str] = None
+    deploy_commands: Optional[List[str]] = None  # editable command list for Quick Deploy
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -43,6 +44,7 @@ class ProjectUpdate(BaseModel):
     direct_command: Optional[str] = None
     source_type: Optional[str] = None
     source_path: Optional[str] = None
+    deploy_commands: Optional[List[str]] = None
 
 class ProjectFileUpdate(BaseModel):
     content: str
@@ -81,6 +83,7 @@ class ProjectOut(BaseModel):
     direct_command: Optional[str]
     source_type: Optional[str]
     source_path: Optional[str]
+    deploy_commands: Optional[List[str]]
     created_at: datetime
     class Config:
         from_attributes = True

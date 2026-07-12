@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Logs — DockLiner{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div>
+      <h2 class="section-title" style="margin:0;">System Logs</h2>
+      <p class="muted" style="margin:4px 0 0;font-size:12px;">Docker, daemon, deploy, and preflight events grouped by day.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <select id="logSource" class="form-control" style="min-width:140px;font-size:13px;" onchange="filterLogs()">
+        <option value="">All sources</option>
+        <option value="docker">docker</option>
+        <option value="daemon">daemon</option>
+        <option value="system">system</option>
+        <option value="deploy">deploy</option>
+        <option value="preflight">preflight</option>
+      </select>
+      <button class="btn btn-secondary btn-sm" onclick="refreshLogs()">↻ Refresh</button>
+      <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
+    </div>
+  </div>
+
+  {% if groups %}
+    {% for day, logs in groups|dictsort(reverse=True) %}
+      <div class="log-day" data-day="{{ day }}">
+        <div class="log-day-header">{{ day }} <span class="muted">({{ logs|length }})</span></div>
+        <div class="log-list">
+          {% for log in logs %}
+            <div class="log-row" data-source="{{ log.source }}" data-level="{{ log.level }}">
+              <span class="log-time">{{ log.created_at[11:16] if log.created_at else '--:--' }}</span>
+              <span class="log-badge source-{{ log.source }}">{{ log.source }}</span>
+              <span class="log-badge level-{{ log.level }}">{{ log.level }}</span>
+              <span class="log-message">{{ log.message }}</span>
+              {% if log.project_id %}<span class="log-project">project #{{ log.project_id }}</span>{% endif %}
+              {% if log.details %}<button class="log-toggle" onclick="this.nextElementSibling.classList.toggle('open')">details</button>{% endif %}
+              {% if log.details %}<pre class="log-details">{{ log.details }}</pre>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">No system logs yet. Events appear when DockLiner talks to Docker or you start/stop the daemon.</div>
+  {% endif %}
+</div>
+
+<style>
+.log-day { margin-bottom: 18px; }
+.log-day-header { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--ink); padding: 10px 0; border-bottom: 1px solid var(--hairline); margin-bottom: 6px; }
+.log-list { display: flex; flex-direction: column; gap: 6px; }
+.log-row { display: grid; grid-template-columns: 48px 70px 56px 1fr auto auto; gap: 10px; align-items: start; padding: 8px 10px; border-radius: var(--radius-md); background: var(--surface-soft); font-family: var(--font-mono); font-size: 12px; }
+.log-time { color: var(--muted); padding-top: 2px; }
+.log-message { color: var(--ink); word-break: break-word; }
+.log-badge { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 10px; text-transform: uppercase; font-weight: 600; }
+.source-docker { background: #1e3a8a; color: #93c5fd; }
+.source-daemon { background: #3f2c06; color: #fbbf24; }
+.source-system { background: #064e3b; color: #6ee7b7; }
+.source-deploy { background: #312e81; color: #a5b4fc; }
+.source-preflight { background: #4c0519; color: #fda4af; }
+.level-info { background: var(--surface-card); color: var(--muted); }
+.level-warn { background: #451a03; color: #fbbf24; }
+.level-error { background: #450a0a; color: #fca5a5; }
+.log-project { color: var(--muted); font-size: 11px; }
+.log-toggle { background: transparent; border: 1px solid var(--hairline); color: var(--muted); border-radius: var(--radius-md); padding: 2px 8px; cursor: pointer; font-size: 11px; }
+.log-details { display: none; grid-column: 1 / -1; white-space: pre-wrap; color: var(--muted); margin: 4px 0 0; padding: 8px; background: var(--surface-card); border-radius: var(--radius-md); }
+.log-details.open { display: block; }
+.empty-state { padding: 40px; text-align: center; color: var(--muted); font-size: 14px; }
+@media (max-width: 700px) {
+  .log-row { grid-template-columns: 48px 1fr; }
+  .log-badge, .log-project, .log-toggle { justify-self: start; }
+}
+</style>
+
+<script>
+async function refreshLogs(){
+  const source = document.getElementById('logSource').value;
+  const url = source ? `/api/logs?source=${encodeURIComponent(source)}` : '/api/logs';
+  const r = await fetch(url);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok || !d.groups) return;
+  renderGroups(d.groups);
+}
+
+function renderGroups(groups){
+  const container = document.querySelector('.card');
+  const old = container.querySelectorAll('.log-day, .empty-state');
+  old.forEach(el => el.remove());
+  const days = Object.keys(groups).sort().reverse();
+  if (!days.length) {
+    container.insertAdjacentHTML('beforeend', '<div class="empty-state">No system logs yet.</div>');
+    return;
+  }
+  for (const day of days) {
+    const logs = groups[day];
+    let html = `<div class="log-day" data-day="${day}"><div class="log-day-header">${day} <span class="muted">(${logs.length})</span></div><div class="log-list">`;
+    for (const log of logs) {
+      const t = log.created_at ? log.created_at.slice(11, 16) : '--:--';
+      const details = log.details ? `<button class="log-toggle" onclick="this.nextElementSibling.classList.toggle('open')">details</button><pre class="log-details">${escapeHtml(log.details)}</pre>` : '';
+      const project = log.project_id ? `<span class="log-project">project #${log.project_id}</span>` : '';
+      html += `<div class="log-row" data-source="${log.source}" data-level="${log.level}"><span class="log-time">${t}</span><span class="log-badge source-${log.source}">${log.source}</span><span class="log-badge level-${log.level}">${log.level}</span><span class="log-message">${escapeHtml(log.message)}</span>${project}${details}</div>`;
+    }
+    html += '</div></div>';
+    container.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+function filterLogs(){
+  const source = document.getElementById('logSource').value;
+  document.querySelectorAll('.log-row').forEach(row => {
+    row.style.display = !source || row.dataset.source === source ? 'grid' : 'none';
+  });
+  document.querySelectorAll('.log-day').forEach(day => {
+    const visible = day.querySelectorAll('.log-row:not([style*="none"])').length;
+    day.style.display = visible ? 'block' : 'none';
+  });
+}
+
+async function clearLogs(){
+  if (!confirm('Clear all system logs?')) return;
+  const r = await fetch('/api/logs', { method: 'DELETE' });
+  if (r.ok) renderGroups({});
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+</script>
+{% endblock %}

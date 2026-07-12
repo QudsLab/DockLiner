@@ -181,7 +181,18 @@
   </div>
 </div>
 
-<!-- System / Update / About -->
+<!-- Database Migrations -->
+<div class="settings-view" data-view="migrations" id="migrations">
+  <div class="card" id="migrations">
+    <h2 class="section-title">Database Migrations</h2>
+    <div id="migrationStatus"></div>
+    <div id="migrationList" style="margin-top:12px;"></div>
+    <div id="migrationActions" style="margin-top:16px; display:none;">
+      <button class="btn btn-danger" onclick="runSelectedMigrations()">Run selected migrations</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block scripts %}<script>
 function createToken(form){
@@ -251,6 +262,7 @@ function setCookie(name, value){
 }
 
 loadAppearance();
+loadMigrations();
 
 // ---- Custom modals for daemon control ----
 // NOTE: Docker daemon controls moved to Dashboard; no daemon UI in Settings anymore.
@@ -266,6 +278,81 @@ function showLogoutModal(){
   });
 }
 
-// Docker daemon controls moved to Dashboard
-</script>
+// ---- Database migrations UI ----
+let pendingOps = [];
+
+function loadMigrations(){
+  fetch('/api/migrations')
+    .then(r => r.json())
+    .then(data => {
+      pendingOps = data.ops || [];
+      const statusEl = document.getElementById('migrationStatus');
+      const listEl = document.getElementById('migrationList');
+      const actionsEl = document.getElementById('migrationActions');
+      if (!pendingOps.length) {
+        statusEl.innerHTML = '<p style="color:var(--success);font-size:14px;">Schema is up to date.</p>';
+        listEl.innerHTML = '';
+        actionsEl.style.display = 'none';
+        return;
+      }
+      const high = pendingOps.filter(o => o.risk === 'high').length;
+      statusEl.innerHTML = `<p style="color:var(--warning);font-size:14px;"><strong>${pendingOps.length} pending migration${pendingOps.length === 1 ? '' : 's'}</strong> · ${high} high-risk operation${high === 1 ? '' : 's'}.</p>`;
+      listEl.innerHTML = pendingOps.map((op, i) => `
+        <div style="border:1px solid var(--hairline);border-radius:var(--radius-md);padding:12px;margin-bottom:10px;background:var(--surface-soft);">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+            <input type="checkbox" class="migration-checkbox" data-idx="${i}" checked style="margin-top:4px;">
+            <div style="flex:1;">
+              <div style="font-weight:600;color:var(--ink);font-size:14px;">${escapeHtml(op.message)}</div>
+              <div style="margin-top:6px;font-size:12px;color:var(--muted);font-family:var(--font-mono);white-space:pre-wrap;word-break:break-word;background:var(--surface-dark);padding:8px;border-radius:var(--radius-sm);">${escapeHtml(op.sql)}</div>
+              <div style="margin-top:6px;"><span class="risk-badge ${op.risk}">${op.risk.toUpperCase()} RISK</span></div>
+            </div>
+          </label>
+        </div>
+      `).join('');
+      actionsEl.style.display = 'block';
+    })
+    .catch(e => {
+      document.getElementById('migrationStatus').innerHTML = `<p style="color:var(--error);font-size:14px;">Could not load migrations: ${escapeHtml(e.message)}</p>`;
+    });
+}
+
+function runSelectedMigrations(){
+  const checked = Array.from(document.querySelectorAll('.migration-checkbox:checked'));
+  if (!checked.length) return;
+  const selected = checked.map(cb => pendingOps[parseInt(cb.dataset.idx)]);
+  const high = selected.filter(o => o.risk === 'high');
+  const sql = selected.map(o => o.sql);
+
+  let warning = selected.length === 1
+    ? selected[0].message
+    : `${selected.length} operations will be applied.`;
+  if (high.length) {
+    warning += `\n\n${high.length} HIGH-RISK operation${high.length === 1 ? '' : 's'} may remove data, columns, or entire tables. This cannot be undone.`;
+  }
+  warning += '\n\nBack up your database before continuing.';
+
+  showConfirmModal('Apply migrations?', warning, 'Apply', 'btn-danger', () => {
+    fetch('/api/migrations/run', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sql})
+    })
+    .then(r => {
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      return r.json();
+    })
+    .then(d => {
+      showInfoModal('Migrations applied', `${d.applied} SQL statement${d.applied === 1 ? '' : 's'} executed.`);
+      loadMigrations();
+    })
+    .catch(e => showErrorModal('Migration failed', e.message));
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/\u0026/g,'\u0026amp;').replace(/\u003c/g,'\u0026lt;').replace(/\u003e/g,'\u0026gt;').replace(/"/g,'\u0026quot;');
+}
+
+// ---- Custom modals for daemon control ----
+// NOTE: Docker daemon controls moved to Dashboard; no daemon UI in Settings anymore.
 {% endblock %}

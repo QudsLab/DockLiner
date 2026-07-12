@@ -84,31 +84,41 @@ class DockLinerService:
     def _run(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 15) -> subprocess.CompletedProcess:
         exe = cls._find_docker()
         if not exe:
-            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker executable not found. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
+            msg = "Docker executable not found. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner."
+            cls._log("docker", "docker exec missing", "error", msg)
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr=msg)
         resolved = [exe if c == "docker" else c for c in cmd]
         try:
             r = subprocess.run(resolved, capture_output=True, text=True, cwd=cwd, timeout=timeout, check=False)
         except Exception as e:
-            return subprocess.CompletedProcess(args=resolved, returncode=1, stdout="", stderr=str(e))
-        if r.returncode != 0 and r.stderr:
-            r._dockliner_diag = cls._diagnose(r.stderr)  # type: ignore[attr-defined]
+            msg = str(e)
+            cls._log("docker", f"{' '.join(cmd)}: exception", "error", msg)
+            return subprocess.CompletedProcess(args=resolved, returncode=1, stdout="", stderr=msg)
+        if r.returncode != 0:
+            diag = cls._diagnose(r.stderr)
+            cls._log("docker", f"{' '.join(cmd)}: rc={r.returncode}", "error", diag)
+            r._dockliner_diag = diag  # type: ignore[attr-defined]
         return r
 
     @classmethod
     def _with_preflight(cls, cmd: List[str], cwd: Optional[str] = None, timeout: int = 300) -> subprocess.CompletedProcess:
-        cached = cls._cache_get("running")
-        if cached is None:
-            installed = cls.docker_installed()
-            running = cls.docker_running()
-            cls._cache_set("installed", installed)
-            cls._cache_set("running", running)
-            if not installed:
-                return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker is not installed. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner.")
-            if not running:
-                return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux).")
-        elif cached is False:
-            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr="Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux).")
+        if not cls.docker_installed():
+            msg = "Docker is not installed. Install Docker Desktop (Windows/Mac) or docker-ce (Linux) and restart DockLiner."
+            cls._log("preflight", "docker not installed", "error", msg)
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr=msg)
+        if not cls.docker_running():
+            msg = "Docker daemon is not running. Start Docker Desktop (Windows/Mac) or run `sudo systemctl start docker` (Linux)."
+            cls._log("preflight", "docker daemon not running", "error", msg)
+            return subprocess.CompletedProcess(args=cmd, returncode=1, stdout="", stderr=msg)
         return cls._run(cmd, cwd=cwd, timeout=timeout)
+
+    @classmethod
+    def _log(cls, source: str, message: str, level: str, details: str = ""):
+        try:
+            from app.services.log_service import LogService
+            LogService.add(source, message, level, details)
+        except Exception:
+            pass
 
     @classmethod
     def docker_installed(cls) -> bool:
@@ -117,6 +127,8 @@ class DockLinerService:
             return cached
         v = cls._find_docker() is not None
         cls._cache_set("installed", v)
+        if not v:
+            cls._log("system", "Docker installation check: not found", "error")
         return v
 
     @classmethod
@@ -127,6 +139,8 @@ class DockLinerService:
         r = cls._run(["docker", "info"], timeout=5)
         v = r.returncode == 0
         cls._cache_set("running", v)
+        if not v:
+            cls._log("system", "Docker daemon check: not running", "warn", (r.stderr or "")[:1000])
         return v
 
     @classmethod
@@ -137,6 +151,7 @@ class DockLinerService:
         r = cls._run(["docker", "version", "--format", "{{.Client.Version}}"], timeout=5)
         v = r.stdout.strip() if r.returncode == 0 else "unknown"
         cls._cache_set("version", v)
+        cls._log("system", f"Docker version: {v}", "info")
         return v
 
     # ---- Containers ----
@@ -271,25 +286,36 @@ class DockLinerService:
         if os.name == "nt":
             dd = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Docker" / "Docker" / "Docker Desktop.exe"
             if dd.exists():
+                cls._log("daemon", f"starting Docker Desktop: {dd}", "info")
                 subprocess.Popen([str(dd)], shell=False)
                 if cls._wait_for_daemon(timeout=30):
+                    cls._log("daemon", "Docker Desktop started", "info")
                     return 0, "Docker Desktop started"
+                cls._log("daemon", "Docker Desktop start timed out", "error")
+                return 1, "Docker Desktop start timed out. Check the system tray."
+            cls._log("daemon", "Docker Desktop executable not found", "error")
             return 1, "Could not start Docker Desktop. Start it manually from the system tray."
         r = subprocess.run(["sudo", "systemctl", "start", "docker"], capture_output=True, text=True, timeout=30)
+        cls._log("daemon", f"systemctl start docker: rc={r.returncode}", "error" if r.returncode != 0 else "info", r.stdout + r.stderr)
         return r.returncode, r.stdout + r.stderr
 
     @classmethod
     def stop_daemon(cls) -> tuple:
         if os.name == "nt":
+            cls._log("daemon", "stopping Docker Desktop", "info")
             for ps_cmd in ["Start-Process -FilePath \"%ProgramFiles%\\Docker\\Docker\\Docker Desktop.exe\" -ArgumentList \"--quit\"", "Stop-Service com.docker.service"]:
                 r = subprocess.run(["powershell.exe", "-Command", ps_cmd], capture_output=True, text=True, timeout=30)
+                cls._log("daemon", f"stop command rc={r.returncode}", "info", r.stdout + r.stderr)
                 if r.returncode == 0:
                     return 0, "Docker Desktop stop command sent."
             err = (r.stderr or r.stdout or "").strip()
             if "access is denied" in err.lower() or "cannot open" in err.lower() or "servicecontroller" in err.lower():
+                cls._log("daemon", "permission denied stopping Docker Desktop", "error", err)
                 return 1, "Permission denied: could not stop Docker Desktop service. Run PowerShell as Administrator."
+            cls._log("daemon", "could not stop Docker Desktop", "error", err)
             return r.returncode, err or "Could not stop Docker daemon."
         r = subprocess.run(["sudo", "systemctl", "stop", "docker"], capture_output=True, text=True, timeout=30)
+        cls._log("daemon", f"systemctl stop docker: rc={r.returncode}", "error" if r.returncode != 0 else "info", r.stdout + r.stderr)
         return r.returncode, r.stdout + r.stderr
 
     # ---- Security ----
