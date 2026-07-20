@@ -7,17 +7,17 @@
 </div>
 <p class="section-subtitle">Manage your deployments.</p>
 
-<div class="card">
+<div class="card projects-list-card">
   {% if projects %}
-  <table class="table">
+  <table class="table projects-table">
     <thead>
       <tr><th>Name</th><th>Repo</th><th>Branch</th><th>Status</th><th>Port</th><th>Actions</th></tr>
     </thead>
     <tbody>
     {% for p in projects %}
-      <tr>
+      <tr class="project-row">
         <td data-label="Name"><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
-        <td data-label="Repo" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">{{ p.github_repo_url or '-' }}</td>
+        <td data-label="Repo">{{ p.github_repo_url or '-' }}</td>
         <td data-label="Branch">{{ p.branch or 'default' }}</td>
         <td data-label="Status"><span class="status-pill status-{{ p.status }}">{{ p.status }}</span></td>
         <td data-label="Port">{{ p.port or '-' }}</td>
@@ -29,6 +29,40 @@
     {% endfor %}
     </tbody>
   </table>
+
+  <div class="project-cards">
+    {% for p in projects %}
+    <div class="project-card">
+      <div class="project-card-header">
+        <div class="project-card-name">
+          <span class="label">NAME</span>
+          <span class="value name">{{ p.name }}</span>
+        </div>
+        <span class="project-card-badge">{{ p.labels or 'no-label' }}</span>
+      </div>
+      <div class="project-card-row">
+        <span class="label">REPO</span>
+        <span class="value repo" title="{{ p.github_repo_url or '' }}">{{ p.github_repo_url or '-' }}</span>
+      </div>
+      <div class="project-card-row">
+        <span class="label">BRANCH</span>
+        <span class="value">{{ p.branch or 'default' }}</span>
+      </div>
+      <div class="project-card-row">
+        <span class="label">STATUS</span>
+        <span class="status-pill status-{{ p.status }}">{{ p.status }}</span>
+      </div>
+      <div class="project-card-row">
+        <span class="label">PORT</span>
+        <span class="value">{{ p.port or '-' }}</span>
+      </div>
+      <div class="project-card-actions">
+        <a class="btn btn-primary" href="/projects/{{ p.id }}">Manage</a>
+        <button class="btn btn-danger" onclick="showConfirmModal('Delete project?', 'Delete {{ p.name | e }}? This cannot be undone.', 'Delete', 'btn-danger', ()=>{ fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload()); })">Delete</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   {% else %}
   <div style="text-align:center;padding:48px 20px;">
     <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="opacity:.6;margin-bottom:12px;">

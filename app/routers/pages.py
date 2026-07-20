@@ -137,10 +137,8 @@ def downloads_page(request: Request, db: Session = Depends(get_db), user: str = 
 def settings_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     tokens = db.query(AccessToken).all()
     sec = DockLinerService.security_summary()
-    version = {"current": "dev", "latest": "unknown", "has_update": False}
-    vf = Path(__file__).resolve().parents[2] / "VERSION"
-    if vf.exists():
-        version["current"] = vf.read_text().strip()
+    from app.services.version_service import VersionService
+    version = VersionService.check()
     return templates.TemplateResponse(request, "settings.html", {
         "request": request, "tokens": tokens,
         "sec": sec, "version": version,

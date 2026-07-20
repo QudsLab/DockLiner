@@ -8,7 +8,7 @@ from app.routers import api, pages
 from app.services.dockliner_service import DockLinerService
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="DockLiner", version="0.1.0")
+    app = FastAPI(title="DockLiner", version=settings.VERSION)
     init_db()
     DockLinerService.ensure_dirs()
     app.add_middleware(ErrorLogMiddleware)

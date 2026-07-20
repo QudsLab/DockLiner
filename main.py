@@ -16,6 +16,6 @@ if __name__ == "__main__":
         port=settings.PORT,
         reload=True,
         reload_dirs=["app"],
-        reload_includes=["*.py"],
+        reload_includes=["*.py", "*.html", "*.css"],
         reload_excludes=["downloads", "github-cache", "projects", "doc", "__pycache__", "*.db", "*.log"],
     )

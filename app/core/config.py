@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # Database: either set DATABASE_URL directly, or use DB_TYPE + DB_* variables.
     # Examples:
     #   DATABASE_URL=sqlite:///./dockliner.db
-    #   DATABASE_URL=mysql+pymysql://user:pass@localhost/dockliner
+    #   DATABASE_URL=mysql+pymysql://user:***@localhost/dockliner
     #   DATABASE_URL=postgresql+psycopg2://user:pass@localhost/dockliner
     DATABASE_URL: Optional[str] = None
     DB_TYPE: str = "sqlite"              # sqlite | mysql | postgres
@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     # Default users as JSON array of {"user":"...","hash":"..."}
     # Root user hash = blake3("qwer.1234") 512-bit hex
     USERS: str = '[{"user":"root","hash":"9aa0a2b0f48247f8be3983b37fdbc13a4128da84d4a68ff6690d0202d8883c926f258640f9d8fad34f4b625043195da367307f04274618e734f7b5bf5641a663"}]'
+    # DockLiner system version. Single source of truth for the running app.
+    VERSION: str = "0.0.1"
 
     class Config:
         env_file = ".env"
