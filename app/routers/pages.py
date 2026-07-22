@@ -38,9 +38,13 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: str = Depen
 
 @router.get("/projects", response_class=HTMLResponse)
 def projects_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    items = db.query(Project).all()
-    tokens = db.query(AccessToken).all()
-    return templates.TemplateResponse(request, "projects.html", {"request": request, "projects": items, "tokens": tokens})
+    from app.services.cleanup_service import CleanupService
+    registered = db.query(Project).all()
+    scan = CleanupService.scan(db)
+    return templates.TemplateResponse(request, "projects.html", {
+        "request": request, "projects": registered, "tokens": db.query(AccessToken).all(),
+        "orphan_projects": scan["projects"], "orphan_downloads": scan["downloads"],
+    })
 
 @router.get("/projects/add", response_class=HTMLResponse)
 def projects_add_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -165,6 +169,10 @@ def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Project not found")
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p, "tokens": tokens})
+
+@router.get("/cleanup", response_class=HTMLResponse)
+def cleanup_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    return templates.TemplateResponse(request, "cleanup.html", {"request": request})
 
 @router.get("/logout", response_class=HTMLResponse)
 def logout_page(request: Request):

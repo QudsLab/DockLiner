@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Cleanup — DockLiner{% endblock %}
+{% block content %}
+<style>
+.cleanup-card{padding:14px 16px;border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--surface-card);margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.cleanup-card .chk{flex-shrink:0}
+.cleanup-card .info{flex:1;min-width:0}
+.cleanup-card .name{font-weight:600;color:var(--ink);font-size:14px;word-break:break-word}
+.cleanup-card .path{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:2px}
+.cleanup-card .meta{font-size:12px;color:var(--muted);margin-top:2px}
+.cleanup-card .size{flex-shrink:0;font-family:var(--font-mono);font-size:13px;color:var(--ink);font-weight:500}
+.cleanup-empty{text-align:center;color:var(--muted);padding:40px 0;font-size:14px}
+.cleanup-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.cleanup-section-title{font-size:16px;font-weight:600;color:var(--ink);margin:24px 0 10px}
+</style>
+
+<h1 class="hero-title">Cleanup</h1>
+<p class="section-subtitle">Find and remove orphan project/download folders left on disk but not tracked by the system.</p>
+
+<div class="cleanup-actions">
+  <button class="btn btn-secondary btn-sm" onclick="loadCleanup()">Refresh</button>
+  <button class="btn btn-primary btn-sm" onclick="selectAll(true)">Select all</button>
+  <button class="btn btn-ghost btn-sm" onclick="selectAll(false)">Deselect all</button>
+  <button class="btn btn-danger btn-sm" onclick="deleteSelected()">Delete selected</button>
+  <span id="summary" style="color:var(--muted);font-size:13px;margin-left:auto;"></span>
+</div>
+
+<div id="cleanup-list"></div>
+
+<script>
+let state={projects:[],downloads:[],selected:new Set()};
+
+function key(item){ return `${item.type}:${item.name}`; }
+
+function fmtBytes(n){
+  if(!n && n!==0) return '-';
+  const units=['B','KB','MB','GB']; let i=0;
+  while(n>=1024 && i<units.length-1){ n/=1024; i++; }
+  return n.toFixed(1)+' '+units[i];
+}
+
+function escapeHtml(s){ return String(s).replace(/[<>"']/g, c => ({'<':'\u0026lt;','>':'\u0026gt;','"':'\u0026quot;',"'":'\u0026#39;'}[c])); }
+
+async function loadCleanup(){
+  const r=await fetch('/api/cleanup');
+  if(!r.ok){ document.getElementById('cleanup-list').innerHTML='<div class="cleanup-empty">Could not load cleanup data.</div>'; return; }
+  const d=await r.json();
+  state.projects=d.projects||[];
+  state.downloads=d.downloads||[];
+  document.getElementById('summary').textContent = `${d.total_count} item(s) · ${d.total_size}`;
+  render();
+}
+
+function render(){
+  const box=document.getElementById('cleanup-list');
+  const all=[...state.projects,...state.downloads];
+  if(all.length===0){ box.innerHTML='<div class="cleanup-empty">No orphan folders found. Everything is tracked.</div>'; return; }
+  let html='';
+  if(state.projects.length){
+    html+=`<div class="cleanup-section-title">Orphan project folders (${state.projects.length})</div>`;
+    html+=state.projects.map(itemCard).join('');
+  }
+  if(state.downloads.length){
+    html+=`<div class="cleanup-section-title">Orphan download folders (${state.downloads.length})</div>`;
+    html+=state.downloads.map(itemCard).join('');
+  }
+  box.innerHTML=html;
+}
+
+function itemCard(item){
+  const k=key(item);
+  const checked=state.selected.has(k)?'checked':'';
+  return `
+  <div class="cleanup-card">
+    <input type="checkbox" class="chk" ${checked} onchange="toggle('${k.replace(/'/g,"\\'")}')">
+    <div class="info">
+      <div class="name">${escapeHtml(item.name)} <span class="tag">${item.type}</span></div>
+      <div class="path">${escapeHtml(item.path)}</div>
+      <div class="meta">Modified: ${new Date(item.modified_at).toLocaleString()}</div>
+    </div>
+    <div class="size">${item.size}</div>
+  </div>`;
+}
+
+function toggle(k){ state.selected.has(k)?state.selected.delete(k):state.selected.add(k); render(); }
+function selectAll(v){
+  const all=[...state.projects,...state.downloads].map(key);
+  if(v) all.forEach(k=>state.selected.add(k)); else state.selected.clear();
+  render();
+}
+
+function deleteSelected(){
+  const items=[...state.selected].map(k=>{ const [type,name]=k.split(':'); return {type,name}; });
+  if(!items.length) return;
+  const names=items.map(i=>`${i.type}/${i.name}`).join(', ');
+  showConfirmModal('Delete selected?', `This will permanently delete:\n${names}`, 'Delete', 'btn-danger', async ()=>{
+    const r=await fetch('/api/cleanup/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items})});
+    const d=await r.json().catch(()=>({}));
+    showToast(`Deleted ${d.deleted||0}, failed ${d.failed||0}`, d.failed?'warn':'success');
+    state.selected.clear();
+    loadCleanup();
+  });
+}
+
+loadCleanup();
+</script>
+{% endblock %}

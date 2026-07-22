@@ -201,6 +201,9 @@ def delete_project(pid: int, db: Session = Depends(get_db), user: str = Depends(
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
+    from app.services.deploy_service import DeployService
+    if p.deploy_path:
+        DeployService._remove_tree(Path(p.deploy_path))
     db.query(Deployment).filter(Deployment.project_id == pid).delete()
     db.delete(p)
     db.commit()
@@ -344,6 +347,13 @@ def read_project_file(pid: int, path: str, db: Session = Depends(get_db), user: 
         return {"path": path, "is_dir": True}
     return {"path": path, "content": target.read_text(encoding="utf-8", errors="replace"), "is_dir": False, "size": target.stat().st_size}
 
+class ProjectFileUpdate(BaseModel):
+    content: str
+
+class MoveFilePayload(BaseModel):
+    source: str
+    destination: str
+
 @router.put("/projects/{pid}/files/{path:path}")
 def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
@@ -373,6 +383,84 @@ def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Sessio
     AuditService.log(db, "project_file_update", target=f"{p.name}/{path}", user=user)
     return {"ok": True}
 
+@router.post("/projects/{pid}/files/{path:path}")
+def create_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    target = (Path(p.deploy_path) / path).resolve()
+    root = Path(p.deploy_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if target.exists():
+        raise HTTPException(status_code=409, detail="Already exists")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(data.content, encoding="utf-8")
+    AuditService.log(db, "project_file_create", target=f"{p.name}/{path}", user=user)
+    return {"ok": True}
+
+@router.post("/projects/{pid}/mkdir/{path:path}")
+def create_project_folder(pid: int, path: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    target = (Path(p.deploy_path) / path).resolve()
+    root = Path(p.deploy_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if target.exists():
+        raise HTTPException(status_code=409, detail="Already exists")
+    target.mkdir(parents=True, exist_ok=False)
+    AuditService.log(db, "project_folder_create", target=f"{p.name}/{path}", user=user)
+    return {"ok": True}
+
+@router.delete("/projects/{pid}/files/{path:path}")
+def delete_project_file(pid: int, path: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    target = (Path(p.deploy_path) / path).resolve()
+    root = Path(p.deploy_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not target.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+    if target.is_dir():
+        import shutil
+        shutil.rmtree(target)
+    else:
+        target.unlink()
+    AuditService.log(db, "project_file_delete", target=f"{p.name}/{path}", user=user)
+    return {"ok": True}
+
+@router.post("/projects/{pid}/files/{path:path}/move")
+def move_project_file(pid: int, path: str, payload: MoveFilePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    root = Path(p.deploy_path).resolve()
+    src = (Path(p.deploy_path) / payload.source).resolve()
+    dst = (Path(p.deploy_path) / payload.destination).resolve()
+    try:
+        src.relative_to(root)
+        dst.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Source not found")
+    if dst.exists():
+        raise HTTPException(status_code=409, detail="Destination already exists")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    src.replace(dst)
+    AuditService.log(db, "project_file_move", target=f"{p.name}: {payload.source} -> {payload.destination}", user=user)
+    return {"ok": True}
+
 @router.get("/projects/{pid}/health")
 def project_health(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     hc = db.query(HealthCheck).filter(HealthCheck.project_id == pid).first()
@@ -393,7 +481,6 @@ def project_timeline(pid: int, db: Session = Depends(get_db), user: str = Depend
             "events": [{"action": a.action, "timestamp": a.timestamp, "user": a.user} for a in audits]}
 
 # ---------- Health Checks ----------
-
 @router.post("/health-checks", response_model=HealthCheckOut)
 def create_health_check(data: HealthCheckCreate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     hc = HealthCheck(**data.model_dump())
@@ -740,6 +827,21 @@ def github_download_list(limit: int = 50, db: Session = Depends(get_db), user: s
         entry.update(GitHubDownloadService.scan(dl))
         out.append(entry)
     return out
+
+# ---------- Cleanup ----------
+
+@router.get("/cleanup")
+def cleanup_scan(db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    from app.services.cleanup_service import CleanupService
+    return CleanupService.scan(db)
+
+@router.post("/cleanup/bulk")
+def cleanup_bulk(data: Dict[str, Any], db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    from app.services.cleanup_service import CleanupService
+    items = data.get("items", [])
+    result = CleanupService.bulk_delete(items)
+    AuditService.log(db, "cleanup_bulk", target=f"deleted={result['deleted']} failed={result['failed']}", user=user)
+    return result
 
 # ---------- Tokens ----------
 
