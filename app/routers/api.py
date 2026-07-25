@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
-import io, zipfile, json, os, urllib.request, urllib.error
+import io, zipfile, json, os, urllib.request, urllib.error, subprocess, time, sys
 from app.core.db import get_db, SessionLocal
 from app.core.config import settings
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
@@ -1061,6 +1061,59 @@ def docker_stats(user: str = Depends(require_auth)):
 def system_version(user: str = Depends(require_auth)):
     from app.services.version_service import VersionService
     return VersionService.check()
+
+@router.get("/system/config")
+def system_config(user: str = Depends(require_auth)):
+    env_path = Path(os.environ.get("DOCKLINER_ENV_FILE", ".env"))
+    if env_path.exists():
+        text = env_path.read_text(encoding="utf-8")
+    else:
+        text = _default_env_text()
+    return {"path": str(env_path.resolve()), "content": text, "service": os.environ.get("DOCKLINER_SERVICE", "")}
+
+class ConfigUpdate(BaseModel):
+    content: str
+
+@router.post("/system/config")
+def update_system_config(data: ConfigUpdate, user: str = Depends(require_auth)):
+    env_path = Path(os.environ.get("DOCKLINER_ENV_FILE", ".env"))
+    try:
+        env_path.write_text(data.content, encoding="utf-8")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not write .env: {e}")
+    return {"ok": True, "path": str(env_path.resolve())}
+
+@router.post("/system/restart")
+def restart_server(user: str = Depends(require_auth)):
+    service = os.environ.get("DOCKLINER_SERVICE", "")
+    if service:
+        try:
+            subprocess.Popen(["systemctl", "restart", service], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"systemctl restart failed: {e}")
+        return {"ok": True, "mode": "service", "service": service}
+    # Fallback: detached self-restart (dev mode)
+    root = Path(__file__).resolve().parent.parent.parent
+    restart_script = root / "scripts" / "restart.py"
+    popen_kwargs = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL, "start_new_session": True}
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+    try:
+        subprocess.Popen([sys.executable, str(restart_script), str(os.getpid())], **popen_kwargs)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Restart spawn failed: {e}")
+    return {"ok": True, "mode": "dev", "message": "Restart triggered. Refresh in a few seconds."}
+
+def _default_env_text():
+    return """# DockLiner configuration
+DOCKLINER_SECRET_KEY=change-me
+DOCKLINER_HOST=0.0.0.0
+DOCKLINER_PORT=8080
+# DOCKLINER_SERVICE=dockliner
+# Database
+DOCKLINER_DB_TYPE=sqlite
+DOCKLINER_DB_PATH=./dockliner.db
+"""
 
 # ---------- Database / migrations ----------
 

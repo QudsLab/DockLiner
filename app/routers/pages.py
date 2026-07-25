@@ -159,6 +159,10 @@ def settings_database_page(request: Request, db: Session = Depends(get_db), user
         "operations": MigrationService.diff_schema(Base),
     })
 
+@router.get("/settings/config", response_class=HTMLResponse)
+def settings_config_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    return templates.TemplateResponse(request, "settings_config.html", {"request": request})
+
 @router.get("/projects/{pid}/logs", response_class=HTMLResponse)
 def logs_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()

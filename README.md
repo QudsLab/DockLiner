@@ -113,9 +113,21 @@ A lightweight, self-hosted deployment manager for personal Docker-based projects
 - DockLiner runs on a separate port (default `8080`).
 - Point an aaPanel reverse-proxy site to `http://127.0.0.1:8080`.
 
-## Development Quick Start
+## One-run setup (recommended)
 
-1. Clone the repository to `/data/dockliner/`.
+Install or update DockLiner, dependencies, systemd service, and default `.env` with one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | bash
+# or with a custom install directory:
+# curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | DOCKLINER_INSTALL_DIR=/data/dockliner bash
+```
+
+After setup the service runs on `http://<server-ip>:8080`. Default credentials are `root` / `qwer.1234` — change them in **Settings → Config** after first login.
+
+## Manual setup
+
+1. Clone the repository to `/data/dockliner/` or `/opt/dockliner`.
 2. Copy `.env.example` to `.env` and set `SECRET_KEY`.
 
 ### Database configuration
@@ -153,7 +165,7 @@ DOCKLINER_DATABASE_URL=postgresql+psycopg2://dockliner:secret@localhost/dockline
 ```
 
 3. Install dependencies: `pip install -r requirements.txt`.
-4. Run: `python main.py`.
+4. Run: `$INSTALL_DIR/venv/bin/python main.py` (or use `setup.sh` to create a systemd service).
 5. Open `http://localhost:8080` and log in.
 
 ## Status

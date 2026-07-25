@@ -139,12 +139,15 @@ main.layout{max-width:none!important;margin:0!important;padding:0!important;padd
 
 .sidebar-toggle{display:none;background:transparent;border:none;color:#cccccc;cursor:pointer;padding:4px;border-radius:3px}
 .sidebar-toggle:hover{background:#2a2d2e;color:#ffffff}
+.mobile-bottom-bar{display:none}
+.sidebar-backdrop{display:none}
 
 /* === Responsive === */
 @media (max-width:768px){
-  .editor-page{height:100vh;min-height:0}
+  .editor-page{height:100vh;min-height:0;display:flex;flex-direction:column}
   .editor-toolbar{padding:6px 10px;gap:8px;flex-wrap:nowrap}
   .editor-toolbar h1{display:none}
+  .editor-toolbar .editor-subtitle{display:none}
   .editor-toolbar .left{gap:8px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
   .editor-toolbar .left::-webkit-scrollbar{display:none}
   .editor-toolbar .right{gap:6px}
@@ -152,16 +155,21 @@ main.layout{max-width:none!important;margin:0!important;padding:0!important;padd
   .editor-actions button{width:32px;height:32px}
   .editor-actions button .material-symbols-outlined{font-size:20px}
   .editor-actions button[title="Select line"]{display:none}
-  .sidebar-toggle{display:flex;align-items:center;justify-content:center;width:32px;height:32px}
-  .workspace{flex-direction:column;position:relative}
-  .sidebar{position:absolute;top:0;left:0;width:100%;height:45vh;max-height:45vh;z-index:20;border-right:none;border-bottom:2px solid #2d2d2d;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .workspace{flex:1;position:relative;min-height:0}
+  .sidebar{position:fixed;top:0;left:0;width:80%;max-width:320px;height:100vh;z-index:30;border-right:2px solid #2d2d2d;border-bottom:none;display:none;box-shadow:4px 0 24px rgba(0,0,0,.5)}
   .sidebar.mobile-open{display:flex}
+  .sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:25;display:none}
+  .sidebar-backdrop.mobile-open{display:block}
   .editor-pane{flex:1;min-height:0}
   .editor-tabs{min-height:32px}
   .editor-tab{padding:5px 10px;height:32px;font-size:12px;max-width:140px}
   .CodeMirror{font-size:14px!important}
   .editor-status{font-size:11px;height:20px;line-height:20px}
   .empty-editor{font-size:14px}
+  .mobile-bottom-bar{display:flex;align-items:center;justify-content:space-around;padding:6px 0;background:var(--surface-soft);border-top:1px solid var(--hairline);z-index:40}
+  .mobile-bottom-bar button{background:transparent;border:none;color:#cccccc;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;padding:4px 12px;border-radius:6px}
+  .mobile-bottom-bar button.active,.mobile-bottom-bar button:active{color:var(--primary)}
+  .mobile-bottom-bar button .material-symbols-outlined{font-size:22px}
 }
 </style>
 
@@ -201,6 +209,7 @@ main.layout{max-width:none!important;margin:0!important;padding:0!important;padd
     <div class="sidebar-search"><input id="fileSearch" placeholder="Search files..." oninput="filterTree()"></div>
     <div id="fileTree" class="tree"></div>
   </div>
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
   <div class="editor-pane">
     <div id="fileTabs" class="editor-tabs"></div>
     <div class="editor-box" id="editorBox"><div class="empty-editor">Select a file to start editing</div></div>
@@ -209,6 +218,14 @@ main.layout{max-width:none!important;margin:0!important;padding:0!important;padd
       <div class="right"><span id="statusLines">0 lines</span><span>Ctrl+S to save</span></div>
     </div>
   </div>
+</div>
+
+<div class="mobile-bottom-bar">
+  <button onclick="toggleSidebar()"><span class="material-symbols-outlined">folder</span><span>Files</span></button>
+  <button onclick="editorUndo()"><span class="material-symbols-outlined">undo</span><span>Undo</span></button>
+  <button onclick="saveCurrentFile()"><span class="material-symbols-outlined">save</span><span>Save</span></button>
+  <button onclick="editorSelectAll()"><span class="material-symbols-outlined">select_all</span><span>Select</span></button>
+  <button onclick="location.href='/projects/{{ project.id }}'"><span class="material-symbols-outlined">arrow_back</span><span>Back</span></button>
 </div>
 </div>
 
@@ -666,9 +683,11 @@ attachCustomScroll(document.getElementById('fileTree'));
 
 function toggleSidebar(){
   document.querySelector('.sidebar').classList.toggle('mobile-open');
+  const bd = document.getElementById('sidebarBackdrop');
+  if(bd) bd.classList.toggle('mobile-open');
 }
 
-function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escapeHtml(t){return t.replace(/\u0026/g,'\u0026amp;').replace(/\u003c/g,'\u0026lt;').replace(/\u003e/g,'\u0026gt;');}
 function showToast(msg,type){
   type=type||'info';
   var div=document.createElement('div');

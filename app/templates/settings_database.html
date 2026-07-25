@@ -17,6 +17,10 @@
 .badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;text-transform:uppercase}
 .badge-low{background:rgba(34,197,94,.15);color:#22c55e}
 .badge-high{background:rgba(239,68,68,.15);color:#ef4444}
+.counts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px 12px}
+.counts-grid .pair{font-size:13px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.counts-grid .name{color:var(--muted)}
+.counts-grid .num{color:var(--primary);font-weight:600;font-variant-numeric:tabular-nums}
 .empty{padding:20px;color:var(--muted);text-align:center}
 .action-bar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px}
 </style>
@@ -46,8 +50,12 @@ async function loadInfo(){
   const d = await r.json();
   const el = document.getElementById('dbMeta');
   const rowCounts = d.row_counts || {};
-  let countsHtml = Object.entries(rowCounts).map(([t,n]) => `&lt;span title="${escapeHtml(t)}"&gt;${escapeHtml(t)}:&lt;b&gt;${n ?? '—'}&lt;/b&gt;&lt;/span&gt;`).join('&lt;br&gt;');
-  if (!countsHtml) countsHtml = '&lt;span style="color:var(--muted)"&gt;No tables yet&lt;/span&gt;';
+  const counts = Object.entries(rowCounts).map(([t,n]) => `
+    <div class="pair" title="${escapeHtml(t)}">
+      <span class="name">${escapeHtml(t)}</span>
+      <span class="num">${n ?? '—'}</span>
+    </div>`).join('');
+  const countsHtml = counts ? `<div class="counts-grid">${counts}</div>` : '<span style="color:var(--muted)">No tables yet</span>';
   el.innerHTML = `
     <div class="db-card"><h4>Connection URL</h4><div class="value">${escapeHtml(d.url || '-')}</div></div>
     <div class="db-card"><h4>Dialect</h4><div class="value">${escapeHtml(d.dialect || '-')}</div></div>
