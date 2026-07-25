@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Editor — DockLiner{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="/static/vendor/codemirror/codemirror.min.css">
+<link id="cmTheme" rel="stylesheet" href="/static/vendor/codemirror/dracula.min.css">
+<script src="/static/vendor/codemirror/codemirror.min.js"></script>
+<script src="/static/vendor/codemirror/yaml.min.js"></script>
+<script src="/static/vendor/codemirror/shell.min.js"></script>
+<script src="/static/vendor/codemirror/dockerfile.min.js"></script>
+<script src="/static/vendor/codemirror/python.min.js"></script>
+<script src="/static/vendor/codemirror/javascript.min.js"></script>
+<script src="/static/vendor/codemirror/css.min.js"></script>
+<script src="/static/vendor/codemirror/xml.min.js"></script>
+<script src="/static/vendor/codemirror/markdown.min.js"></script>
+
+<style>
+/* === VS Code-like Editor Page === */
+.editor-page{display:flex;flex-direction:column;gap:0;height:calc(100vh - 100px);min-height:520px}
+.editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 16px;background:var(--surface-soft);border-bottom:1px solid var(--hairline);min-height:40px}
+.editor-toolbar .left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.editor-toolbar .right{display:flex;align-items:center;gap:8px}
+.editor-toolbar h1{font-size:13px;font-weight:400;color:var(--muted);margin:0}
+.workspace{display:flex;gap:0;flex:1;background:var(--surface-card);min-height:0;overflow:hidden}
+
+/* === Sidebar (VS Code Explorer) === */
+.sidebar{width:260px;min-width:200px;background:#1e1e1e;display:flex;flex-direction:column;overflow:hidden;border-right:1px solid #2d2d2d}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;height:35px}
+.sidebar-title{font-size:11px;font-weight:600;color:#bbbbbb;text-transform:uppercase;letter-spacing:.5px}
+.sidebar-actions{display:flex;gap:2px}
+.sidebar-actions button{background:transparent;border:none;color:#cccccc;cursor:pointer;padding:2px 4px;border-radius:3px;display:flex;align-items:center;justify-content:center;width:24px;height:24px}
+.sidebar-actions button:hover{color:#ffffff;background:#2a2d2e}
+.sidebar-search{padding:4px 8px 8px 8px}
+.sidebar-search input{width:100%;background:#3c3c3c;border:1px solid #3c3c3c;color:#cccccc;padding:4px 8px;border-radius:3px;font-size:12px;outline:none}
+.sidebar-search input:focus{border-color:#007acc}
+.sidebar-search input::placeholder{color:#8b8b8b}
+.tree{flex:1;overflow:auto;padding:0;font-size:13px;user-select:none}
+.tree-item{display:flex;align-items:center;gap:4px;padding:3px 8px 3px 0;cursor:pointer;color:#cccccc;white-space:nowrap;height:22px;line-height:22px}
+.tree-item:hover{background:#2a2d2e}
+.tree-item.active{background:#37373d;color:#ffffff}
+.tree-item .label{overflow:hidden;text-overflow:ellipsis;font-size:13px;line-height:22px}
+.tree-folder{font-weight:400}
+.tree-chevron{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8b8b8b;flex-shrink:0}
+.tree-indent{width:16px;flex-shrink:0}
+.collapsed{display:none}
+
+/* === Editor Pane === */
+.editor-pane{flex:1;display:flex;flex-direction:column;min-width:0;background:#1e1e1e}
+
+/* === Tabs (VS Code style) === */
+.editor-tabs{display:flex;background:#252526;min-height:35px;overflow-x:auto;align-items:end;border-bottom:1px solid #2d2d2d}
+.editor-tab{display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;color:#8b8b8b;cursor:pointer;background:#2d2d2d;white-space:nowrap;min-width:100px;max-width:200px;border-right:1px solid #252526;height:35px}
+.editor-tab.active{color:#ffffff;background:#1e1e1e;border-top:1px solid #007acc}
+.editor-tab .name{overflow:hidden;text-overflow:ellipsis;flex:1;font-size:12px}
+.editor-tab .close{font-size:14px;line-height:1;color:#8b8b8b;margin-left:4px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;border-radius:3px}
+.editor-tab .close:hover{color:#ffffff;background:#5a5a5a}
+.editor-tab.active .close:hover{background:#37373d}
+
+/* === Editor Box === */
+.editor-box{flex:1;position:relative;min-height:0;overflow:hidden;background:#1e1e1e}
+.empty-editor{display:flex;align-items:center;justify-content:center;height:100%;color:#8b8b8b;font-size:13px;user-select:none}
+
+/* === Status Bar (VS Code style) === */
+.editor-status{display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#007acc;color:#ffffff;font-size:12px;font-family:var(--font-mono);height:22px;line-height:22px;user-select:none}
+.editor-status .left{display:flex;gap:16px}
+.editor-status .right{display:flex;gap:16px}
+
+/* === CodeMirror Overrides === */
+.CodeMirror{font-family:"Cascadia Code","Fira Code","JetBrains Mono",var(--font-mono),monospace!important;font-size:13px!important;height:100%!important;background:#1e1e1e!important;color:#d4d4d4!important}
+.CodeMirror-gutters{background:#1e1e1e!important;border-right:1px solid #2d2d2d!important;padding-right:8px!important}
+.CodeMirror-linenumber{color:#858585!important;font-size:12px!important}
+.CodeMirror-cursor{border-left-color:#aeafad!important;border-left-width:2px!important}
+.CodeMirror-selected{background:#264f78!important}
+.CodeMirror-activeline-background{background:#2a2d2e!important}
+.CodeMirror-lines{padding:4px 0!important}
+
+
+
+/* === File Icons === */
+.file-icon{width:16px;height:16px;fill:currentColor;flex-shrink:0}
+.file-icon.python{color:#3572A5}
+.file-icon.docker{color:#2496ed}
+.file-icon.js{color:#f0db4f}
+.file-icon.json{color:#f0db4f}
+.file-icon.css{color:#264de4}
+.file-icon.html{color:#e34c26}
+.file-icon.env{color:#f59e0b}
+.file-icon.gitignore{color:#f43f5e}
+.file-icon.requirements{color:#10b981}
+.file-icon.compose{color:#6a6a6a}
+.file-icon.markdown{color:#6a6a6a}
+.file-icon.txt{color:#6a6a6a}
+.file-icon.folder{color:#dcb67a}
+.file-icon.file{color:#6a6a6a}
+
+/* === Modal === */
+.modal-overlay{z-index:90}
+
+/* === Buttons in toolbar === */
+.editor-toolbar .btn{font-size:12px;padding:4px 10px;height:26px;line-height:18px;border-radius:3px}
+.editor-toolbar .btn-primary{background:#007acc;color:#fff;border:1px solid #007acc}
+.editor-toolbar .btn-primary:hover{background:#1a8ad4}
+.editor-toolbar .btn-secondary{background:transparent;color:#cccccc;border:1px solid transparent}
+.editor-toolbar .btn-secondary:hover{background:#2a2d2e;color:#ffffff}
+
+
+/* === Responsive === */
+@media (max-width:768px){
+  .editor-page{height:auto}
+  .workspace{flex-direction:column}
+  .sidebar{width:100%;max-height:220px;border-right:none;border-bottom:1px solid #2d2d2d}
+}
+</style>
+
+<div class="editor-toolbar">
+  <div class="left">
+    <h1 class="section-title" style="margin:0;">{{ project.name }}</h1>
+    <span style="color:var(--muted);font-size:13px;">Code editor</span>
+  </div>
+  <div class="right">
+    <button class="btn btn-secondary btn-sm" onclick="saveCurrentFile()">Save</button>
+    <a class="btn btn-secondary btn-sm" href="/projects/{{ project.id }}">← Back</a>
+    <a class="btn btn-secondary btn-sm" href="/projects">← Projects</a>
+  </div>
+</div>
+
+<div class="workspace">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Explorer</span>
+      <div class="sidebar-actions">
+        <button title="New file" onclick="showCreateModal('file','')"><span class="material-symbols-outlined" style="font-size:18px">note_add</span></button>
+        <button title="New folder" onclick="showCreateModal('folder','')"><span class="material-symbols-outlined" style="font-size:18px">create_new_folder</span></button>
+      </div>
+    </div>
+    <div class="sidebar-search"><input id="fileSearch" placeholder="Search files..." oninput="filterTree()"></div>
+    <div id="fileTree" class="tree"></div>
+  </div>
+  <div class="editor-pane">
+    <div id="fileTabs" class="editor-tabs"></div>
+    <div class="editor-box" id="editorBox"><div class="empty-editor">Select a file to start editing</div></div>
+    <div class="editor-status">
+      <div class="left"><span id="statusPath">No file open</span><span id="statusLang"></span></div>
+      <div class="right"><span id="statusLines">0 lines</span><span>Ctrl+S to save</span></div>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="nameModal" class="modal-overlay" style="display:none;">
+  <div class="modal-box" style="max-width:360px;">
+    <h3 class="modal-title" id="nameModalTitle">New file</h3>
+    <input id="nameModalInput" class="input" type="text" placeholder="name" onkeydown="if(event.key==='Enter')nameModalOk()">
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closeNameModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="nameModalOk()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const pid={{ project.id }};
+let openFiles=[], activeFile=null, editorInst=null, flatFiles=[], folderExpanded={}, treeFilter='';
+let createModalType='file', createModalFolder='';
+
+const FILE_SVGS={
+  python:'<svg class="file-icon python" viewBox="0 0 24 24"><path d="M12 2c-2 0-3.8.2-5.2.6-1.4.4-2.5 1-3.1 1.7-.6.7-.9 1.6-.7 2.5.2.9.8 1.7 1.7 2.3V8c0 1.1.5 2.1 1.4 2.9.9.7 2.1 1.1 3.4 1.1h4.4c.7 0 1.3.2 1.8.5.5.3.7.7.7 1.2v.8c-1.1.4-1.9 1-2.4 1.7-.5.7-.7 1.6-.5 2.5.2.9.8 1.7 1.7 2.3.9.6 2.1.9 3.4.9h.7c.2.8.6 1.5 1.2 2 .6.5 1.4.8 2.2.8.8 0 1.6-.3 2.2-.8.6-.5 1-1.2 1.2-2h.7c1.5 0 2.7-.5 3.6-1.4.9-.9 1.3-2.1 1.3-3.5v-4c0-1.3-.4-2.4-1.2-3.2-.8-.8-1.9-1.2-3.2-1.2H12.3c-.8 0-1.4-.2-1.9-.6-.5-.4-.7-.9-.7-1.5v-.7c1.2-.5 2-1.2 2.5-2 .5-.8.6-1.7.4-2.6C12.2 3 11.6 2.4 10.8 2c-.6-.2-1.2-.3-1.8-.3zM9 5.5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm6 10.5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1z"/></svg>',
+  docker:'<svg class="file-icon docker" viewBox="0 0 24 24"><path d="M13.983 11.078h2.119a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.119a.185.185 0 00-.185.185v1.888c0 .102.083.185.185.185zm-2.954-5.43h2.118a.186.186 0 00.186-.186V3.574a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185zm0 2.716h2.118a.187.187 0 00.186-.186V6.29a.186.186 0 00-.186-.185h-2.118a.185.185 0 00-.185.185v1.887c0 .102.082.186.185.186zm-2.93 0h2.12a.186.186 0 00.184-.186V6.29a.185.185 0 00-.185-.185H8.1a.185.185 0 00-.185.185v1.887c0 .102.083.186.185.186zm-2.964 0h2.119a.186.186 0 00.185-.186V6.29a.185.185 0 00-.185-.185H5.136a.186.186 0 00-.186.185v1.887c0 .102.084.186.186.186zm5.893 2.715h2.118a.186.186 0 00.186-.185V9.006a.186.186 0 00-.186-.186h-2.118a.185.185 0 00-.185.185v1.888c0 .102.082.185.185.185zm-2.93 0h2.12a.186.186 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.185.185zm-2.964 0h2.119a.185.185 0 00.185-.185V9.006a.185.185 0 00-.185-.186h-2.12a.186.186 0 00-.184.185v1.888c0 .102.084.185.186.185zm-2.92 0h2.12a.185.185 0 00.184-.185V9.006a.185.185 0 00-.184-.186h-2.12a.185.185 0 00-.184.185v1.888c0 .102.083.185.185.185zm21.354 1.923c-.612-.646-1.58-.96-2.79-.96-.388 0-.79.03-1.19.086-.21-1.11-1.04-2.08-2.34-2.79-.73-.4-1.55-.63-2.39-.67l-.11-.01-.11.01c-.31.02-.62.05-.92.1-.75.12-1.46.36-2.1.7-.96.51-1.7 1.2-2.15 2-.25.44-.4.9-.45 1.36-.04.35-.02.7.05 1.04h-3.57c-.74 0-1.42.23-1.96.66-.55.43-.94 1.04-1.1 1.73-.1.43-.1.88-.02 1.32.15.82.61 1.54 1.26 2.01.55.39 1.21.6 1.91.6h12.73c.85 0 1.63-.26 2.25-.76.62-.5 1.05-1.22 1.18-2.04.1-.6.02-1.22-.24-1.78-.26-.55-.67-1.01-1.2-1.33.55-.16 1.03-.45 1.4-.86.46-.5.72-1.16.72-1.86 0-.55-.17-1.08-.48-1.54z"/></svg>',
+  js:'<svg class="file-icon js" viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zm13.6 14.5c.6.8 1.4 1.3 2.3 1.3.9 0 1.6-.3 1.6-1.1 0-.8-.6-1-1.8-1.4-1.5-.5-2.6-1.2-2.6-2.9 0-1.7 1.3-2.9 3.4-2.9 1.5 0 2.6.5 3.3 1.6l-1.5 1.4c-.4-.6-.9-.9-1.7-.9-.8 0-1.3.4-1.3 1 0 .7.5 1 1.7 1.3 1.6.5 2.7 1.2 2.7 3 0 1.9-1.4 3.1-3.6 3.1-1.6 0-2.9-.6-3.7-1.7l1.5-1.7zm-6.9.8c-.5.7-1 1-1.9 1-1.2 0-2-.5-2-2.1V10h2.2v5.5c0 .7.2 1 .8 1 .5 0 .9-.3 1.2-.8V10h2.2v8.3H9.7v-1z"/></svg>',
+  json:'<svg class="file-icon json" viewBox="0 0 24 24"><path d="M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zm3.5 16.5v-2H6.8c-.5 0-.8-.4-.8-.9v-1.6c0-.5.3-.9.8-.9h1.7V12H6.8c-.5 0-.8-.4-.8-.9V9.5c0-.5.3-.9.8-.9h1.7V6.5h2v2h1.7c.5 0 .8.4.8.9v1.6c0 .5-.3.9-.8.9H9.5v1.6h1.7c.5 0 .8.4.8.9v1.6c0 .5-.3.9-.8.9H9.5v2h-2zm8.5 0h-2v-2h1.7c.5 0 .8-.4.8-.9v-1.6c0-.5-.3-.9-.8-.9H14V12h1.7c.5 0 .8-.4.8-.9V9.5c0-.5-.3-.9-.8-.9H14V6.5h2v2h1.7c.5 0 .8.4.8.9v1.6c0 .5-.3.9-.8.9h-1.7v1.6h1.7c.5 0 .8.4.8.9v1.6c0 .5-.3.9-.8.9h-1.7v2z"/></svg>',
+  css:'<svg class="file-icon css" viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zm13.4 13.1L15.2 17l-2.5-.9-2.5.9-1.2-1.9c-.6-.1-1.1-.3-1.7-.5l.3-1.9c.5.2 1 .3 1.6.4l.7-4.5h2l-.6 4.4c.7 0 1.3-.1 1.9-.3l.3 1.9c-.6.2-1.2.3-1.9.4l.5 3.1zm4.2-.2c-.5.1-1.1.2-1.6.2l.7-4.7h2l-.6 4.1c.4-.1.8-.2 1.2-.4l.3 1.9c-.5.2-1 .3-1.5.4l.3 2.1-1.9-.7-.5-2.9z"/></svg>',
+  html:'<svg class="file-icon html" viewBox="0 0 24 24"><path d="M3 3h18v18H3V3zm13.1 13.5l-4.1 1.7-4.1-1.7-.5-2.1h2l.3 1.2 2.3 1 2.3-1 .3-1.5H6.2l-.4-2h12.4l.3-1.5H5.3L5 9.3h14l-1.2 6.3-2.7 1.1v-2.2h-2v2.2l2.8-1.2z"/></svg>',
+  env:'<svg class="file-icon env" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>',
+  gitignore:'<svg class="file-icon gitignore" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2v-2zm0-2h2V7h-2v8z"/></svg>',
+  requirements:'<svg class="file-icon requirements" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+  compose:'<svg class="file-icon compose" viewBox="0 0 24 24"><path d="M3 3h6v6H3V3zm0 8h6v6H3v-6zm8-8h10v6H11V3zm0 8h10v6H11v-6z"/></svg>',
+  markdown:'<svg class="file-icon markdown" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 12H8v-2H6v4h3v-2h2v2h3v-4h-2v2zm6-3l-2.5 3.5L12 12l-2.5 3.5L7 12v5h12v-5l-2-3z"/></svg>',
+  txt:'<svg class="file-icon txt" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>',
+  folder:'<svg class="file-icon folder" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>',
+  file:'<svg class="file-icon file" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm0 18H6V4h7v5h5v11z"/></svg>',
+};
+
+function fileIconSVG(path,isFolder){
+  const base=path.split('/').pop().toLowerCase();
+  let name='file';
+  if(isFolder) name='folder';
+  else if(base==='dockerfile') name='docker';
+  else if(base.endsWith('.yml')||base.endsWith('.yaml')) name='compose';
+  else if(base==='.env'||base==='.env.example'||base==='env.example') name='env';
+  else if(base==='.gitignore'||base.endsWith('.ignore')) name='gitignore';
+  else if(base==='requirements.txt') name='requirements';
+  else if(base.endsWith('.py')) name='python';
+  else if(base.endsWith('.js')||base.endsWith('.ts')||base.endsWith('.jsx')||base.endsWith('.tsx')) name='js';
+  else if(base.endsWith('.html')||base.endsWith('.htm')) name='html';
+  else if(base.endsWith('.css')) name='css';
+  else if(base.endsWith('.md')||base.endsWith('.markdown')) name='markdown';
+  else if(base.endsWith('.json')) name='json';
+  else if(base.endsWith('.txt')) name='txt';
+  return FILE_SVGS[name]||FILE_SVGS.file;
+}
+
+function guessLang(path){
+  const p=path.toLowerCase();
+  if(p.endsWith('dockerfile')) return 'dockerfile';
+  if(p.endsWith('.env')||p.endsWith('.ini')) return 'shell';
+  if(p.endsWith('.yml')||p.endsWith('.yaml')) return 'yaml';
+  if(p.endsWith('.sh')||p.endsWith('.bash')) return 'shell';
+  if(p.endsWith('.py')) return 'python';
+  if(p.endsWith('.js')||p.endsWith('.jsx')) return 'javascript';
+  if(p.endsWith('.ts')||p.endsWith('.tsx')) return 'text/typescript';
+  if(p.endsWith('.json')) return 'application/json';
+  if(p.endsWith('.html')||p.endsWith('.xml')) return 'text/html';
+  if(p.endsWith('.css')) return 'css';
+  if(p.endsWith('.md')) return 'text/x-markdown';
+  if(p.endsWith('.sql')) return 'text/x-sql';
+  if(p.endsWith('.php')) return 'php';
+  if(p.endsWith('.toml')) return 'toml';
+  if(p.endsWith('.c')||p.endsWith('.h')) return 'text/x-csrc';
+  if(p.endsWith('.cpp')||p.endsWith('.hpp')) return 'text/x-c++src';
+  if(p.endsWith('.go')) return 'text/x-go';
+  if(p.endsWith('.rs')) return 'text/x-rustsrc';
+  if(p.endsWith('.ps1')) return 'powershell';
+  if(p.endsWith('.bat')||p.endsWith('.cmd')) return 'batch';
+  return 'text';
+}
+
+function buildTree(entries){
+  var root={name:'',children:{},files:[]};
+  entries.forEach(function(entry){
+    var parts=entry.path.split('/');
+    var cur=root;
+    for(var i=0;i<parts.length-(entry.is_dir?0:1);i++){
+      var nm=parts[i];
+      if(!cur.children[nm]) cur.children[nm]={name:nm,children:{},files:[]};
+      cur=cur.children[nm];
+    }
+    if(!entry.is_dir) cur.files.push(entry);
+  });
+  return root;
+}
+function shouldShow(path){return !treeFilter||path.toLowerCase().indexOf(treeFilter)>=0;}
+
+function renderNode(node,depth,pathPrefix){
+  var dirPath=pathPrefix?pathPrefix+'/'+node.name:node.name;
+  var expanded=folderExpanded[dirPath]||treeFilter.length>0;
+  var div=document.createElement('div');
+  // folder row
+  var row=document.createElement('div');
+  row.className='tree-item tree-folder';
+  row.setAttribute('data-path',dirPath);
+  row.setAttribute('data-isdir','true');
+  row.style.paddingLeft=(8+depth*14)+'px';
+  row.innerHTML='<span class="tree-chevron">'+(expanded?'▾':'▸')+'</span>'+fileIconSVG(dirPath,true)+'<span class="label">'+escapeHtml(node.name)+'</span>';
+  div.appendChild(row);
+  // children container
+  var childDiv=document.createElement('div');
+  if(!expanded) childDiv.className='collapsed';
+  // subdirs
+  var dirNames=Object.keys(node.children).sort();
+  for(var di=0;di<dirNames.length;di++){
+    var sub=renderNode(node.children[dirNames[di]],depth+1,dirPath);
+    if(sub) childDiv.appendChild(sub);
+  }
+  // files
+  node.files.sort(function(a,b){return a.path.localeCompare(b.path);});
+  for(var fi=0;fi<node.files.length;fi++){
+    var f=node.files[fi];
+    if(treeFilter && !shouldShow(f.path)) continue;
+    var frow=document.createElement('div');
+    frow.className='tree-item file'+(f.path===activeFile?' active':'');
+    frow.setAttribute('data-path',f.path);
+    frow.setAttribute('data-isdir','false');
+    frow.style.paddingLeft=(8+(depth+1)*14)+'px';
+    frow.innerHTML='<span class="tree-indent"></span>'+fileIconSVG(f.path)+'<span class="label">'+escapeHtml(f.path.split('/').pop())+'</span>';
+    childDiv.appendChild(frow);
+  }
+  div.appendChild(childDiv);
+  return div;
+}
+
+function renderTree(){
+  var tree=document.getElementById('fileTree'); if(!tree) return;
+  tree.innerHTML='';
+  var root=buildTree(flatFiles);
+  // root files
+  root.files.sort(function(a,b){return a.path.localeCompare(b.path);});
+  for(var i=0;i<root.files.length;i++){
+    var f=root.files[i];
+    if(treeFilter && !shouldShow(f.path)) continue;
+    var row=document.createElement('div');
+    row.className='tree-item file'+(f.path===activeFile?' active':'');
+    row.setAttribute('data-path',f.path);
+    row.setAttribute('data-isdir','false');
+    row.style.paddingLeft='8px';
+    row.innerHTML=fileIconSVG(f.path)+'<span class="label">'+escapeHtml(f.path)+'</span>';
+    tree.appendChild(row);
+  }
+  // root dirs
+  var dirNames=Object.keys(root.children).sort();
+  for(var di=0;di<dirNames.length;di++){
+    var rendered=renderNode(root.children[dirNames[di]],0,'');
+    if(rendered) tree.appendChild(rendered);
+  }
+}
+
+// Event delegation for tree clicks
+document.addEventListener('click',function(e){
+  var el=e.target;
+  while(el && el.parentNode){
+    if(el.classList && el.classList.contains('tree-item')){
+      var path=el.getAttribute('data-path');
+      var isdir=el.getAttribute('data-isdir');
+      if(isdir==='true'){
+        folderExpanded[path]=!folderExpanded[path];
+        renderTree();
+      }else if(path){
+        openFile(path);
+      }
+      return;
+    }
+    el=el.parentNode;
+  }
+});
+
+async function loadFiles(){
+  try{
+    var r=await fetch('/api/projects/'+pid+'/files');
+    if(!r.ok) throw new Error(r.status+' '+r.statusText);
+    var data=await r.json();
+    flatFiles=(data.files||[]).sort(function(a,b){return a.path.localeCompare(b.path);});
+    folderExpanded={};
+    renderTree();
+  }catch(err){
+    var tree=document.getElementById('fileTree');
+    if(tree) tree.innerHTML='<div style="padding:10px;color:var(--error)">Failed to load files: '+escapeHtml(err.message)+'</div>';
+    console.error(err);
+  }
+}
+function filterTree(){treeFilter=document.getElementById('fileSearch').value.trim().toLowerCase();if(treeFilter) Object.keys(folderExpanded).forEach(function(k){folderExpanded[k]=true;});renderTree();}
+
+function makeEditor(mountId,lang,value){
+  var el=document.getElementById(mountId);
+  el.innerHTML='';
+  var cm=CodeMirror(el,{
+    value: value||'',
+    mode: lang,
+    theme: document.documentElement.getAttribute('data-theme')==='dark'?'dracula':'default',
+    lineNumbers:true,
+    tabSize:2,
+    indentWithTabs:false,
+    lineWrapping:false,
+    extraKeys:{"Ctrl-S":function(){saveCurrentFile();},"Tab":function(){cm.replaceSelection("  ","end");}}
+  });
+  return cm;
+}
+
+function updateStatus(){
+  document.getElementById('statusPath').textContent=activeFile||'No file open';
+  document.getElementById('statusLang').textContent=activeFile?guessLang(activeFile).toUpperCase():'';
+  var lines=editorInst?editorInst.lineCount():0;
+  document.getElementById('statusLines').textContent=lines+' lines';
+}
+
+async function openFile(path){
+  if(!openFiles.find(function(f){return f.path===path;})) openFiles.push({path:path,dirty:false});
+  activeFile=path; renderTabs();
+  var r=await fetch('/api/projects/'+pid+'/files/'+encodeURIComponent(path));
+  var d=await r.json();
+  var box=document.getElementById('editorBox');
+  box.innerHTML='<div id="editor-mount" style="height:100%;"></div>';
+  editorInst=makeEditor('editor-mount',guessLang(path),d.content||'');
+  editorInst.on('change',function(){var f=openFiles.find(function(x){return x.path===activeFile;});if(f){f.dirty=true;renderTabs();}});
+  editorInst.on('update',updateStatus);
+  var f=openFiles.find(function(x){return x.path===path;}); if(f){f.dirty=false;renderTabs();}
+  setTheme();
+  updateStatus();
+  editorInst.focus();
+}
+
+function renderTabs(){
+  var box=document.getElementById('fileTabs'); if(!box) return;
+  box.innerHTML=openFiles.map(function(f){
+    var name=f.path.split('/').pop();
+    var active=f.path===activeFile;
+    return '<div class="editor-tab '+(active?'active':'')+'" onclick="switchTab(\''+f.path.replace(/'/g,"\\'")+'\')">'+fileIconSVG(f.path)+'<span class="name">'+escapeHtml(name)+(f.dirty?' •':'')+'</span><span class="close" onclick="closeTab(event,\''+f.path.replace(/'/g,"\\'")+'\')">×</span></div>';
+  }).join('');
+}
+function switchTab(path){activeFile=path;renderTabs();openFile(path);}
+function closeTab(e,path){e.stopPropagation();openFiles=openFiles.filter(function(f){return f.path!==path;});if(activeFile===path){activeFile=openFiles.length?openFiles[0].path:null;if(activeFile) openFile(activeFile);else{document.getElementById('editorBox').innerHTML='<div class="empty-editor">Select a file to start editing</div>';editorInst=null;updateStatus();}}renderTabs();}
+
+async function saveCurrentFile(){
+  if(!activeFile||!editorInst) return;
+  var content=editorInst.getValue();
+  var r=await fetch('/api/projects/'+pid+'/files/'+encodeURIComponent(activeFile),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:content})});
+  var f=openFiles.find(function(x){return x.path===activeFile;}); if(f) f.dirty=false;
+  renderTabs();
+  showToast(r.ok?activeFile.split('/').pop()+' saved':'Save failed',r.ok?'success':'error');
+}
+
+function setTheme(){
+  var isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.getElementById('cmTheme').href='/static/vendor/codemirror/'+(isDark?'dracula.min.css':'codemirror.min.css');
+  if(editorInst) editorInst.setOption('theme',isDark?'dracula':'default');
+}
+
+// Modal helpers for new file/folder
+function showCreateModal(type,basePath){createModalType=type;createModalFolder=basePath||'';document.getElementById('nameModalTitle').textContent=type==='file'?'New file':'New folder';document.getElementById('nameModalInput').value='';document.getElementById('nameModal').style.display='flex';document.getElementById('nameModalInput').focus();}
+function closeNameModal(){document.getElementById('nameModal').style.display='none';}
+async function nameModalOk(){
+  var name=document.getElementById('nameModalInput').value.trim(); if(!name){closeNameModal();return;}
+  var rel=createModalFolder?createModalFolder+'/'+name:name;
+  var url=createModalType==='folder'?'/api/projects/'+pid+'/mkdir/'+encodeURIComponent(rel):'/api/projects/'+pid+'/files/'+encodeURIComponent(rel);
+  var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:''})});
+  var d=await r.json().catch(function(){return {};});
+  closeNameModal(); await loadFiles();
+  showToast(r.ok?'Created':'Create failed: '+(d.detail||r.statusText),r.ok?'success':'error');
+}
+
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function showToast(msg,type){
+  type=type||'info';
+  var div=document.createElement('div');
+  div.style.cssText='position:fixed;bottom:16px;right:16px;padding:10px 14px;border-radius:8px;background:'+(type==='error'?'var(--error)':type==='success'?'var(--success)':'var(--primary)')+';color:#fff;z-index:9999;font-size:13px;';
+  div.textContent=msg; document.body.appendChild(div); setTimeout(function(){div.remove();},2500);
+}
+
+window.addEventListener('themeChanged',setTheme);
+document.addEventListener('DOMContentLoaded',loadFiles);
+loadFiles();
+</script>
+
+{% endblock %}

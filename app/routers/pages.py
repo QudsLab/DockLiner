@@ -170,6 +170,12 @@ def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p, "tokens": tokens})
 
+@router.get("/projects/{pid}/editor", response_class=HTMLResponse)
+def project_editor_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(request, "project_editor.html", {"request": request, "project": p})
 @router.get("/cleanup", response_class=HTMLResponse)
 def cleanup_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     return templates.TemplateResponse(request, "cleanup.html", {"request": request})

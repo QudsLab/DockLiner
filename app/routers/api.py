@@ -28,6 +28,7 @@ from app.services.dockliner_service import DockLinerService
 from app.services.deploy_service import DeployService
 from app.services.github_download_service import GitHubDownloadService
 from app.services.log_service import LogService
+from app.services.terminal_service import TerminalService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
 from app.services.file_scanner import scan_downloaded_repo
 from app.services.error_log_service import ErrorLogService
@@ -69,6 +70,11 @@ def _extract_host_port_from_compose(content: str) -> Optional[int]:
                     return int(published)
     return None
 
+
+
+class TerminalCommand(BaseModel):
+    command: str = ""
+    cwd: Optional[str] = None
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -827,6 +833,34 @@ def github_download_list(limit: int = 50, db: Session = Depends(get_db), user: s
         entry.update(GitHubDownloadService.scan(dl))
         out.append(entry)
     return out
+
+
+# ---------- Terminal ----------
+
+@router.post("/projects/{pid}/terminal")
+def project_terminal_command(pid: int, body: TerminalCommand, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    cwd = body.cwd or str(p.deploy_path)
+    # Simple safety: prevent interactive editors or commands that hang without output
+    result = TerminalService.exec(pid, body.command, cwd=cwd)
+    return result
+
+@router.get("/projects/{pid}/terminal")
+def project_terminal_read(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return TerminalService.read(pid)
+
+@router.delete("/projects/{pid}/terminal")
+def project_terminal_reset(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Project not found")
+    TerminalService.reset(pid, cwd=str(p.deploy_path))
+    return {"ok": True}
 
 # ---------- Cleanup ----------
 
