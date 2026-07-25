@@ -195,11 +195,24 @@ def update_project(pid: int, data: ProjectUpdate, db: Session = Depends(get_db),
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
-    for k, v in data.model_dump(exclude_unset=True).items():
+    payload = data.model_dump(exclude_unset=True)
+    new_name = payload.pop("name", None)
+    for k, v in payload.items():
         setattr(p, k, v)
+    if new_name is not None and new_name != p.name:
+        existing = db.query(Project).filter(Project.name == new_name, Project.id != pid).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Project name already exists")
+        old_path = Path(str(p.deploy_path)) if p.deploy_path else None
+        new_deploy_path = str(Path(settings.PROJECTS_DIR) / new_name)
+        new_path = Path(new_deploy_path)
+        if old_path and old_path.exists() and not new_path.exists():
+            old_path.rename(new_path)
+        p.name = new_name
+        p.deploy_path = new_deploy_path
     db.commit()
     db.refresh(p)
-    AuditService.log(db, "project_update", target=p.name, user=user)
+    AuditService.log(db, "project_update" if not new_name else "project_rename", target=p.name, user=user)
     return p
 
 @router.delete("/projects/{pid}")
@@ -335,6 +348,35 @@ def list_project_files(pid: int, db: Session = Depends(get_db), user: str = Depe
             continue
     return {"files": files}
 
+class ProjectFileUpdate(BaseModel):
+    content: str
+
+class MoveFilePayload(BaseModel):
+    source: str
+    destination: str
+
+@router.post("/projects/{pid}/files/move")
+def move_project_file(pid: int, payload: MoveFilePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    root = Path(p.deploy_path).resolve()
+    src = (Path(p.deploy_path) / payload.source).resolve()
+    dst = (Path(p.deploy_path) / payload.destination).resolve()
+    try:
+        src.relative_to(root)
+        dst.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Source not found")
+    if dst.exists():
+        raise HTTPException(status_code=409, detail="Destination already exists")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    src.replace(dst)
+    AuditService.log(db, "project_file_move", target=f"{p.name}: {payload.source} -> {payload.destination}", user=user)
+    return {"ok": True}
+
 @router.get("/projects/{pid}/files/{path:path}")
 def read_project_file(pid: int, path: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
@@ -352,13 +394,6 @@ def read_project_file(pid: int, path: str, db: Session = Depends(get_db), user: 
     if target.is_dir():
         return {"path": path, "is_dir": True}
     return {"path": path, "content": target.read_text(encoding="utf-8", errors="replace"), "is_dir": False, "size": target.stat().st_size}
-
-class ProjectFileUpdate(BaseModel):
-    content: str
-
-class MoveFilePayload(BaseModel):
-    source: str
-    destination: str
 
 @router.put("/projects/{pid}/files/{path:path}")
 def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -445,27 +480,6 @@ def delete_project_file(pid: int, path: str, db: Session = Depends(get_db), user
     AuditService.log(db, "project_file_delete", target=f"{p.name}/{path}", user=user)
     return {"ok": True}
 
-@router.post("/projects/{pid}/files/{path:path}/move")
-def move_project_file(pid: int, path: str, payload: MoveFilePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    p = db.query(Project).filter(Project.id == pid).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="Not found")
-    root = Path(p.deploy_path).resolve()
-    src = (Path(p.deploy_path) / payload.source).resolve()
-    dst = (Path(p.deploy_path) / payload.destination).resolve()
-    try:
-        src.relative_to(root)
-        dst.relative_to(root)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid path")
-    if not src.exists():
-        raise HTTPException(status_code=404, detail="Source not found")
-    if dst.exists():
-        raise HTTPException(status_code=409, detail="Destination already exists")
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    src.replace(dst)
-    AuditService.log(db, "project_file_move", target=f"{p.name}: {payload.source} -> {payload.destination}", user=user)
-    return {"ok": True}
 
 @router.get("/projects/{pid}/health")
 def project_health(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -1048,6 +1062,65 @@ def system_version(user: str = Depends(require_auth)):
     from app.services.version_service import VersionService
     return VersionService.check()
 
+# ---------- Database / migrations ----------
+
+@router.get("/system/db-info")
+def db_info(user: str = Depends(require_auth)):
+    from app.core.db import engine, DATABASE_URL, Base
+    from app.services.migration_service import MigrationService
+    from sqlalchemy import inspect, text
+    inspector = inspect(engine)
+    existing = set(inspector.get_table_names())
+    model_tables = set(Base.metadata.tables.keys())
+    url = DATABASE_URL
+    if url.startswith("mysql://") or url.startswith("mysql+") or url.startswith("postgresql://") or url.startswith("postgresql+"):
+        try:
+            from urllib.parse import urlparse, urlunparse
+            u = urlparse(url)
+            if u.password:
+                url = urlunparse(u._replace(netloc=u.netloc.replace(u.password, "***")))
+        except Exception:
+            pass
+    info = {
+        "url": url,
+        "dialect": engine.dialect.name,
+        "existing_tables": sorted(existing),
+        "model_tables": sorted(model_tables),
+        "missing_tables": sorted(model_tables - existing),
+        "orphan_tables": sorted(existing - model_tables),
+    }
+    try:
+        info["diff"] = MigrationService.diff_schema(Base)
+    except Exception as e:
+        info["diff_error"] = str(e)
+    counts = {}
+    from sqlalchemy.orm import Session as _Session
+    with _Session(bind=engine) as session:
+        for t in sorted(existing):
+            try:
+                counts[t] = session.execute(text(f"SELECT COUNT(*) FROM {t}")).scalar()
+            except Exception as e:
+                counts[t] = None
+                print(f"[db-info] count failed for {t}: {e}")
+    info["row_counts"] = counts
+    return info
+
+@router.get("/system/migrations")
+def migrations_list(user: str = Depends(require_auth)):
+    from app.core.db import Base
+    from app.services.migration_service import MigrationService
+    return {"operations": MigrationService.diff_schema(Base)}
+
+@router.post("/system/migrations")
+def migrations_apply(user: str = Depends(require_auth)):
+    from app.core.db import Base
+    from app.services.migration_service import MigrationService
+    ops = MigrationService.diff_schema(Base)
+    if not ops:
+        return {"applied": 0, "message": "No migrations needed"}
+    result = MigrationService.run_ops(ops)
+    return {"applied": result["applied"], "message": f"Applied {result['applied']} migration operations"}
+
 # ---------- Error logs ----------
 
 class JsErrorBody(BaseModel):
@@ -1076,6 +1149,29 @@ def log_js_error(data: JsErrorBody, request: Request, db: Session = Depends(get_
 @router.get("/error-logs")
 def list_error_logs(source: Optional[str] = None, limit: int = 100, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     return ErrorLogService.list(db, limit=limit, source=source)
+
+
+# ---------- Local directory browser ----------
+
+from pathlib import Path as _Path
+
+@router.get("/system/browse")
+def browse_local_dir(path: Optional[str] = None, user: str = Depends(require_auth)):
+    """Return a safe listing of directories under the given local path."""
+    base = _Path(path).expanduser().resolve() if path else _Path.home()
+    if not base.exists():
+        raise HTTPException(status_code=400, detail="Path does not exist")
+    if not base.is_dir():
+        raise HTTPException(status_code=400, detail="Path is not a directory")
+    try:
+        parent = str(base.parent) if base.parent != base else None
+        items = []
+        for child in sorted(base.iterdir()):
+            if child.is_dir() and not child.name.startswith('.'):
+                items.append({"name": child.name, "path": str(child), "type": "dir"})
+        return {"current": str(base), "parent": parent, "items": items}
+    except PermissionError:
+        raise HTTPException(status_code=403, detail="Permission denied")
 
 # ---------- Open error API (rescue even when server startup fails) ----------
 

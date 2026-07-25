@@ -26,6 +26,15 @@
 .mode-row{display:flex;gap:8px;margin:12px 0}
 .mode-btn{flex:1;padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--hairline);background:var(--surface-card);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;text-align:center}
 .mode-btn.active{border-color:var(--primary);background:rgba(249,115,22,.12);color:var(--primary)}
+
+.dir-browser{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);max-height:360px;overflow:auto;padding:6px 0;}
+.dir-item{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--hairline);}
+.dir-item:last-child{border-bottom:none;}
+.dir-item:hover{background:var(--surface-hover);}
+.dir-item.active{background:rgba(249,115,22,.12);}
+.dir-item .icon{color:var(--primary);font-size:18px;width:22px;text-align:center;}
+.dir-item .name{flex:1;font-family:var(--font-mono);font-size:13px;}
+.dir-empty{padding:20px;text-align:center;color:var(--muted);font-size:13px;}
 </style>
 
 <h1 class="hero-title">Add Project</h1>
@@ -128,12 +137,15 @@
 
   <!-- Local directory -->
   <div class="panel" id="panel-local">
-    <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Enter the full path to an existing project directory on this machine.</p>
-    <div style="display:flex;gap:8px;">
-      <input class="input" id="localPath" placeholder="C:\projects\my-app or /home/user/my-app" style="flex:1;">
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px;">Pick a local project directory from the server filesystem.</p>
+    <input type="hidden" id="localPath">
+    <div class="browser-bar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <button class="btn btn-secondary btn-sm" onclick="browseUp()">↑ Up</button>
+      <input class="input" id="currentPath" value="Loading..." readonly style="flex:1;font-family:var(--font-mono);font-size:13px;">
       <button class="btn btn-primary" onclick="continueLocal()">Containerize →</button>
     </div>
-    <p class="subtle" style="margin-top:8px;">DockLiner will scan this directory and take you to the setup page for compose/Dockerfile/env.</p>
+    <div id="dirBrowser" class="dir-browser">Loading directories…</div>
+    <p class="subtle" style="margin-top:8px;">DockLiner will scan the selected directory and take you to the setup page for compose/Dockerfile/env.</p>
   </div>
 
   <!-- Existing download -->
@@ -152,6 +164,55 @@ let state={tokenId:null,tokenName:'',org:'',repo:{},mode:'branch',branch:'main',
 let orgsCache=[], reposCache=[], releasesCache=[];
 let currentDownloadId=null, pollTimer=null;
 
+
+
+function browseDir(path){
+  const url = '/api/system/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+  fetch(url).then(r=>r.json()).then(d=>{
+    const cur = d.current || '';
+    document.getElementById('currentPath').value = cur;
+    document.getElementById('localPath').value = cur;
+    const box = document.getElementById('dirBrowser');
+    if (!d.items || !d.items.length){
+      box.innerHTML = '<div class="dir-empty">No directories here.</div>';
+      return;
+    }
+    box.innerHTML = d.items.map(it => {
+      const active = it.path === d.current ? 'active' : '';
+      return `<div class="dir-item ${active}" data-path="${escapeHtml(it.path)}" data-name="${escapeHtml(it.name)}">` +
+        '<span class="icon">📁</span>' +
+        `<span class="name">${escapeHtml(it.name)}</span>` +
+        '</div>';
+    }).join('');
+    box.querySelectorAll('.dir-item').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const path = el.dataset.path;
+        selectDir(path);
+        if (path === document.getElementById('currentPath').value) {
+          browseDir(path);
+        }
+      });
+    });
+  }).catch(e=>{
+    document.getElementById('dirBrowser').innerHTML = '<div class="dir-empty">Could not list directory: ' + escapeHtml(e.message) + '</div>';
+  });
+}
+function selectDir(path){
+  document.getElementById('localPath').value = path;
+  document.getElementById('currentPath').value = path;
+  document.querySelectorAll('.dir-item').forEach(el=>el.classList.remove('active'));
+  const hit = document.querySelector(`.dir-item[data-path="${CSS.escape(path)}"]`);
+  if (hit) hit.classList.add('active');
+}
+function browseUp(){
+  const cur = document.getElementById('currentPath').value;
+  if (!cur) return browseDir();
+  const parts = cur.split(/[\\/]/).filter(Boolean);
+  parts.pop();
+  const up = parts.length ? parts.join('/') : '/';
+  browseDir(up);
+}
+function escapeHtml(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function showPanel(which){
   ['github','local','download'].forEach(w=>{
     const p=document.getElementById('panel-'+w);
@@ -159,6 +220,7 @@ function showPanel(which){
     if(p) p.classList.toggle('active', w===which);
     if(b) b.classList.toggle('active', w===which);
   });
+  if(which==='local') browseDir();
   if(which==='download') loadDownloadsPicker();
 }
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }

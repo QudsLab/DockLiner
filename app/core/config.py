@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     DB_USER: str = ""
     DB_PASSWORD: str = ""
     DB_NAME: str = "dockliner"
+
     DB_PATH: str = "./dockliner.db"     # legacy fallback for sqlite
 
     PROJECTS_DIR: str = "./projects"

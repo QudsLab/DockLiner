@@ -66,6 +66,7 @@ def projects_setup_page(
     scan_data = {}
     file_map = {}
     tokens = db.query(AccessToken).all()
+    dl = None
 
     if source == "download":
         dl = db.query(Download).filter(Download.id == download_id).first() if download_id else None
@@ -146,6 +147,16 @@ def settings_page(request: Request, db: Session = Depends(get_db), user: str = D
     return templates.TemplateResponse(request, "settings.html", {
         "request": request, "tokens": tokens,
         "sec": sec, "version": version,
+    })
+
+@router.get("/settings/database", response_class=HTMLResponse)
+def settings_database_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    from app.core.db import Base
+    from app.services.migration_service import MigrationService
+    return templates.TemplateResponse(request, "settings_database.html", {
+        "request": request,
+        "db_url": "",  # fetched client-side via API
+        "operations": MigrationService.diff_schema(Base),
     })
 
 @router.get("/projects/{pid}/logs", response_class=HTMLResponse)

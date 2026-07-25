@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Database & Migrations — DockLiner{% endblock %}
+{% block content %}
+
+<style>
+.db-hero{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.db-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.db-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);padding:14px}
+.db-card h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+.db-card .value{margin:0;font-size:16px;font-weight:600;color:var(--ink);word-break:break-all}
+.migration-list{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);overflow:hidden}
+.migration-item{padding:12px 14px;border-bottom:1px solid var(--hairline);display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.migration-item:last-child{border-bottom:none}
+.migration-item.risk-high{background:rgba(239,68,68,.08)}
+.migration-item.risk-low{background:rgba(34,197,94,.08)}
+.migration-sql{background:var(--surface-dark);color:var(--on-dark);padding:8px 10px;border-radius:6px;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow:auto}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600;text-transform:uppercase}
+.badge-low{background:rgba(34,197,94,.15);color:#22c55e}
+.badge-high{background:rgba(239,68,68,.15);color:#ef4444}
+.empty{padding:20px;color:var(--muted);text-align:center}
+.action-bar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px}
+</style>
+
+<div class="db-hero">
+  <div>
+    <h1 class="hero-title">Database</h1>
+    <p class="section-subtitle">Inspect tables, row counts and apply schema migrations.</p>
+  </div>
+  <a class="btn btn-secondary btn-sm" href="/settings">← Back to Settings</a>
+</div>
+
+<div id="dbMeta" class="db-meta">Loading database info…</div>
+
+<div class="action-bar">
+  <button class="btn btn-secondary btn-sm" onclick="loadMigrations()">Refresh diff</button>
+  <button class="btn btn-primary btn-sm" onclick="applyMigrations()">Run migrations</button>
+</div>
+
+<div id="migrationList" class="migration-list">
+  <div class="empty">Loading migrations…</div>
+</div>
+
+<script>
+async function loadInfo(){
+  const r = await fetch('/api/system/db-info');
+  const d = await r.json();
+  const el = document.getElementById('dbMeta');
+  const rowCounts = d.row_counts || {};
+  let countsHtml = Object.entries(rowCounts).map(([t,n]) => `&lt;span title="${escapeHtml(t)}"&gt;${escapeHtml(t)}:&lt;b&gt;${n ?? '—'}&lt;/b&gt;&lt;/span&gt;`).join('&lt;br&gt;');
+  if (!countsHtml) countsHtml = '&lt;span style="color:var(--muted)"&gt;No tables yet&lt;/span&gt;';
+  el.innerHTML = `
+    <div class="db-card"><h4>Connection URL</h4><div class="value">${escapeHtml(d.url || '-')}</div></div>
+    <div class="db-card"><h4>Dialect</h4><div class="value">${escapeHtml(d.dialect || '-')}</div></div>
+    <div class="db-card"><h4>Tables in DB</h4><div class="value">${(d.existing_tables || []).length}</div></div>
+    <div class="db-card"><h4>Missing tables</h4><div class="value">${(d.missing_tables || []).length || 'None'}</div></div>
+    <div class="db-card"><h4>Orphan tables</h4><div class="value">${(d.orphan_tables || []).length || 'None'}</div></div>
+    <div class="db-card"><h4>Row counts</h4><div class="value" style="font-size:13px">${countsHtml}</div></div>
+  `;
+  renderDiff(d.diff || []);
+}
+
+async function loadMigrations(){
+  const r = await fetch('/api/migrations');
+  const d = await r.json();
+  renderDiff(d.ops || []);
+}
+
+function renderDiff(ops){
+  const el = document.getElementById('migrationList');
+  if (!ops.length){
+    el.innerHTML = '<div class="empty">Database is in sync. No migrations needed.</div>';
+    return;
+  }
+  el.innerHTML = ops.map(op => `
+    <div class="migration-item risk-${op.risk}">
+      <div><span class="badge badge-${op.risk}">${op.risk}</span></div>
+      <div>
+        <div style="font-weight:600;color:var(--ink);font-size:13px;margin-bottom:4px">${escapeHtml(op.type)} — ${escapeHtml(op.table)}${op.column ? '.' + escapeHtml(op.column) : ''}</div>
+        <div style="color:var(--muted);font-size:12px;margin-bottom:6px">${escapeHtml(op.message)}</div>
+        <div class="migration-sql">${escapeHtml(op.sql)}</div>
+      </div>
+    </div>
+  `).join('');
+  window.currentOps = ops;
+}
+
+async function applyMigrations(){
+  if (!confirm('Apply all pending migrations? Low-risk ops add tables/columns. High-risk ops drop columns/tables and cause data loss.')) return;
+  const ops = window.currentOps || [];
+  if (!ops.length) { showToast('No migrations to apply', 'info'); return; }
+  const r = await fetch('/api/migrations/run', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({sql: ops.map(o => o.sql)})
+  });
+  const d = await r.json();
+  showToast(d.message || (r.ok ? 'Done' : 'Failed'), r.ok ? 'success' : 'error');
+  if (r.ok) { loadInfo(); loadMigrations(); }
+}
+
+function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function showToast(msg,type='info'){
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;bottom:16px;right:16px;padding:10px 14px;border-radius:8px;background:'+(type==='error'?'var(--error)':type==='success'?'var(--success)':'var(--primary)')+';color:#fff;z-index:9999;font-size:13px;';
+  div.textContent=msg;
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),2500);
+}
+
+loadInfo();
+</script>
+
+{% endblock %}

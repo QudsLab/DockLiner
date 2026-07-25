@@ -2,127 +2,63 @@
 {% block title %}{{ project.name }} — DockLiner{% endblock %}
 {% block content %}
 
-<link id="prismTheme" rel="stylesheet" href="/static/vendor/prism/prism.min.css">
-<script src="/static/vendor/prism/prism.min.js"></script>
-<script src="/static/vendor/prism/prism-yaml.min.js"></script>
-<script src="/static/vendor/prism/prism-docker.min.js"></script>
-<script src="/static/vendor/prism/prism-bash.min.js"></script>
-<script src="/static/vendor/prism/prism-ini.min.js"></script>
-
 <style>
-.editor-outer{display:flex;border:1px solid var(--hairline);border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);min-height:360px}
-.editor-gutter{padding:12px 10px 12px 8px;background:var(--surface-soft);border-right:1px solid var(--hairline);font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;color:var(--muted);text-align:right;user-select:none;white-space:pre;overflow:hidden;min-width:44px;flex-shrink:0}
-.prism-editor-wrap{display:grid;flex:1;overflow:auto;min-height:360px}
-.prism-editor-wrap>pre[class*="language-"],.prism-editor-wrap>textarea{grid-area:1/1;padding:12px!important;margin:0!important;font-family:var(--font-mono)!important;font-size:13px!important;line-height:1.65!important;tab-size:2;-moz-tab-size:2;white-space:pre!important;box-sizing:border-box;border:none!important;border-radius:0!important;min-width:100%}
-.prism-editor-wrap>pre[class*="language-"]{z-index:0;pointer-events:none;overflow:auto!important;background:transparent!important;text-shadow:none!important;height:100%}
-.prism-editor-wrap>pre[class*="language-"]>code[class*="language-"]{padding:0!important;margin:0!important;background:transparent!important;text-shadow:none!important;display:block;font-family:inherit!important;font-size:inherit!important;line-height:inherit!important;min-height:100%}
-.prism-editor-wrap .token{text-shadow:none!important;background:transparent!important}
-.prism-editor-wrap>textarea{background:transparent;color:transparent;caret-color:var(--ink);-webkit-text-fill-color:transparent;outline:none;resize:none;z-index:1;overflow:hidden;height:100%;-webkit-appearance:none;appearance:none}
-html[data-theme="dark"] .editor-outer{background:#1e1e1e;border-color:var(--hairline)}
-html[data-theme="dark"] .editor-gutter{background:#252526;border-color:var(--hairline);color:#6e7681}
-html[data-theme="dark"] .prism-editor-wrap{background:#1e1e1e}
-html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
-.detail-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px}
-.detail-tabs{display:flex;gap:6px;border-bottom:2px solid var(--hairline);margin-bottom:0;padding:4px;background:var(--surface-card);border-radius:var(--radius-md) var(--radius-md) 0 0;border-bottom-left-radius:0;border-bottom-right-radius:0}
-.detail-tab{padding:10px 18px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;display:flex;align-items:center;gap:8px;background:transparent;border:none;border-radius:8px 8px 0 0}
-.detail-tab.active{color:#ff7300;border-bottom-color:#ff7300;background:rgba(255,115,0,.10)}
-.editor-card{border:1px solid var(--hairline);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md);overflow:hidden;background:var(--surface-card);display:none}
-.editor-card.active,.panel.active>.editor-card{display:block}
-.editor-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
-.editor-header span{font-weight:700;font-size:14px;color:var(--ink)}
-.panel{display:none}
-.panel.active{display:block}
-.log-window{min-height:220px;max-height:420px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:12px;border-radius:var(--radius-md);font-family:var(--font-mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.deploy-entry{border:1px solid var(--hairline);border-radius:var(--radius-md);padding:10px 12px;background:var(--surface-card);margin-bottom:8px}
-.deploy-entry .meta{display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px}
-.status-success{color:var(--success)}
-.status-error{color:var(--error)}
-.status-started{color:var(--warning)}
-.action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-.hint-banner{margin-bottom:14px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,115,0,.12);border:1px solid rgba(255,115,0,.35);color:var(--ink);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+/* manage page dashboard */
+.manage-hero{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:start;margin-bottom:20px}
+.manage-title h1{margin:0 0 6px;font-size:28px;font-weight:700;color:var(--ink)}
+.manage-meta{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.status-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-weight:600;font-size:12px;background:rgba(255,115,0,.12);color:var(--primary)}
+.status-running{background:rgba(34,197,94,.15);color:#22c55e}
+.status-stopped{background:rgba(148,163,184,.15);color:#94a3b8}
+.status-error{background:rgba(239,68,68,.15);color:#ef4444}
 
-/* VSCode-like file viewer */
-.file-explorer{display:grid;grid-template-columns:260px 1fr;gap:0;min-height:420px;background:#1e1e1e}
-.file-tree{padding:6px 0;background:#252526;border-right:1px solid #333;overflow:auto;max-height:640px;font-size:13px;user-select:none;position:relative}
-.tree-item{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 8px;cursor:pointer;color:#cccccc;white-space:nowrap;border:1px solid transparent;position:relative}
-.tree-item:hover{background:#2a2d2e}
-.tree-item.active{background:#37373d;color:#ffffff;border-color:transparent}
-.tree-item.drag-over{background:rgba(255,115,0,.18);border-color:rgba(255,115,0,.5)}
-.tree-item.file{cursor:grab}
-.tree-item.file.dragging{opacity:.5}
-.tree-item .icon{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#cccccc}
-.tree-item.active .icon{color:#ffffff}
-.tree-item .material-symbols-outlined{font-size:16px !important;color:inherit !important}
-.tree-folder .icon[data-kind="folder"]{color:#dcb677 !important}
-.tree-item .icon[data-kind="docker"]{color:#2496ed !important}
-.tree-item .icon[data-kind="python"]{color:#3b82f6 !important}
-.tree-item .icon[data-kind="env"]{color:#f59e0b !important}
-.tree-item .icon[data-kind="gitignore"]{color:#f43f5e !important}
-.tree-item .icon[data-kind="requirements"]{color:#10b981 !important}
-.tree-item .icon[data-kind="compose"]{color:#9ca3af !important}
-.tree-item .icon[data-kind="markdown"]{color:#9ca3af !important}
-.tree-item .icon[data-kind="html"]{color:#e44d26 !important}
-.tree-item .icon[data-kind="css"]{color:#264de4 !important}
-.tree-item .icon[data-kind="js"]{color:#facc15 !important}
-.tree-item .icon[data-kind="json"]{color:#facc15 !important}
-.tree-item .icon[data-kind="txt"]{color:#9ca3af !important}
-.tree-item .icon[data-kind="file"]{color:#9ca3af !important}
-.tree-item .icon[data-kind="folder"]{color:#dcb677 !important}
-.tree-item .label{font-size:13px;overflow:hidden;text-overflow:ellipsis}
-.tree-indent{width:14px;flex-shrink:0}
-.tree-folder{font-weight:500;color:#cccccc}
-.collapsed{display:none}
-.ctx-menu{position:absolute;z-index:100;background:#252526;border:1px solid #333;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.5);padding:4px 0;min-width:160px;display:none}
-.ctx-menu-item{padding:7px 14px;font-size:13px;color:#cccccc;cursor:pointer;display:flex;align-items:center;gap:8px}
-.ctx-menu-item:hover{background:#37373d;color:#fff}
-.ctx-menu-item .material-symbols-outlined{font-size:16px;color:inherit}
-.ctx-menu-divider{height:1px;background:#333;margin:4px 0}
-.file-tree-header{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #333;background:#252526}
-.file-tree-title{font-size:12px;font-weight:600;color:#cccccc;letter-spacing:.3px;text-transform:uppercase}
-.file-tree-actions{display:flex;gap:4px}
-.file-tree-actions button{background:transparent;border:none;color:#969696;cursor:pointer;padding:2px 4px;border-radius:3px;display:flex;align-items:center;justify-content:center}
-.file-tree-actions button:hover{color:#fff;background:#37373d}
-.file-tree-actions .material-symbols-outlined{font-size:18px;color:inherit}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;align-items:center;justify-content:center}
+.actions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.action-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);padding:16px;display:flex;flex-direction:column;gap:10px;transition:transform .1s,border-color .1s}
+.action-card:hover{border-color:rgba(255,115,0,.4)}
+.action-card.primary{border-color:rgba(255,115,0,.45)}
+.action-card .head{display:flex;align-items:center;gap:10px}
+.action-card .icon{width:34px;height:34px;border-radius:8px;background:rgba(255,115,0,.12);display:flex;align-items:center;justify-content:center;color:var(--primary)}
+.action-card.primary .icon{background:var(--primary);color:#fff}
+.action-card h3{margin:0;font-size:15px;font-weight:600;color:var(--ink)}
+.action-card p{margin:0;font-size:12px;color:var(--muted);line-height:1.4;flex:1}
+.action-card .btn{width:100%;justify-content:center}
+
+.log-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.log-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);padding:14px;min-height:220px}
+.log-card h4{margin:0 0 10px;font-size:14px;color:var(--ink);display:flex;justify-content:space-between;align-items:center}
+.log-window{height:260px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:12px;border-radius:8px;font-family:var(--font-mono);font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px}
 .modal-overlay.active{display:flex}
-.modal{background:#252526;border:1px solid #333;border-radius:8px;padding:16px;min-width:300px;max-width:90vw}
-.modal-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:12px}
-.modal-input{width:100%;background:#3c3c3c;border:1px solid #3c3c3c;color:#cccccc;padding:6px 8px;border-radius:4px;font-size:13px;margin-bottom:12px}
-.modal-input:focus{outline:none;border-color:#ff7300}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px}
-.modal-actions button{font-size:12px;padding:6px 12px;border-radius:4px;border:none;cursor:pointer}
-.modal-actions .btn-primary{background:#ff7300;color:#1a1a1a}
-.modal-actions .btn-secondary{background:#3c3c3c;color:#cccccc}
-.file-tabs{display:flex;gap:0;background:#252526;border-bottom:1px solid #333;min-height:35px;overflow-x:auto;align-items:end}
-.file-tab{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px;color:#969696;border-right:1px solid #333;cursor:pointer;background:#2d2d2d;white-space:nowrap;min-width:120px;max-width:220px}
-.file-tab.active{color:#ffffff;background:#1e1e1e;border-top:2px solid #ff7300}
-.file-tab .close{font-size:16px;line-height:1;color:#969696;margin-left:auto}
-.file-tab .close:hover{color:#ffffff}
-.file-tab .name{overflow:hidden;text-overflow:ellipsis;flex:1}
-.editor-area{display:flex;flex-direction:column;min-height:420px;position:relative;background:#1e1e1e}
-.editor-status{display:flex;align-items:center;justify-content:space-between;padding:4px 12px;background:var(--primary);color:#fff;font-size:11px;font-family:var(--font-mono)}
-.editor-status .left{display:flex;gap:12px}
-.editor-status .right{display:flex;gap:12px}
-.save-hint{color:rgba(255,255,255,.75)}
-.file-search-wrap{padding:6px 8px;border-bottom:1px solid #333;background:#252526}
-.file-search{width:100%;background:#3c3c3c;border:1px solid #3c3c3c;color:#cccccc;padding:5px 8px;border-radius:4px;font-size:13px}
-.file-search:focus{outline:none;border-color:#ff7300}
-.empty-editor{display:flex;align-items:center;justify-content:center;height:100%;color:#6e7681;font-size:14px}
+.modal{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-md);width:calc(100% - 32px);height:calc(100% - 32px);max-width:calc(100% - 32px);max-height:calc(100% - 32px);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--hairline)}
+.modal-header h3{margin:0;font-size:16px}
+.modal-body{padding:16px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 16px;border-top:1px solid var(--hairline)}
+.log-window{flex:1;height:auto!important;min-height:300px}
+.quick-deploy-preview{flex:1;width:100%;min-height:300px;background:#0f172a;color:#22c55e;padding:14px;border-radius:8px;font-family:var(--font-mono);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;resize:none;border:1px solid rgba(255,115,0,.4);outline:none;box-shadow:inset 0 2px 10px rgba(0,0,0,.4)}
+.quick-deploy-preview:focus{border-color:var(--primary)}
+.modal-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px}
+
+
+.hint-banner{margin-bottom:18px;padding:12px 14px;border-radius:var(--radius-md);background:rgba(255,115,0,.12);border:1px solid rgba(255,115,0,.35);color:var(--ink);font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+@media (max-width:800px){
+  .manage-hero{grid-template-columns:1fr}
+  .log-grid{grid-template-columns:1fr}
+}
 </style>
 
-<div class="detail-header">
-  <div>
-    <h1 class="hero-title" style="margin:0;">{{ project.name }}</h1>
-    <p style="color:var(--muted);font-size:13px;margin:4px 0 0;">Status: <span class="status-pill status-{{ project.status }}">{{ project.status }}</span> · Port: {{ project.port or '-' }} · Mode: {{ project.command_mode }}</p>
+<div class="manage-hero">
+  <div class="manage-title">
+    <h1>{{ project.name }}</h1>
+    <div class="manage-meta">
+      <span class="status-pill status-{{ project.status }}">{{ project.status }}</span>
+      <span>Port: {{ project.port or '-' }}</span>
+      <span>Mode: {{ project.command_mode or 'compose' }}</span>
+      <span>Path: {{ project.deploy_path }}</span>
+    </div>
   </div>
-  <div class="action-bar">
-    <button class="btn btn-primary btn-sm" onclick="doAction('deploy')">Quick Deploy</button>
-    <button class="btn btn-primary btn-sm" style="background:transparent;border:1px solid var(--primary);color:var(--primary);" onclick="doAction('build')">Build</button>
-    <button class="btn btn-secondary btn-sm" onclick="doAction('run')">Run</button>
-    <button class="btn btn-secondary btn-sm" onclick="doAction('start')">Start</button>
-    <button class="btn btn-secondary btn-sm" onclick="doAction('restart')">Restart</button>
-    <button class="btn btn-secondary btn-sm" onclick="doAction('stop')">Stop</button>
-    <a class="btn btn-primary btn-sm" href="/projects/{{ project.id }}/editor">Edit Files</a>
+  <div class="action-bar" style="display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn btn-secondary btn-sm" href="/projects">← Projects</a>
   </div>
 </div>
@@ -135,607 +71,209 @@ html[data-theme="dark"] .prism-editor-wrap>textarea{caret-color:#abb2bf}
   </div>
 </div>
 
-<div class="detail-tabs">
-  <button class="detail-tab active" onclick="showTab('compose')">compose.yml</button>
-  <button class="detail-tab" onclick="showTab('dockerfile')">Dockerfile</button>
-  <button class="detail-tab" onclick="showTab('env')">.env</button>
-  <button class="detail-tab" onclick="showTab('qdeploy')">Quick Deploy</button>
-  <button class="detail-tab" onclick="showTab('files')">Files</button>
-  <button class="detail-tab" onclick="showTab('logs')">Deploy Logs</button>
-  <button class="detail-tab" onclick="showTab('runtime')">Runtime Logs</button>
-</div>
-
-<div id="tab-compose" class="panel active">
-  <div class="editor-card">
-    <div class="editor-header"><span>compose.yml</span><button id="saveComposeBtn" class="btn btn-primary btn-sm">Save</button></div>
-    <div id="editor-compose"></div>
+<section class="actions-grid">
+  <div class="action-card primary">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L4 9h6v13h6V9h6z"/></svg></div>
+      <h3>Quick Deploy</h3>
+    </div>
+    <p>Sync source, rebuild image and restart the container in one click.</p>
+    <button class="btn btn-primary" onclick="openModal('qdeploy')">Open Quick Deploy</button>
   </div>
-</div>
 
-<div id="tab-dockerfile" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>Dockerfile</span><button class="btn btn-primary btn-sm" onclick="saveFile('Dockerfile','dockerfile')">Save</button></div>
-    <div id="editor-dockerfile"></div>
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8M12 8v8"/></svg></div>
+      <h3>Build</h3>
+    </div>
+    <p>Rebuild the Docker image without starting the container.</p>
+    <button class="btn btn-secondary" onclick="doAction('build')">Build image</button>
   </div>
-</div>
 
-<div id="tab-qdeploy" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>Quick Deploy</span><button class="btn btn-primary btn-sm" onclick="saveDeployCommands()">Save</button></div>
-    <div id="editor-qdeploy"></div>
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></div>
+      <h3>Run / Start</h3>
+    </div>
+    <p>Start the container or create a fresh run from the built image.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="doAction('run')">Run</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="doAction('start')">Start</button>
+    </div>
   </div>
-</div>
 
-<div id="tab-env" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>.env</span><button class="btn btn-primary btn-sm" onclick="saveFile('.env','env')">Save</button></div>
-    <div id="editor-env"></div>
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 1 0 5.64 15.36"/></svg></div>
+      <h3>Restart / Stop</h3>
+    </div>
+    <p>Restart the running container or stop it cleanly.</p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" style="flex:1" onclick="doAction('restart')">Restart</button>
+      <button class="btn btn-danger" style="flex:1" onclick="doAction('stop')">Stop</button>
+    </div>
   </div>
-</div>
 
-<div id="tab-files" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>Project Files</span><div><button class="btn btn-primary btn-sm" id="saveFileBtn" onclick="saveCurrentFile()" disabled>Save</button></div></div>
-    <div class="file-explorer">
-      <div class="file-tree" id="fileTreePanel" oncontextmenu="return false;" ondragover="onTreeDragOver(event)" ondragleave="onTreeDragLeave(event)" ondrop="onTreeDrop(event)">
-        <div class="file-tree-header">
-          <span class="file-tree-title">Project Files</span>
-          <div class="file-tree-actions">
-            <button title="New file" onclick="showCreateModal('file', '')"><span class="material-symbols-outlined">note_add</span></button>
-            <button title="New folder" onclick="showCreateModal('folder', '')"><span class="material-symbols-outlined">create_new_folder</span></button>
-          </div>
-        </div>
-        <div class="file-search-wrap"><input id="fileSearch" class="file-search" placeholder="Search files..." oninput="filterTree()"></div>
-        <div id="fileTree"></div>
-        <div id="ctxMenu" class="ctx-menu" oncontextmenu="return false;" ontouchstart="return false;">
-          <div class="ctx-menu-item" onmousedown="ctxNewFile(event)"><span class="material-symbols-outlined">note_add</span> New file</div>
-          <div class="ctx-menu-item" onmousedown="ctxNewFolder(event)"><span class="material-symbols-outlined">create_new_folder</span> New folder</div>
-          <div class="ctx-menu-divider"></div>
-          <div class="ctx-menu-item" onmousedown="ctxRename(event)"><span class="material-symbols-outlined">edit</span> Rename</div>
-          <div class="ctx-menu-item" onmousedown="ctxDelete(event)"><span class="material-symbols-outlined">delete</span> Delete</div>
-        </div>
-      </div>
-      <div class="editor-area">
-        <div id="fileTabs" class="file-tabs"></div>
-        <div id="editor-file" style="flex:1;"><div class="empty-editor">Select a file from the explorer to edit</div></div>
-        <div class="editor-status">
-          <div class="left">
-            <span id="statusPath">-</span>
-            <span id="statusLang">-</span>
-          </div>
-          <div class="right">
-            <span id="statusLines">0 lines</span>
-            <span class="save-hint">Ctrl+S to save</span>
-          </div>
-        </div>
-      </div>
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+      <h3>Edit Files</h3>
+    </div>
+    <p>Open the full code editor to manage compose, Dockerfile, .env and all project files.</p>
+    <a class="btn btn-primary" href="/projects/{{ project.id }}/editor">Open Editor</a>
+  </div>
+
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <h3>Deploy Logs</h3>
+    </div>
+    <p>View the history of builds, deploys and their output.</p>
+    <button class="btn btn-secondary" onclick="openModal('logs')">View Deploy Logs</button>
+  </div>
+
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></div>
+      <h3>Rename</h3>
+    </div>
+    <p>Change the project name and its working directory.</p>
+    <button class="btn btn-secondary" onclick="openRenameModal()">Rename project</button>
+  </div>
+
+  <div class="action-card">
+    <div class="head">
+      <div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg></div>
+      <h3>Runtime Logs</h3>
+    </div>
+    <p>Stream the live container logs for the running project.</p>
+    <button class="btn btn-secondary" onclick="openModal('runtime')">View Runtime Logs</button>
+  </div>
+
+</section>
+
+<!-- Quick Deploy Modal -->
+<div id="modal-qdeploy" class="modal-overlay" onclick="if(event.target===this)closeModal('qdeploy')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Quick Deploy</h3>
+      <button class="modal-close" onclick="closeModal('qdeploy')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin:0;color:var(--muted);font-size:13px;">Edit the commands below. They are saved to the project and used by Quick Deploy, Build and Run.</p>
+      <textarea id="qdeployPreview" class="quick-deploy-preview">Loading...</textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('qdeploy')">Close</button>
+      <button class="btn btn-secondary btn-sm" onclick="saveDeployCommands()">Save commands</button>
+      <button class="btn btn-primary btn-sm" onclick="runQdeployFromModal()">Run Quick Deploy</button>
     </div>
   </div>
 </div>
 
-<div id="tab-logs" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>Deploy Logs</span><button class="btn btn-secondary btn-sm" onclick="loadDeployLogs()">Refresh</button></div>
-    <div id="deployLogs" style="padding:12px;max-height:500px;overflow:auto;"></div>
-  </div>
-</div>
-
-<div id="tab-runtime" class="panel">
-  <div class="editor-card">
-    <div class="editor-header"><span>Runtime Logs</span><button class="btn btn-secondary btn-sm" onclick="loadRuntimeLogs()">Refresh</button></div>
-    <div style="padding:12px;"><pre id="runtimeLogs" class="log-window">Loading...</pre></div>
-  </div>
-</div>
-
-<div id="nameModal" class="modal-overlay">
+<!-- Deploy Logs Modal -->
+<div id="modal-logs" class="modal-overlay" onclick="if(event.target===this)closeModal('logs')">
   <div class="modal">
-    <div class="modal-title" id="nameModalTitle">New file</div>
-    <input id="nameModalInput" class="modal-input" type="text" placeholder="name" onkeydown="if(event.key==='Enter')nameModalOk()">
-    <div class="modal-actions">
-      <button class="btn-secondary" onclick="closeNameModal()">Cancel</button>
-      <button class="btn-primary" onclick="nameModalOk()">OK</button>
+    <div class="modal-header">
+      <h3>Deploy Logs</h3>
+      <button class="modal-close" onclick="closeModal('logs')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="deployLogs" class="log-window">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="loadDeployLogs()">Refresh</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('logs')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Runtime Logs Modal -->
+<div id="modal-runtime" class="modal-overlay" onclick="if(event.target===this)closeModal('runtime')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Runtime Logs</h3>
+      <button class="modal-close" onclick="closeModal('runtime')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="runtimeLogs" class="log-window">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="loadRuntimeLogs()">Refresh</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('runtime')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div id="modal-rename" class="modal-overlay" onclick="if(event.target===this)closeModal('rename')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Rename project</h3>
+      <button class="modal-close" onclick="closeModal('rename')">×</button>
+    </div>
+    <div class="modal-body">
+      <label style="color:var(--muted);font-size:13px;display:block;margin-bottom:8px;">New project name</label>
+      <input class="input" id="renameInput" value="{{ project.name }}" style="width:100%;">
+      <p style="margin:8px 0 0;color:var(--muted);font-size:12px;">Renaming also renames the project directory on disk.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('rename')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveRename()">Save name</button>
     </div>
   </div>
 </div>
 
 <script>
-const pid={{ project.id }};
-let currentFilePath='';
-let composeFileName='compose.yml';
-const editors={};
+const pid = {{ project.id }};
 
-let openFiles=[];
-let activeFile=null;
-let ctxPath='';
-let ctxIsFolder=false;
-let createModalType='file';
-let createModalFolder='';
-
-function showTab(id){
-  document.querySelectorAll('.detail-tab').forEach(t=>t.classList.toggle('active', t.getAttribute('onclick').includes("'"+id+"'")));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+id));
-  if(id==='files') loadFiles();
+function openModal(id){
+  document.getElementById('modal-'+id).classList.add('active');
+  if(id==='qdeploy') renderQdeployPreview();
   if(id==='logs') loadDeployLogs();
   if(id==='runtime') loadRuntimeLogs();
-  setTimeout(()=>{ if(editors[id]) editors[id].refresh(); }, 10);
 }
-function guessLang(path){
-  const p=path.toLowerCase();
-  if(p.endsWith('dockerfile')) return 'docker';
-  if(p.endsWith('.env')||p.endsWith('.ini')) return 'ini';
-  if(p.endsWith('.yml')||p.endsWith('.yaml')) return 'yaml';
-  if(p.endsWith('.sh')||p.endsWith('.bash')) return 'bash';
-  if(p.endsWith('.py')) return 'python';
-  if(p.endsWith('.js')) return 'javascript';
-  if(p.endsWith('.json')) return 'json';
-  if(p.endsWith('.html')) return 'html';
-  if(p.endsWith('.css')) return 'css';
-  if(p.endsWith('.md')) return 'markdown';
-  if(p.endsWith('.sql')) return 'sql';
-  if(p.endsWith('.xml')) return 'xml';
-  if(p.endsWith('.toml')) return 'toml';
-  return 'none';
-}
-const FILE_ICON_NAMES={
-  folder:'folder',
-  folderOpen:'folder_open',
-  file:'draft',
-  python:'terminal',
-  docker:'layers',
-  compose:'dns',
-  requirements:'list_alt',
-  txt:'description',
-  markdown:'article',
-  html:'code',
-  css:'palette',
-  json:'data_object',
-  js:'code',
-  env:'lock',
-  lock:'lock',
-  gitignore:'block',
-};
-function fileIcon(path,isFolder){
-  const base=path.split('/').pop().toLowerCase();
-  let name='file';
-  if(isFolder) name='folder';
-  else if(base==='dockerfile') name='docker';
-  else if(base.endsWith('.yml')||base.endsWith('.yaml')) name='compose';
-  else if(base==='.env'||base==='.env.example'||base==='env.example') name='env';
-  else if(base==='.gitignore'||base.endsWith('.ignore')) name='gitignore';
-  else if(base==='requirements.txt') name='requirements';
-  else if(base.endsWith('.py')) name='python';
-  else if(base.endsWith('.js')||base.endsWith('.ts')) name='js';
-  else if(base.endsWith('.html')||base.endsWith('.htm')) name='html';
-  else if(base.endsWith('.css')) name='css';
-  else if(base.endsWith('.md')||base.endsWith('.markdown')) name='markdown';
-  else if(base.endsWith('.json')) name='json';
-  else if(base.endsWith('.txt')) name='txt';
-  return `\u003cspan class="icon" data-kind="${name}"\u003e\u003cspan class="material-symbols-outlined"\u003e${FILE_ICON_NAMES[name]}\u003c/span\u003e\u003c/span\u003e`;
-}
-let flatFiles=[],folderExpanded={},treeFilter='';
-function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-  function makeEditor(mountId, lang, value){
-  const el = document.getElementById(mountId);
-  el.innerHTML = `<div class="editor-outer"><div class="editor-gutter" aria-hidden="true"></div><div class="prism-editor-wrap"><pre class="language-${lang}"><code class="language-${lang}"></code></pre><textarea spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea></div></div>`;
-  const gutter = el.querySelector('.editor-gutter');
-  const wrap = el.querySelector('.prism-editor-wrap');
-  const code = wrap.querySelector('code');
-  const ta = wrap.querySelector('textarea');
-  function update(dirty=true){
-    code.textContent = ta.value;
-    if(window.Prism) Prism.highlightElement(code);
-    const lines = (ta.value.match(/\n/g)||[]).length + 1;
-    gutter.textContent = Array.from({length:lines},(_,i)=>i+1).join('\n');
-    gutter.scrollTop = wrap.scrollTop;
-    updateStatus(lines);
-    if(dirty) markDirty(mountId, true);
-  }
-  wrap.addEventListener('scroll', ()=>{ gutter.scrollTop = wrap.scrollTop; });
-  ta.value = value || '';
-  ta.addEventListener('input', ()=>update(true));
-  ta.addEventListener('keydown', e=>{
-    if(e.key==='Tab'){ e.preventDefault(); const s=ta.selectionStart,en=ta.selectionEnd; ta.value=ta.value.substring(0,s)+'  '+ta.value.substring(en); ta.selectionStart=ta.selectionEnd=s+2; update(true); }
-    if(e.ctrlKey && e.key==='s'){ e.preventDefault(); if(mountId==='editor-file') saveCurrentFile(); else if(mountId==='editor-compose') saveFile(composeFileName,'compose'); else if(mountId==='editor-dockerfile') saveFile('Dockerfile','dockerfile'); else if(mountId==='editor-env') saveFile('.env','env'); }
-  });
-  update(false);
-  return { getValue:()=>ta.value, setValue:(v)=>{ta.value=v;update(false);}, refresh:()=>{}, setOption:()=>{}, getOption:()=>'', getWrapperElement:()=>el.querySelector('.editor-outer'), toTextArea:()=>{el.innerHTML='';} };
-}
-function updateStatus(lines){
-  const sp=document.getElementById('statusPath');
-  const sl=document.getElementById('statusLang');
-  const ln=document.getElementById('statusLines');
-  if(sp) sp.textContent = activeFile || '-';
-  if(sl) sl.textContent = activeFile ? guessLang(activeFile).toUpperCase() : '-';
-  if(ln) ln.textContent = `${lines} lines`;
-}
-function markDirty(mountId, dirty){
-  if(mountId==='editor-file' && activeFile){
-    const f=openFiles.find(x=>x.path===activeFile);
-    if(f){ f.dirty=dirty; renderTabs(); }
-  }
-}
-function setTheme(){
-  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
-  document.getElementById('prismTheme').href = '/static/vendor/prism/' + (isDark?'prism-dark.min.css':'prism.min.css');
+function closeModal(id){
+  document.getElementById('modal-'+id).classList.remove('active');
 }
 
-async function loadComposeFile(){
-  const candidates = ['compose.yml','compose.yaml','docker-compose.yml','docker-compose.yaml'];
-  for(const name of candidates){
-    const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(name)}`);
-    if(r.ok){
-      const data=await r.json();
-      if(!data.is_dir){
-        composeFileName = name;
-        document.querySelector('#tab-compose .editor-header span').textContent = name;
-        document.getElementById('saveComposeBtn').onclick = ()=>saveFile(name,'compose');
-        return data.content || '';
-      }
+async function renderQdeployPreview(){
+  const box = document.getElementById('qdeployPreview');
+  try{
+    const r = await fetch('/api/projects/'+pid);
+    const p = await r.json();
+    const cf = p.compose_file || 'compose.yml';
+    const defaultLines = [
+      '# sync source to '+p.deploy_path,
+      '# write .env',
+      'cd '+p.deploy_path,
+      'docker compose -f '+cf+' build',
+      'docker compose -f '+cf+' up -d --build'
+    ];
+    if(p.deploy_commands && p.deploy_commands.length){
+      box.value = p.deploy_commands.join('\n');
+    } else {
+      box.value = defaultLines.join('\n');
     }
+  } catch(e){
+    box.value = 'Could not load deploy preview.';
   }
-  return '';
-}
-
-(async function(){
-  const [c,d,e,p] = await Promise.all([
-    loadComposeFile(),
-    fetch(`/api/projects/${pid}/files/Dockerfile`).then(r=>r.ok?r.json():{content:''}),
-    fetch(`/api/projects/${pid}/files/.env`).then(r=>r.ok?r.json():{content:''}),
-    fetch(`/api/projects/${pid}`).then(r=>r.ok?r.json():{})
-  ]);
-  editors.compose = makeEditor('editor-compose', 'yaml', typeof c === 'string' ? c : (c.content||''));
-  editors.dockerfile = makeEditor('editor-dockerfile', 'docker', d.content||'');
-  editors.env = makeEditor('editor-env', 'bash', e.content||'');
-  editors.qdeploy = makeEditor('editor-qdeploy', 'shell', buildQdeployCommandPreview(p));
-  setTheme();
-})();
-
-function buildQdeployCommandPreview(p){
-  if(p.deploy_commands && p.deploy_commands.length){
-    return p.deploy_commands.join('\n');
-  }
-  let lines=[];
-  if(p.source_type==='github') lines.push(`# sync source to ${p.deploy_path}`);
-  else if((p.source_type==='download' || p.source_type==='local') && p.source_path) lines.push(`cp -r ${p.source_path} ${p.deploy_path}`);
-  else lines.push(`# no source configured; deploy_path left empty`);
-  lines.push('# write .env');
-  const mode=p.command_mode || p.deploy_method || 'compose';
-  const deployPath=p.deploy_path;
-  if(mode==='compose'){
-    const cf=p.compose_file || 'compose.yml';
-    lines.push(`cd ${deployPath}`);
-    lines.push(`docker compose -f ${cf} build`);
-    lines.push(`docker compose -f ${cf} up -d --build`);
-  }else if(mode==='dockerfile'){
-    lines.push(`cd ${deployPath}`);
-    lines.push(`docker build -t ${p.name} .`);
-    lines.push(`docker run -d -p ${p.port || 0}:${p.port || 0} --name ${p.name} ${p.name}`);
-  }else if(mode==='direct'){
-    lines.push(`cd ${deployPath}`);
-    lines.push(p.direct_command || '# no direct command provided');
-  }
-  return lines.join('\n');
 }
 
 async function saveDeployCommands(){
-  const raw=editors.qdeploy.getValue().trim();
-  const commands=raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
-  const r=await fetch(`/api/projects/${pid}`,{
-    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({deploy_commands:commands})
+  const box = document.getElementById('qdeployPreview');
+  const commands = box.value.split('\n').map(l=>l.trimEnd()).filter(l=>l.length>0);
+  const r = await fetch('/api/projects/'+pid, {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({deploy_commands: commands})
   });
-  const d=await r.json().catch(()=>({}));
-  showToast(r.ok?'Deploy commands saved':'Save failed: '+(d.detail||r.statusText), r.ok?'success':'error');
+  const d = await r.json().catch(()=>({}));
+  showToast(r.ok ? 'Deploy commands saved' : (d.detail||'Save failed'), r.ok?'success':'error');
 }
 
-async function saveFile(path, key){
-  const content=editors[key].getValue();
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`,{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})
-  });
-  showToast(r.ok?'Saved':'Save failed', r.ok?'success':'error');
-}
-
-async function loadFiles(){
-  const r=await fetch(`/api/projects/${pid}/files`);
-  const data=await r.json();
-  flatFiles=(data.files||[]).sort((a,b)=>a.path.localeCompare(b.path));
-  folderExpanded={};
-  renderTree();
-}
-
-function filterTree(){
-  treeFilter=document.getElementById('fileSearch').value.trim().toLowerCase();
-  if(treeFilter) Object.keys(folderExpanded).forEach(k=>folderExpanded[k]=true);
-  renderTree();
-}
-
-function buildTree(entries){
-  const root={name:'',children:new Map(),files:[]};
-  entries.forEach(entry=>{
-    const parts=entry.path.split('/');
-    let cur=root;
-    for(let i=0;i<parts.length-(entry.is_dir?0:1);i++){
-      const name=parts[i];
-      let child=cur.children.get(name);
-      if(!child){ child={name,children:new Map(),files:[]}; cur.children.set(name,child); }
-      cur=child;
-    }
-    if(entry.is_dir){
-      // already ensured dir node exists above
-    } else {
-      cur.files.push(entry);
-    }
-  });
-  return root;
-}
-
-function shouldShow(path){
-  if(!treeFilter) return true;
-  return path.toLowerCase().includes(treeFilter);
-}
-
-function hasVisible(node,pathPrefix){
-  for(const child of node.children.values()){
-    const cp=pathPrefix?`${pathPrefix}/${child.name}`:child.name;
-    if(shouldShow(cp) || hasVisible(child,cp)) return true;
-  }
-  return node.files.some(f=>shouldShow(f.path));
-}
-
-function renderDir(node,depth,pathPrefix){
-  const dirPath=pathPrefix?`${pathPrefix}/${node.name}`:node.name;
-  const expanded=folderExpanded[dirPath] || treeFilter.length>0;
-  if(!treeFilter && !hasVisible(node,dirPath)) return null;
-
-  const div=document.createElement('div');
-  const row=document.createElement('div');
-  row.className='tree-item tree-folder';
-  row.dataset.path=dirPath;
-  row.dataset.isdir='true';
-  row.draggable=true;
-  row.style.paddingLeft=`${8+depth*14}px`;
-  const chevron=expanded?'▾':'▸';
-  row.innerHTML=`<span class="icon" style="margin-right:2px;font-size:10px;color:#969696;">${chevron}</span>${fileIcon(node.name,true)}<span class="label">${escapeHtml(node.name)}</span>`;
-  row.onclick=(e)=>{ e.stopPropagation(); folderExpanded[dirPath]=!folderExpanded[dirPath]; renderTree(); };
-  row.oncontextmenu=(e)=>{ e.stopPropagation(); e.preventDefault(); showCtxMenu(e, dirPath, true); };
-  attachLongPress(row, dirPath, true);
-  row.ondragstart=(e)=>{ e.stopPropagation(); e.dataTransfer.setData('text/source', dirPath); e.dataTransfer.effectAllowed='move'; row.classList.add('dragging'); };
-  row.ondragend=(e)=>{ e.stopPropagation(); row.classList.remove('dragging'); };
-  row.ondragover=(e)=>{ e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect='move'; row.classList.add('drag-over'); };
-  row.ondragleave=(e)=>{ e.stopPropagation(); row.classList.remove('drag-over'); };
-  row.ondrop=(e)=>{ e.preventDefault(); e.stopPropagation(); row.classList.remove('drag-over'); const src=e.dataTransfer.getData('text/source'); if(src && src!==dirPath) moveFile(src, dirPath); };
-  div.appendChild(row);
-
-  const child=document.createElement('div');
-  child.className=expanded?'':'collapsed';
-  const kids=[...node.children.values()].sort((a,b)=>a.name.localeCompare(b.name));
-  kids.forEach(kid=>{
-    const sub=renderDir(kid,depth+1,dirPath);
-    if(sub) child.appendChild(sub);
-  });
-  node.files.sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{
-    if(treeFilter && !shouldShow(f.path)) return;
-    const frow=document.createElement('div');
-    frow.className='tree-item file'+(f.path===activeFile?' active':'');
-    frow.dataset.path=f.path;
-    frow.dataset.isdir='false';
-    frow.draggable=true;
-    frow.style.paddingLeft=`${8+(depth+1)*14}px`;
-    frow.innerHTML=`<span class="icon">${fileIcon(f.path)}</span><span class="label">${escapeHtml(f.path.split('/').pop())}</span>`;
-    frow.onclick=(e)=>{ e.stopPropagation(); openFile(f.path); };
-    frow.oncontextmenu=(e)=>{ e.stopPropagation(); e.preventDefault(); showCtxMenu(e, f.path, false); };
-    attachLongPress(frow, f.path, false);
-    frow.ondragstart=(e)=>{ e.stopPropagation(); e.dataTransfer.setData('text/source', f.path); e.dataTransfer.effectAllowed='move'; frow.classList.add('dragging'); };
-    frow.ondragend=(e)=>{ e.stopPropagation(); frow.classList.remove('dragging'); };
-    child.appendChild(frow);
-  });
-  div.appendChild(child);
-  return div;
-}
-
-function renderTree(){
-  const tree=document.getElementById('fileTree');
-  if(!tree) return;
-  tree.innerHTML='';
-  const root=buildTree(flatFiles);
-
-  // render root-level files first
-  root.files.sort((a,b)=>a.path.localeCompare(b.path)).forEach(f=>{
-    if(treeFilter && !shouldShow(f.path)) return;
-    const row=document.createElement('div');
-    row.className='tree-item file'+(f.path===activeFile?' active':'');
-    row.dataset.path=f.path;
-    row.dataset.isdir='false';
-    row.draggable=true;
-    row.style.paddingLeft='8px';
-    row.innerHTML=`<span class="icon">${fileIcon(f.path)}</span><span class="label">${escapeHtml(f.path)}</span>`;
-    row.onclick=(e)=>{ e.stopPropagation(); openFile(f.path); };
-    row.oncontextmenu=(e)=>{ e.stopPropagation(); e.preventDefault(); showCtxMenu(e, f.path, false); };
-    attachLongPress(row, f.path, false);
-    row.ondragstart=(e)=>{ e.stopPropagation(); e.dataTransfer.setData('text/source', f.path); e.dataTransfer.effectAllowed='move'; row.classList.add('dragging'); };
-    row.ondragend=(e)=>{ e.stopPropagation(); row.classList.remove('dragging'); };
-    tree.appendChild(row);
-  });
-
-  // then root directories
-  const kids=[...root.children.values()].sort((a,b)=>a.name.localeCompare(b.name));
-  kids.forEach(kid=>{
-    const rendered=renderDir(kid,0,'');
-    if(rendered) tree.appendChild(rendered);
-  });
-}
-
-function ctxNewFile(e){ if(e){ e.stopPropagation(); e.preventDefault(); } showCreateModal('file', ctxPath); }
-function ctxNewFolder(e){ if(e){ e.stopPropagation(); e.preventDefault(); } showCreateModal('folder', ctxPath); }
-function ctxRename(e){ if(e){ e.stopPropagation(); e.preventDefault(); } showCreateModal('rename', ctxPath); }
-function ctxDelete(e){ if(e){ e.stopPropagation(); e.preventDefault(); } if(confirm(`Delete ${ctxPath}?`)) deletePath(ctxPath); }
-
-let longPressTimer=null;
-function attachLongPress(el, path, isFolder){
-  el.addEventListener('touchstart', (e)=>{
-    longPressTimer=setTimeout(()=>{
-      const touch=e.touches[0];
-      showCtxMenu({clientX:touch.clientX, clientY:touch.clientY, stopPropagation:()=>{}, preventDefault:()=>{}}, path, isFolder);
-    }, 600);
-  }, {passive:true});
-  el.addEventListener('touchend', ()=>clearTimeout(longPressTimer));
-  el.addEventListener('touchmove', ()=>clearTimeout(longPressTimer));
-}
-
-function showCtxMenu(e, path, isFolder){
-  ctxPath=path; ctxIsFolder=isFolder;
-  const menu=document.getElementById('ctxMenu');
-  menu.style.display='block';
-  const panel=document.getElementById('fileTreePanel');
-  const rect=panel.getBoundingClientRect();
-  menu.style.left=Math.min(e.clientX-rect.left+panel.scrollLeft, rect.width-160)+'px';
-  menu.style.top=(e.clientY-rect.top+panel.scrollTop)+'px';
-  if(e.stopPropagation) e.stopPropagation();
-  if(e.preventDefault) e.preventDefault();
-}
-function hideCtxMenu(){
-  document.getElementById('ctxMenu').style.display='none';
-}
-window.addEventListener('mousedown', (e)=>{
-  const menu=document.getElementById('ctxMenu');
-  if(e.button!==0) return;
-  if(menu.style.display==='block' && !menu.contains(e.target)) hideCtxMenu();
-});
-window.addEventListener('touchstart', (e)=>{
-  const menu=document.getElementById('ctxMenu');
-  if(menu.style.display==='block' && !menu.contains(e.target)) hideCtxMenu();
-});
-
-function showCreateModal(type, basePath){
-  createModalType=type; createModalFolder=basePath||'';
-  const title=document.getElementById('nameModalTitle');
-  const input=document.getElementById('nameModalInput');
-  title.textContent=type==='file'?'New file':type==='folder'?'New folder':'Rename';
-  input.value='';
-  if(type==='rename') input.value=basePath.split('/').pop();
-  document.getElementById('nameModal').classList.add('active');
-  input.focus();
-}
-function closeNameModal(){ document.getElementById('nameModal').classList.remove('active'); }
-async function nameModalOk(){
-  const input=document.getElementById('nameModalInput');
-  const name=input.value.trim();
-  if(!name){ closeNameModal(); return; }
-  const base=createModalFolder;
-  const relPath=base?(base?`${base}/${name}`:name):name;
-  if(createModalType==='rename'){
-    const parent=base.split('/').slice(0,-1).join('/');
-    const dest=parent?`${parent}/${name}`:name;
-    await moveFile(base, dest);
-  } else if(createModalType==='folder'){
-    await apiCreateFolder(relPath);
-  } else {
-    await apiCreateFile(relPath);
-  }
-  closeNameModal();
-  await loadFiles();
-}
-
-async function apiCreateFile(path){
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:''})});
-  const d=await r.json().catch(()=>({}));
-  showToast(r.ok?'Created':'Create failed: '+(d.detail||r.statusText), r.ok?'success':'error');
-  return r.ok;
-}
-async function apiCreateFolder(path){
-  const r=await fetch(`/api/projects/${pid}/mkdir/${encodeURIComponent(path)}`,{method:'POST'});
-  const d=await r.json().catch(()=>({}));
-  showToast(r.ok?'Created':'Create failed: '+(d.detail||r.statusText), r.ok?'success':'error');
-  return r.ok;
-}
-async function deletePath(path){
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`,{method:'DELETE'});
-  const d=await r.json().catch(()=>({}));
-  showToast(r.ok?'Deleted':'Delete failed: '+(d.detail||r.statusText), r.ok?'success':'error');
-  if(r.ok) await loadFiles();
-}
-async function moveFile(source, destination){
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(source)}/move`,{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source, destination})
-  });
-  const d=await r.json().catch(()=>({}));
-  showToast(r.ok?'Moved':'Move failed: '+(d.detail||r.statusText), r.ok?'success':'error');
-  if(r.ok) await loadFiles();
-}
-
-function onTreeDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
-function onTreeDragLeave(e){}
-async function onTreeDrop(e){
-  e.preventDefault();
-  const src=e.dataTransfer.getData('text/source');
-  if(src) moveFile(src, '');
-}
-
-async function openFile(path){
-  if(!openFiles.find(f=>f.path===path)) openFiles.push({path,dirty:false});
-  activeFile=path;
-  renderTabs();
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(path)}`);
-  const d=await r.json();
-  const el=document.getElementById('editor-file');
-  el.innerHTML='';
-  if(editors.file){ editors.file.toTextArea(); editors.file=null; }
-  editors.file=makeEditor('editor-file',guessLang(path),d.content||'');
-  document.getElementById('saveFileBtn').disabled=false;
-  const f=openFiles.find(x=>x.path===path);
-  if(f) f.dirty=false;
-  renderTabs();
-  setTheme();
-}
-
-function renderTabs(){
-  const box=document.getElementById('fileTabs');
-  if(!box) return;
-  box.innerHTML=openFiles.map(f=>{
-    const name=f.path.split('/').pop();
-    const isActive=f.path===activeFile;
-    return `<div class="file-tab ${isActive?'active':''}" onclick="switchTab('${f.path.replace(/'/g,"\\'")}')">
-      <span class="icon">${fileIcon(f.path)}</span>
-      <span class="name">${escapeHtml(name)}${f.dirty?' •':''}</span>
-      <span class="close" onclick="closeTab(event,'${f.path.replace(/'/g,"\\'")}')">×</span>
-    </div>`;
-  }).join('');
-}
-
-function switchTab(path){
-  activeFile=path;
-  renderTabs();
-  openFile(path);
-}
-
-function closeTab(e,path){
-  e.stopPropagation();
-  openFiles=openFiles.filter(f=>f.path!==path);
-  if(activeFile===path){
-    activeFile=openFiles.length?openFiles[0].path:null;
-    if(activeFile) openFile(activeFile);
-    else{
-      const el=document.getElementById('editor-file');
-      if(el) el.innerHTML='<div class="empty-editor">Select a file from the explorer to edit</div>';
-      if(editors.file){ editors.file.toTextArea(); editors.file=null; }
-      document.getElementById('saveFileBtn').disabled=true;
-      updateStatus(0);
-    }
-  }
-  renderTabs();
-}
-
-async function saveCurrentFile(){
-  if(!activeFile || !editors.file) return;
-  const content=editors.file.getValue();
-  const r=await fetch(`/api/projects/${pid}/files/${encodeURIComponent(activeFile)}`,{
-    method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})
-  });
-  const f=openFiles.find(x=>x.path===activeFile);
-  if(f) f.dirty=false;
-  renderTabs();
-  showToast(r.ok?activeFile.split('/').pop()+' saved':'Save failed', r.ok?'success':'error');
+function runQdeployFromModal(){
+  saveDeployCommands().then(()=>{ doAction('deploy'); closeModal('qdeploy'); });
 }
 
 async function loadDeployLogs(){
@@ -745,8 +283,8 @@ async function loadDeployLogs(){
   if(!logs.length){ box.innerHTML='<div class="empty">No deploy logs yet.</div>'; return; }
   box.innerHTML=logs.map(l=>{
     const date=new Date(l.timestamp).toLocaleString();
-    return `<div class="deploy-entry">
-      <div class="meta"><span>#${l.id}</span><span>${date}</span><span class="status-${l.status}">${l.status}</span></div>
+    return `<div class="deploy-entry" style="border:1px solid var(--hairline);border-radius:8px;padding:10px 12px;background:var(--surface-soft);margin-bottom:8px">
+      <div style="display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px"><span>#${l.id}</span><span>${date}</span><span class="status-${l.status}" style="font-weight:600">${l.status}</span></div>
       <pre style="margin:0;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(l.logs||'No output')}</pre>
     </div>`;
   }).join('');
@@ -762,8 +300,7 @@ async function doAction(action){
   const r=await fetch(`/api/projects/${pid}/${action}`,{method:'POST'});
   const d=await r.json().catch(()=>({}));
   showToast(d.status||action, r.ok?'success':'error');
-  if(r.ok && action==='build') loadDeployLogs();
-  if(r.ok && action==='deploy') loadDeployLogs();
+  if(r.ok && (action==='build'||action==='deploy')) loadDeployLogs();
 }
 
 function dismissQdeployHint(){
@@ -778,9 +315,30 @@ function maybeShowQdeployHint(){
   if(!shown) el.style.display='flex';
 }
 
-maybeShowQdeployHint();
+function openRenameModal(){
+  document.getElementById('modal-rename').classList.add('active');
+  const inp = document.getElementById('renameInput');
+  inp.focus(); inp.select();
+}
 
-function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB','GB']; let i=0; while(n>=1024 && i<units.length-1){ n/=1024; i++; } return n.toFixed(1)+' '+units[i]; }
+async function saveRename(){
+  const name = document.getElementById('renameInput').value.trim();
+  if (!name) return showToast('Enter a name', 'error');
+  const r = await fetch('/api/projects/' + pid, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: name})
+  });
+  const d = await r.json().catch(()=>({}));
+  if (r.ok){
+    showToast('Project renamed', 'success');
+    closeModal('rename');
+    setTimeout(() => location.href = '/projects/' + pid, 500);
+  } else {
+    showToast(d.detail || 'Rename failed', 'error');
+  }
+}
+
 function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showToast(msg,type='info'){
   const div=document.createElement('div');
@@ -790,7 +348,7 @@ function showToast(msg,type='info'){
   setTimeout(()=>div.remove(),2500);
 }
 
-window.addEventListener('themeChanged', setTheme);
+maybeShowQdeployHint();
 </script>
 
 {% endblock %}

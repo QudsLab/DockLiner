@@ -16,7 +16,13 @@
 
 <style>
 /* === VS Code-like Editor Page === */
-.editor-page{display:flex;flex-direction:column;gap:0;height:calc(100vh - 100px);min-height:520px}
+html,body{height:100%;overflow:hidden!important}
+.nav-bar{display:none!important}
+.mobile-top-bar{display:none!important}
+.bottom-nav{display:none!important}
+body{padding-top:0!important;padding-bottom:0!important}
+main.layout{padding-top:0!important;padding-bottom:0!important}
+.editor-page{display:flex;flex-direction:column;gap:0;height:100vh;min-height:0}
 .editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 16px;background:var(--surface-soft);border-bottom:1px solid var(--hairline);min-height:40px}
 .editor-toolbar .left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .editor-toolbar .right{display:flex;align-items:center;gap:8px}
@@ -38,6 +44,7 @@
 .tree-item{display:flex;align-items:center;gap:4px;padding:3px 8px 3px 0;cursor:pointer;color:#cccccc;white-space:nowrap;height:22px;line-height:22px}
 .tree-item:hover{background:#2a2d2e}
 .tree-item.active{background:#37373d;color:#ffffff}
+.tree-item.cut{opacity:.5}
 .tree-item .label{overflow:hidden;text-overflow:ellipsis;font-size:13px;line-height:22px}
 .tree-folder{font-weight:400}
 .tree-chevron{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#8b8b8b;flex-shrink:0}
@@ -58,6 +65,7 @@
 
 /* === Editor Box === */
 .editor-box{flex:1;position:relative;min-height:0;overflow:hidden;background:#1e1e1e}
+#editor-mount{position:absolute;top:0;left:0;right:0;bottom:0}
 .empty-editor{display:flex;align-items:center;justify-content:center;height:100%;color:#8b8b8b;font-size:13px;user-select:none}
 
 /* === Status Bar (VS Code style) === */
@@ -96,6 +104,27 @@
 /* === Modal === */
 .modal-overlay{z-index:90}
 
+/* === Context Menu === */
+.context-menu{position:fixed;background:#252526;border:1px solid #454545;border-radius:4px;padding:4px 0;min-width:160px;box-shadow:0 4px 12px rgba(0,0,0,0.4);z-index:100;font-size:13px;color:#cccccc;user-select:none}
+.context-item{display:flex;align-items:center;gap:8px;padding:6px 12px;cursor:pointer}
+.context-item:hover{background:#094771;color:#ffffff}
+.context-separator{height:1px;background:#454545;margin:4px 0}
+.context-keep-source{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 16px;font-size:12px;color:#888}
+.context-keep-source .muted{color:#888}
+.context-keep-source .link{background:none;border:none;color:#4daafc;padding:0;cursor:pointer;font-size:12px}
+.context-keep-source .link:hover{text-decoration:underline}
+
+/* === Custom auto-hide scrollbars === */
+html,body{height:100%;overflow:hidden!important}
+main.layout{max-width:none!important;margin:0!important;padding:0!important;padding-bottom:0!important}
+.tree,.CodeMirror-scroll{scrollbar-width:thin;scrollbar-color:rgba(160,160,160,0.6) rgba(255,255,255,0.03)}
+.tree::-webkit-scrollbar,.CodeMirror-scroll::-webkit-scrollbar{width:12px;height:12px}
+.tree::-webkit-scrollbar-track,.CodeMirror-scroll::-webkit-scrollbar-track{background:rgba(255,255,255,0.03);border-radius:6px}
+.tree::-webkit-scrollbar-thumb,.CodeMirror-scroll::-webkit-scrollbar-thumb{background:rgba(200,200,200,0.7);border-radius:6px;border:3px solid transparent;background-clip:padding-box}
+.tree::-webkit-scrollbar-thumb:hover,.CodeMirror-scroll::-webkit-scrollbar-thumb:hover{background:rgba(230,230,230,0.9);border:3px solid transparent;background-clip:padding-box}
+.tree.scroll-hide,.CodeMirror-scroll.scroll-hide{scrollbar-color:transparent transparent}
+.tree.scroll-hide::-webkit-scrollbar-thumb,.CodeMirror-scroll.scroll-hide::-webkit-scrollbar-thumb{background:transparent}
+
 /* === Buttons in toolbar === */
 .editor-toolbar .btn{font-size:12px;padding:4px 10px;height:26px;line-height:18px;border-radius:3px}
 .editor-toolbar .btn-primary{background:#007acc;color:#fff;border:1px solid #007acc}
@@ -103,24 +132,60 @@
 .editor-toolbar .btn-secondary{background:transparent;color:#cccccc;border:1px solid transparent}
 .editor-toolbar .btn-secondary:hover{background:#2a2d2e;color:#ffffff}
 
+.editor-actions{display:flex;align-items:center;gap:2px;margin-right:8px}
+.editor-actions button{background:transparent;border:none;color:#cccccc;cursor:pointer;padding:3px 4px;border-radius:3px;display:flex;align-items:center;justify-content:center;width:26px;height:26px}
+.editor-actions button:hover{color:#ffffff;background:#2a2d2e}
+.editor-actions button .material-symbols-outlined{font-size:18px}
+
+.sidebar-toggle{display:none;background:transparent;border:none;color:#cccccc;cursor:pointer;padding:4px;border-radius:3px}
+.sidebar-toggle:hover{background:#2a2d2e;color:#ffffff}
 
 /* === Responsive === */
 @media (max-width:768px){
-  .editor-page{height:auto}
-  .workspace{flex-direction:column}
-  .sidebar{width:100%;max-height:220px;border-right:none;border-bottom:1px solid #2d2d2d}
+  .editor-page{height:100vh;min-height:0}
+  .editor-toolbar{padding:6px 10px;gap:8px;flex-wrap:nowrap}
+  .editor-toolbar h1{display:none}
+  .editor-toolbar .left{gap:8px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .editor-toolbar .left::-webkit-scrollbar{display:none}
+  .editor-toolbar .right{gap:6px}
+  .editor-toolbar .right .btn{padding:4px 8px;font-size:12px;height:28px}
+  .editor-actions button{width:32px;height:32px}
+  .editor-actions button .material-symbols-outlined{font-size:20px}
+  .editor-actions button[title="Select line"]{display:none}
+  .sidebar-toggle{display:flex;align-items:center;justify-content:center;width:32px;height:32px}
+  .workspace{flex-direction:column;position:relative}
+  .sidebar{position:absolute;top:0;left:0;width:100%;height:45vh;max-height:45vh;z-index:20;border-right:none;border-bottom:2px solid #2d2d2d;display:none;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .sidebar.mobile-open{display:flex}
+  .editor-pane{flex:1;min-height:0}
+  .editor-tabs{min-height:32px}
+  .editor-tab{padding:5px 10px;height:32px;font-size:12px;max-width:140px}
+  .CodeMirror{font-size:14px!important}
+  .editor-status{font-size:11px;height:20px;line-height:20px}
+  .empty-editor{font-size:14px}
 }
 </style>
 
+<div class="editor-page">
 <div class="editor-toolbar">
   <div class="left">
+    <button class="sidebar-toggle" title="Toggle files" onclick="toggleSidebar()"><span class="material-symbols-outlined" style="font-size:22px">folder</span></button>
     <h1 class="section-title" style="margin:0;">{{ project.name }}</h1>
-    <span style="color:var(--muted);font-size:13px;">Code editor</span>
+    <span class="editor-subtitle" style="color:var(--muted);font-size:13px;">Code editor</span>
+    <div class="editor-actions">
+      <button title="Undo" onclick="editorUndo()"><span class="material-symbols-outlined">undo</span></button>
+      <button title="Redo" onclick="editorRedo()"><span class="material-symbols-outlined">redo</span></button>
+      <div style="width:1px;background:#454545;height:20px;margin:0 4px"></div>
+      <button title="Cut" onclick="editorCut()"><span class="material-symbols-outlined">content_cut</span></button>
+      <button title="Copy" onclick="editorCopy()"><span class="material-symbols-outlined">content_copy</span></button>
+      <button title="Paste" onclick="editorPaste()"><span class="material-symbols-outlined">content_paste</span></button>
+      <div style="width:1px;background:#454545;height:20px;margin:0 4px"></div>
+      <button title="Select all" onclick="editorSelectAll()"><span class="material-symbols-outlined">select_all</span></button>
+      <button title="Select line" onclick="editorSelectLine()"><span class="material-symbols-outlined">format_line_spacing</span></button>
+    </div>
   </div>
   <div class="right">
     <button class="btn btn-secondary btn-sm" onclick="saveCurrentFile()">Save</button>
     <a class="btn btn-secondary btn-sm" href="/projects/{{ project.id }}">← Back</a>
-    <a class="btn btn-secondary btn-sm" href="/projects">← Projects</a>
   </div>
 </div>
 
@@ -145,8 +210,37 @@
     </div>
   </div>
 </div>
+</div>
 
 
+
+<div id="contextMenu" class="context-menu" style="display:none;">
+  <div class="context-item" onclick="contextNewFile()"><span class="material-symbols-outlined" style="font-size:18px">note_add</span> New File</div>
+  <div class="context-item" onclick="contextNewFolder()"><span class="material-symbols-outlined" style="font-size:18px">create_new_folder</span> New Folder</div>
+  <div class="context-separator"></div>
+  <div class="context-item" onclick="contextCut()"><span class="material-symbols-outlined" style="font-size:18px">content_cut</span> Cut</div>
+  <div class="context-item" onclick="contextCopy()"><span class="material-symbols-outlined" style="font-size:18px">content_copy</span> Copy</div>
+  <div id="contextPasteItem" class="context-item" onclick="contextPaste()" style="display:none;"><span class="material-symbols-outlined" style="font-size:18px">content_paste</span> Paste</div>
+  <div id="contextKeepSource" class="context-keep-source" style="display:none;">
+    <span class="muted">Moving <span id="cutSourceName"></span></span>
+    <button class="link" onclick="contextCancelCut()">keep source unchanged</button>
+  </div>
+  <div class="context-separator"></div>
+  <div class="context-item" onclick="contextRename()"><span class="material-symbols-outlined" style="font-size:18px">edit</span> Rename</div>
+  <div class="context-item" onclick="contextDelete()"><span class="material-symbols-outlined" style="font-size:18px">delete</span> Delete</div>
+</div>
+
+<div id="editorContextMenu" class="context-menu" style="display:none;">
+  <div class="context-item" onclick="editorUndo()"><span class="material-symbols-outlined" style="font-size:18px">undo</span> Undo</div>
+  <div class="context-item" onclick="editorRedo()"><span class="material-symbols-outlined" style="font-size:18px">redo</span> Redo</div>
+  <div class="context-separator"></div>
+  <div class="context-item" onclick="editorCut()"><span class="material-symbols-outlined" style="font-size:18px">content_cut</span> Cut</div>
+  <div class="context-item" onclick="editorCopy()"><span class="material-symbols-outlined" style="font-size:18px">content_copy</span> Copy</div>
+  <div class="context-item" onclick="editorPaste()"><span class="material-symbols-outlined" style="font-size:18px">content_paste</span> Paste</div>
+  <div class="context-separator"></div>
+  <div class="context-item" onclick="editorSelectAll()"><span class="material-symbols-outlined" style="font-size:18px">select_all</span> Select All</div>
+  <div class="context-item" onclick="editorSelectLine()"><span class="material-symbols-outlined" style="font-size:18px">format_line_spacing</span> Select Line</div>
+</div>
 
 <div id="nameModal" class="modal-overlay" style="display:none;">
   <div class="modal-box" style="max-width:360px;">
@@ -163,6 +257,9 @@
 const pid={{ project.id }};
 let openFiles=[], activeFile=null, editorInst=null, flatFiles=[], folderExpanded={}, treeFilter='';
 let createModalType='file', createModalFolder='';
+let ctxMenuTarget={type:'root',path:''};
+let modalMode='create', renameOldPath='';
+let cutPath='';
 
 const FILE_SVGS={
   python:'<svg class="file-icon python" viewBox="0 0 24 24"><path d="M12 2c-2 0-3.8.2-5.2.6-1.4.4-2.5 1-3.1 1.7-.6.7-.9 1.6-.7 2.5.2.9.8 1.7 1.7 2.3V8c0 1.1.5 2.1 1.4 2.9.9.7 2.1 1.1 3.4 1.1h4.4c.7 0 1.3.2 1.8.5.5.3.7.7.7 1.2v.8c-1.1.4-1.9 1-2.4 1.7-.5.7-.7 1.6-.5 2.5.2.9.8 1.7 1.7 2.3.9.6 2.1.9 3.4.9h.7c.2.8.6 1.5 1.2 2 .6.5 1.4.8 2.2.8.8 0 1.6-.3 2.2-.8.6-.5 1-1.2 1.2-2h.7c1.5 0 2.7-.5 3.6-1.4.9-.9 1.3-2.1 1.3-3.5v-4c0-1.3-.4-2.4-1.2-3.2-.8-.8-1.9-1.2-3.2-1.2H12.3c-.8 0-1.4-.2-1.9-.6-.5-.4-.7-.9-.7-1.5v-.7c1.2-.5 2-1.2 2.5-2 .5-.8.6-1.7.4-2.6C12.2 3 11.6 2.4 10.8 2c-.6-.2-1.2-.3-1.8-.3zM9 5.5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1zm6 10.5c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1z"/></svg>',
@@ -247,7 +344,7 @@ function renderNode(node,depth,pathPrefix){
   var div=document.createElement('div');
   // folder row
   var row=document.createElement('div');
-  row.className='tree-item tree-folder';
+  row.className='tree-item tree-folder'+(dirPath===cutPath?' cut':'');
   row.setAttribute('data-path',dirPath);
   row.setAttribute('data-isdir','true');
   row.style.paddingLeft=(8+depth*14)+'px';
@@ -268,7 +365,7 @@ function renderNode(node,depth,pathPrefix){
     var f=node.files[fi];
     if(treeFilter && !shouldShow(f.path)) continue;
     var frow=document.createElement('div');
-    frow.className='tree-item file'+(f.path===activeFile?' active':'');
+    frow.className='tree-item file'+(f.path===activeFile?' active':'')+(f.path===cutPath?' cut':'');
     frow.setAttribute('data-path',f.path);
     frow.setAttribute('data-isdir','false');
     frow.style.paddingLeft=(8+(depth+1)*14)+'px';
@@ -289,7 +386,7 @@ function renderTree(){
     var f=root.files[i];
     if(treeFilter && !shouldShow(f.path)) continue;
     var row=document.createElement('div');
-    row.className='tree-item file'+(f.path===activeFile?' active':'');
+    row.className='tree-item file'+(f.path===activeFile?' active':'')+(f.path===cutPath?' cut':'');
     row.setAttribute('data-path',f.path);
     row.setAttribute('data-isdir','false');
     row.style.paddingLeft='8px';
@@ -352,6 +449,8 @@ function makeEditor(mountId,lang,value){
     lineWrapping:false,
     extraKeys:{"Ctrl-S":function(){saveCurrentFile();},"Tab":function(){cm.replaceSelection("  ","end");}}
   });
+  attachCustomScroll(cm.getWrapperElement().querySelector('.CodeMirror-scroll'));
+  cm.getWrapperElement().addEventListener('contextmenu',function(e){ showEditorContextMenu(e); });
   return cm;
 }
 
@@ -368,7 +467,7 @@ async function openFile(path){
   var r=await fetch('/api/projects/'+pid+'/files/'+encodeURIComponent(path));
   var d=await r.json();
   var box=document.getElementById('editorBox');
-  box.innerHTML='<div id="editor-mount" style="height:100%;"></div>';
+  box.innerHTML='<div id="editor-mount" style="position:absolute;inset:0;"></div>';
   editorInst=makeEditor('editor-mount',guessLang(path),d.content||'');
   editorInst.on('change',function(){var f=openFiles.find(function(x){return x.path===activeFile;});if(f){f.dirty=true;renderTabs();}});
   editorInst.on('update',updateStatus);
@@ -404,17 +503,169 @@ function setTheme(){
   if(editorInst) editorInst.setOption('theme',isDark?'dracula':'default');
 }
 
-// Modal helpers for new file/folder
-function showCreateModal(type,basePath){createModalType=type;createModalFolder=basePath||'';document.getElementById('nameModalTitle').textContent=type==='file'?'New file':'New folder';document.getElementById('nameModalInput').value='';document.getElementById('nameModal').style.display='flex';document.getElementById('nameModalInput').focus();}
-function closeNameModal(){document.getElementById('nameModal').style.display='none';}
+function showCreateModal(type,basePath){createModalType=type;createModalFolder=basePath||'';modalMode='create';renameOldPath='';document.getElementById('nameModalTitle').textContent=type==='file'?'New file':'New folder';document.getElementById('nameModalInput').value='';document.getElementById('nameModal').style.display='flex';document.getElementById('nameModalInput').focus();}
+function closeNameModal(){document.getElementById('nameModal').style.display='none';modalMode='create';renameOldPath='';}
 async function nameModalOk(){
   var name=document.getElementById('nameModalInput').value.trim(); if(!name){closeNameModal();return;}
+  if(modalMode==='rename' && renameOldPath){
+    var base=renameOldPath.includes('/')?renameOldPath.substring(0,renameOldPath.lastIndexOf('/')):'';
+    var newPath=base?base+'/'+name:name;
+    var r=await fetch('/api/projects/'+pid+'/files/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:renameOldPath,destination:newPath})});
+    var d=await r.json().catch(function(){return {};});
+    closeNameModal();
+    await loadFiles();
+    if(activeFile===renameOldPath){ activeFile=newPath; renderTabs(); updateStatus(); }
+    renameOldPath=''; modalMode='create';
+    showToast(r.ok?'Renamed':'Rename failed: '+(d.detail||r.statusText),r.ok?'success':'error');
+    return;
+  }
   var rel=createModalFolder?createModalFolder+'/'+name:name;
   var url=createModalType==='folder'?'/api/projects/'+pid+'/mkdir/'+encodeURIComponent(rel):'/api/projects/'+pid+'/files/'+encodeURIComponent(rel);
   var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:''})});
   var d=await r.json().catch(function(){return {};});
   closeNameModal(); await loadFiles();
   showToast(r.ok?'Created':'Create failed: '+(d.detail||r.statusText),r.ok?'success':'error');
+}
+
+function showContextMenu(e,type,path){
+  e.preventDefault(); e.stopPropagation();
+  ctxMenuTarget={type:type,path:path||''};
+  updateContextMenuState();
+  const menu=document.getElementById('contextMenu');
+  menu.style.display='block';
+  const x=Math.min(e.clientX, window.innerWidth-menu.offsetWidth-8);
+  const y=Math.min(e.clientY, window.innerHeight-menu.offsetHeight-8);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function updateContextMenuState(){
+  const paste=document.getElementById('contextPasteItem');
+  const keep=document.getElementById('contextKeepSource');
+  const name=document.getElementById('cutSourceName');
+  if(cutPath){
+    paste.style.display='flex';
+    keep.style.display='flex';
+    name.textContent=cutPath.split('/').pop();
+  }else{
+    paste.style.display='none';
+    keep.style.display='none';
+  }
+}
+function hideContextMenu(){document.getElementById('contextMenu').style.display='none';}
+function contextBasePath(){
+  if(ctxMenuTarget.type==='folder') return ctxMenuTarget.path;
+  if(ctxMenuTarget.type==='file'){
+    const p=ctxMenuTarget.path;
+    return p.includes('/')?p.substring(0,p.lastIndexOf('/')):'';
+  }
+  return '';
+}
+function contextNewFile(){showCreateModal('file',contextBasePath()); hideContextMenu();}
+function contextNewFolder(){showCreateModal('folder',contextBasePath()); hideContextMenu();}
+function contextCopy(){
+  var p=ctxMenuTarget.path; if(!p) return;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(p).then(function(){ showToast('Copied path','success'); }).catch(function(){ showToast('Copy failed','error'); });
+  }else{
+    var ta=document.createElement('textarea'); ta.value=p; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); showToast('Copied path','success');}catch(e){showToast('Copy failed','error');} document.body.removeChild(ta);
+  }
+  hideContextMenu();
+}
+function contextCut(){
+  var p=ctxMenuTarget.path; if(!p) return;
+  cutPath=p; renderTree();
+  showToast('Cut '+p.split('/').pop()+'. Right-click destination and Paste.','success');
+  hideContextMenu();
+}
+function contextCancelCut(){
+  cutPath=''; renderTree();
+  hideContextMenu();
+}
+async function contextPaste(){
+  if(!cutPath){ hideContextMenu(); return; }
+  var targetDir='';
+  if(ctxMenuTarget.type==='folder') targetDir=ctxMenuTarget.path;
+  else if(ctxMenuTarget.type==='file') targetDir=ctxMenuTarget.path.includes('/')?ctxMenuTarget.path.substring(0,ctxMenuTarget.path.lastIndexOf('/')):'';
+  var name=cutPath.split('/').pop();
+  var dest=targetDir?targetDir+'/'+name:name;
+  var r=await fetch('/api/projects/'+pid+'/files/move',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:cutPath,destination:dest})});
+  var d=await r.json().catch(function(){return {};});
+  if(r.ok){ cutPath=''; await loadFiles(); showToast('Moved','success'); }
+  else { showToast('Move failed: '+(d.detail||r.statusText),'error'); }
+  hideContextMenu();
+}
+
+document.getElementById('fileTree').addEventListener('contextmenu',function(e){
+  hideEditorContextMenu();
+  let el=e.target;
+  while(el && el!==this){
+    if(el.classList && el.classList.contains('tree-item')) break;
+    el=el.parentNode;
+  }
+  if(el && el.classList.contains('tree-item')){
+    showContextMenu(e, el.getAttribute('data-isdir')==='true'?'folder':'file', el.getAttribute('data-path'));
+  }else{
+    showContextMenu(e,'root','');
+  }
+});
+document.addEventListener('click',function(e){
+  const menu=document.getElementById('contextMenu'); if(!menu) return;
+  if(!menu.contains(e.target)) hideContextMenu();
+  const emenu=document.getElementById('editorContextMenu'); if(emenu && !emenu.contains(e.target)) hideEditorContextMenu();
+});
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ hideContextMenu(); hideEditorContextMenu(); } });
+
+function contextRename(){
+  var p=ctxMenuTarget.path; if(!p) return;
+  renameOldPath=p; modalMode='rename';
+  document.getElementById('nameModalTitle').textContent='Rename';
+  document.getElementById('nameModalInput').value=p.split('/').pop();
+  document.getElementById('nameModal').style.display='flex';
+  document.getElementById('nameModalInput').focus();
+  hideContextMenu();
+}
+function contextDelete(){
+  var p=ctxMenuTarget.path; if(!p) return;
+  hideContextMenu();
+  showConfirmModal('Delete','Are you sure you want to delete '+p+'?','Delete','btn-danger',function(){
+    fetch('/api/projects/'+pid+'/files/'+encodeURIComponent(p),{method:'DELETE'}).then(async function(r){
+      var d=await r.json().catch(function(){return {};}); await loadFiles();
+      if(activeFile===p){ activeFile=null; editorInst=null; document.getElementById('editorBox').innerHTML='<div class="empty-editor">Select a file to start editing</div>'; openFiles=openFiles.filter(function(f){return f.path!==p;}); renderTabs(); updateStatus(); }
+      showToast(r.ok?'Deleted':'Delete failed: '+(d.detail||r.statusText),r.ok?'success':'error');
+    });
+  });
+}
+
+function editorUndo(){ if(editorInst){ editorInst.undo(); editorInst.focus(); } }
+function editorRedo(){ if(editorInst){ editorInst.redo(); editorInst.focus(); } }
+function editorCut(){ if(editorInst){ var sel=editorInst.getSelection(); if(sel){ editorInst.replaceSelection(''); try{navigator.clipboard.writeText(sel);}catch(e){} editorInst.focus(); } } }
+function editorCopy(){ if(editorInst){ var sel=editorInst.getSelection(); if(sel){ try{navigator.clipboard.writeText(sel);}catch(e){} editorInst.focus(); } } }
+async function editorPaste(){ if(editorInst){ try{ var txt=await navigator.clipboard.readText(); if(txt!==undefined){ editorInst.replaceSelection(txt); } editorInst.focus(); }catch(e){ showToast('Paste failed','error'); } } }
+function editorSelectAll(){ if(editorInst){ editorInst.execCommand('selectAll'); editorInst.focus(); } }
+function editorSelectLine(){ if(editorInst){ var cur=editorInst.getCursor(); editorInst.setSelection({line:cur.line,ch:0},{line:cur.line,ch:editorInst.getLine(cur.line).length}); editorInst.focus(); } }
+function showEditorContextMenu(e){
+  if(!editorInst) return;
+  e.preventDefault(); e.stopPropagation();
+  const menu=document.getElementById('editorContextMenu');
+  menu.style.display='block';
+  const x=Math.min(e.clientX, window.innerWidth-menu.offsetWidth-8);
+  const y=Math.min(e.clientY, window.innerHeight-menu.offsetHeight-8);
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function hideEditorContextMenu(){document.getElementById('editorContextMenu').style.display='none';}
+
+function attachCustomScroll(el){
+  if(!el) return;
+  var t;
+  function hide(){ el.classList.add('scroll-hide'); }
+  function show(){ el.classList.remove('scroll-hide'); clearTimeout(t); t=setTimeout(hide,1500); }
+  el.addEventListener('scroll',show);
+  el.addEventListener('mouseenter',function(){ el.classList.remove('scroll-hide'); clearTimeout(t); });
+  el.addEventListener('mouseleave',function(){ t=setTimeout(hide,1500); });
+}
+attachCustomScroll(document.getElementById('fileTree'));
+
+function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('mobile-open');
 }
 
 function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
