@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from pathlib import Path
 import io, zipfile, json, os, urllib.request, urllib.error, subprocess, time, sys
 from app.core.db import get_db, SessionLocal
-from app.core.config import settings
+from app.core.config import settings, log_login_attempt, log_login_success, log_login_failure
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
 from app.core.utils import find_free_ports
 from app.models.project import (
@@ -34,6 +34,8 @@ from app.services.file_scanner import scan_downloaded_repo
 from app.services.error_log_service import ErrorLogService
 import yaml, urllib.parse, shutil
 
+
+from app.env_maker import refine_env, validate_env_content
 
 def _extract_host_port_from_compose(content: str) -> Optional[int]:
     """Parse compose YAML and return the first host port found in services.*.ports."""
@@ -85,15 +87,20 @@ class LoginBody(BaseModel):
 @router.post("/login")
 def api_login(data: LoginBody, response: Response, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else ""
+    ua = request.headers.get("user-agent", "")
+    log_login_attempt(data.user, ip, ua)
     if not RateLimitService.limit_login(ip):
-        AuditService.log(db, "login_denied", target=data.user, details="rate limited", ip=ip, user_agent=request.headers.get("user-agent",""))
+        AuditService.log(db, "login_denied", target=data.user, details="rate limited", ip=ip, user_agent=ua)
+        log_login_failure(data.user, ip, ua, reason="rate_limited")
         raise HTTPException(status_code=429, detail="Too many login attempts")
     if verify(data.user, data.pass_):
         for k, v in login_user(data.user).items():
             response.set_cookie(k, v, httponly=True, samesite="lax")
-        AuditService.log(db, "login", target=data.user, details="success", user=data.user, ip=ip, user_agent=request.headers.get("user-agent",""))
+        AuditService.log(db, "login", target=data.user, details="success", user=data.user, ip=ip, user_agent=ua)
+        log_login_success(data.user, ip, ua)
         return {"ok": True}
-    AuditService.log(db, "login_failed", target=data.user, details="bad password", ip=ip, user_agent=request.headers.get("user-agent",""))
+    AuditService.log(db, "login_failed", target=data.user, details="bad password", ip=ip, user_agent=ua)
+    log_login_failure(data.user, ip, ua, reason="bad_password")
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.post("/logout")

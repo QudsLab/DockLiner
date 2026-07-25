@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from app.core.config import settings
+from app.core.config import settings, resolve_port, resolve_hosts
 from app.core.db import init_db
 from app.core.error_middleware import ErrorLogMiddleware
 from app.routers import api, pages
 from app.services.dockliner_service import DockLinerService
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="DockLiner", version=settings.VERSION)
@@ -17,8 +18,11 @@ def create_app() -> FastAPI:
     app.include_router(api.router)
     return app
 
+
 app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True, log_level="info")
+    port = resolve_port()
+    host = resolve_hosts()[0]
+    uvicorn.run("main:app", host=host, port=port, reload=True, log_level="info")

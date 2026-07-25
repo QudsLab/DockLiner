@@ -1,24 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.core.config import settings
+from app.core.config import settings, build_database_url, resolve_db_mode
 
-def _build_database_url():
-    if settings.DATABASE_URL:
-        return settings.DATABASE_URL
-    db_type = settings.DB_TYPE.lower()
-    if db_type == "sqlite":
-        return f"sqlite:///{settings.DB_PATH}"
-    if db_type == "mysql":
-        driver = (settings.DB_DRIVER if settings.DB_DRIVER and "mysql" in settings.DB_DRIVER else "pymysql")
-        port = settings.DB_PORT or 3306
-        return f"mysql+{driver}://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{port}/{settings.DB_NAME}"
-    if db_type in ("postgres", "postgresql"):
-        driver = (settings.DB_DRIVER if settings.DB_DRIVER and "psycopg" in settings.DB_DRIVER else "psycopg2")
-        port = settings.DB_PORT or 5432
-        return f"postgresql+{driver}://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{port}/{settings.DB_NAME}"
-    raise ValueError(f"Unsupported DB_TYPE: {settings.DB_TYPE}")
-
-DATABASE_URL = _build_database_url()
+DATABASE_URL = build_database_url()
+MODE = resolve_db_mode()
 
 engine_kwargs = {}
 if DATABASE_URL.startswith("sqlite"):

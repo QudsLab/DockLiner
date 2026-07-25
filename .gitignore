@@ -17,3 +17,5 @@ x.html
 /projects
 /projects
 /github-cache
+*.db
+*.db+
