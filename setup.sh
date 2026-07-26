@@ -53,16 +53,10 @@ apt_install() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $pkgs >/dev/null
 }
 
-# Detect package manager
-has_pkg_manager() {
-  command -v apt-get &>/dev/null || command -v dnf &>/dev/null || command -v yum &>/dev/null
-}
-
 # Try to install missing packages; prints instructions and exits if impossible
 try_install() {
   local bin="$1"
   local pkg="$2"
-  shift 2
 
   if command -v "$bin" &>/dev/null; then
     return 0
@@ -87,13 +81,6 @@ try_install() {
   fi
 }
 
-# Resolve the python3-venv package for the default python3 version
-python_venv_pkg() {
-  local pyver
-  pyver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
-  echo "python${pyver}-venv"
-}
-
 # ------------------------------------------------------------------------------
 header "DockLiner one-run setup"
 info "Install dir: $INSTALL_DIR"
@@ -102,27 +89,9 @@ info "Install dir: $INSTALL_DIR"
 header "Checking dependencies"
 
 try_install git git
-
 try_install python3 python3
-
-# python3 is present, but venv module may be split out
-if ! python3 -m venv --help &>/dev/null; then
-  warn "python3 venv module is missing"
-  if [ "$(id -u)" -ne 0 ]; then
-    fail "Need root to install python3-venv. Run as root or install it manually."
-    exit 1
-  fi
-  if command -v apt-get &>/dev/null; then
-    VENV_PKG="$(python_venv_pkg)"
-    run "Installing $VENV_PKG via apt" apt_install "$VENV_PKG"
-  else
-    fail "python3 venv module missing and auto-install only supported on apt systems."
-    exit 1
-  fi
-fi
-
 ok "git is installed"
-ok "python3 + venv are ready"
+ok "python3 is ready"
 
 # --- 2. Clone or update -------------------------------------------------------
 if [ -d "$INSTALL_DIR/.git" ]; then
@@ -135,23 +104,35 @@ else
   cd "$INSTALL_DIR"
 fi
 
-# --- 3. Create Python virtual environment -------------------------------------
-if [ ! -d "$INSTALL_DIR/venv" ]; then
-  header "Creating Python virtual environment"
-  run "Creating venv" python3 -m venv "$INSTALL_DIR/venv"
-else
-  ok "Virtual environment exists"
+# --- 3. Ensure python3-pip is available -------------------------------------
+if ! python3 -m pip --version &>/dev/null; then
+  warn "python3-pip is missing"
+  if [ "$(id -u)" -ne 0 ]; then
+    fail "Need root to install python3-pip. Run as root or install it manually."
+    exit 1
+  fi
+  if command -v apt-get &>/dev/null; then
+    run "Installing python3-pip via apt" apt_install python3-pip
+  elif command -v dnf &>/dev/null; then
+    run "Installing python3-pip via dnf" dnf install -y python3-pip
+  elif command -v yum &>/dev/null; then
+    run "Installing python3-pip via yum" yum install -y python3-pip
+  else
+    fail "python3-pip missing and no supported package manager found."
+    exit 1
+  fi
 fi
+ok "python3-pip is ready"
 
 # --- 4. Install / upgrade Python dependencies ---------------------------------
 header "Installing Python dependencies"
-run "Upgrading pip" "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
-run "Installing requirements" "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+run "Upgrading pip" python3 -m pip install --upgrade pip
+run "Installing requirements" python3 -m pip install -r "$INSTALL_DIR/requirements.txt"
 
 # --- 5. Ensure .env exists (env-driven config) -------------------------------
 if [ ! -f "$INSTALL_DIR/.env" ]; then
   header "Creating default .env"
-  run "Generating default environment" "$INSTALL_DIR/venv/bin/python" -c \
+  run "Generating default environment" python3 -c \
     "from app.env_maker import refine_env; print(refine_env(''))" \> "$INSTALL_DIR/.env"
 else
   ok "Environment file exists"
@@ -175,10 +156,10 @@ Type=simple
 User=root
 Group=docker
 WorkingDirectory=$INSTALL_DIR
-Environment="PATH=$INSTALL_DIR/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="DOCKLINER_SERVICE=$SERVICE_NAME"
 Environment="DOCKLINER_ENV_FILE=$INSTALL_DIR/.env"
-ExecStart=$INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py
+ExecStart=python3 $INSTALL_DIR/main.py
 Restart=on-failure
 RestartSec=5
 
@@ -192,7 +173,7 @@ EOF
   systemctl restart "$SERVICE_NAME" || warn "Service start failed; check 'systemctl status $SERVICE_NAME'"
 else
   warn "systemd not detected; skipping service installation"
-  info "To start manually: $INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py"
+  info "To start manually: python3 $INSTALL_DIR/main.py"
 fi
 
 # --- 8. Done ------------------------------------------------------------------
