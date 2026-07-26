@@ -126,8 +126,7 @@ ok "python3-pip is ready"
 
 # --- 4. Install / upgrade Python dependencies ---------------------------------
 header "Installing Python dependencies"
-run "Upgrading pip" python3 -m pip install --upgrade pip --break-system-packages
-run "Installing requirements" python3 -m pip install -r "$INSTALL_DIR/requirements.txt" --break-system-packages
+run "Installing requirements" python3 -m pip install --break-system-packages -r "$INSTALL_DIR/requirements.txt"
 
 # --- 5. Ensure .env exists (env-driven config) -------------------------------
 if [ ! -f "$INSTALL_DIR/.env" ]; then
