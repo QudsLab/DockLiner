@@ -30,40 +30,34 @@ if (Test-Path "$INSTALL_DIR\.git") {
     Set-Location $INSTALL_DIR
 }
 
-# 3. Create Python virtual environment
-if (-not (Test-Path "$INSTALL_DIR\venv")) {
-    Write-Host "==> Creating Python virtual environment" -ForegroundColor Cyan
-    python -m venv "$INSTALL_DIR\venv"
-}
-
-# 4. Install / upgrade Python dependencies
+# 3. Install / upgrade Python dependencies
 Write-Host "==> Installing Python dependencies" -ForegroundColor Cyan
-& "$INSTALL_DIR\venv\Scripts\python.exe" -m pip install --upgrade pip
-& "$INSTALL_DIR\venv\Scripts\pip.exe" install -r "$INSTALL_DIR\requirements.txt"
+python -m pip install --upgrade pip
+python -m pip install -r "$INSTALL_DIR\requirements.txt"
 
-# 5. Ensure .env exists
+# 4. Ensure .env exists
 if (-not (Test-Path "$INSTALL_DIR\.env")) {
     Write-Host "==> Creating default .env" -ForegroundColor Cyan
-    $envContent = & "$INSTALL_DIR\venv\Scripts\python.exe" -c "from app.env_maker import refine_env; print(refine_env(''))"
+    $envContent = python -c "from app.env_maker import refine_env; print(refine_env(''))"
     Set-Content -Path "$INSTALL_DIR\.env" -Value $envContent -Encoding UTF8
 }
 
-# 6. Ensure required directories exist
+# 5. Ensure required directories exist
 New-Item -ItemType Directory -Force -Path "$INSTALL_DIR\projects" | Out-Null
 New-Item -ItemType Directory -Force -Path "$INSTALL_DIR\downloads" | Out-Null
 New-Item -ItemType Directory -Force -Path "$INSTALL_DIR\logs" | Out-Null
 
-# 7. Try to create a Windows service via nssm (optional)
+# 6. Try to create a Windows service via nssm (optional)
 $Nssm = Get-Command nssm -ErrorAction SilentlyContinue
 if ($Nssm) {
     Write-Host "==> Installing Windows service: $SERVICE_NAME" -ForegroundColor Cyan
-    & nssm install $SERVICE_NAME "$INSTALL_DIR\venv\Scripts\python.exe" "$INSTALL_DIR\main.py"
+    & nssm install $SERVICE_NAME python "$INSTALL_DIR\main.py"
     nssm set $SERVICE_NAME AppDirectory $INSTALL_DIR
     nssm set $SERVICE_NAME AppEnvironmentExtra "DOCKLINER_SERVICE=$SERVICE_NAME"
     Start-Service $SERVICE_NAME -ErrorAction SilentlyContinue
 } else {
     Write-Host "==> nssm not found; skipping Windows service installation" -ForegroundColor Yellow
-    Write-Host "    To start manually: $INSTALL_DIR\venv\Scripts\python.exe $INSTALL_DIR\main.py"
+    Write-Host "    To start manually: python $INSTALL_DIR\main.py"
 }
 
 # 8. Done
