@@ -1094,11 +1094,22 @@ def update_system_config(data: ConfigUpdate, user: str = Depends(require_auth)):
 def restart_server(user: str = Depends(require_auth)):
     service = os.environ.get("DOCKLINER_SERVICE", "")
     if service:
-        try:
-            subprocess.Popen(["systemctl", "restart", service], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"systemctl restart failed: {e}")
-        return {"ok": True, "mode": "service", "service": service}
+        if os.name == "nt":
+            # Windows: try sc/netsvc, then fallback to dev restart
+            for cmd in (["net", "stop", service], ["net", "start", service]), (["sc", "stop", service], ["sc", "start", service]):
+                try:
+                    subprocess.run(cmd[0], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+                    subprocess.run(cmd[1], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+                    return {"ok": True, "mode": "service", "service": service, "method": cmd[0][0]}
+                except Exception:
+                    continue
+            # If no Windows service command worked, fall through to dev restart
+        else:
+            try:
+                subprocess.Popen(["systemctl", "restart", service], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+                return {"ok": True, "mode": "service", "service": service, "method": "systemctl"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"systemctl restart failed: {e}")
     # Fallback: detached self-restart (dev mode)
     root = Path(__file__).resolve().parent.parent.parent
     restart_script = root / "scripts" / "restart.py"
