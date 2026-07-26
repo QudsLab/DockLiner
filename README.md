@@ -120,24 +120,24 @@ Install or update DockLiner on Linux/macOS, Windows, or Windows Command Prompt w
 ### Linux / macOS / WSL
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | bash
-# or with a custom install directory:
-# curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | DOCKLINER_INSTALL_DIR=/data/dockliner bash
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh -o setup.sh && bash setup.sh
 ```
 
-### Windows (PowerShell)
+### Windows PowerShell
 
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.ps1" -OutFile "$env:TEMP\setup.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\setup.ps1"
+irm https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.ps1 | iex
 ```
 
-### Windows (Command Prompt)
+### Windows Command Prompt
 
 ```batch
-curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.bat -o %TEMP%\setup.bat && %TEMP%\setup.bat
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.bat -o setup.bat && setup.bat
 ```
 
-After setup the service runs on `http://<server-ip>:50021`. Default credentials are `root` / `qwer.1234` — change them in **Settings → Config** after first login.
+After setup the web UI is available at the `DOCKLINER_PORT` from `.env` (default **50021**). Default user: `root` / `qwer.1234`.
+
+Need to remove it? See [Uninstall](#uninstall) below.
 
 ## Manual setup
 
@@ -181,6 +181,28 @@ DOCKLINER_DATABASE_URL=postgresql+psycopg2://dockliner:secret@localhost/dockline
 3. Install dependencies: `pip install -r requirements.txt`.
 4. Run: `$INSTALL_DIR/venv/bin/python main.py` (or use `setup.sh` to create a systemd service).
 5. Open `http://localhost:8080` and log in.
+
+## Uninstall
+
+Run the matching uninstall script for your OS. It stops/removes the service, deletes the install directory, then deletes the uninstall script itself. A live database (`db/` when `DOCKLINER_DB_TYPE` is not `sqlite`) is preserved by default.
+
+### Linux / macOS / WSL
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/uninstall.sh -o uninstall.sh && bash uninstall.sh
+```
+
+### Windows PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/QudsLab/DockLiner/main/uninstall.ps1 | iex
+```
+
+### Windows Command Prompt
+
+```batch
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/uninstall.bat -o uninstall.bat && uninstall.bat
+```
 
 ## Status
 
