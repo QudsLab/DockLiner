@@ -923,7 +923,10 @@ def debug_routes(request: Request, user: str = Depends(require_auth)):
 
 @router.post("/tokens", response_model=AccessTokenOut)
 def create_token(data: AccessTokenCreate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    t = AccessToken(name=data.name, token=data.token, provider=data.provider)
+    clean_token = (data.token or "").strip()
+    if not clean_token:
+        raise HTTPException(status_code=400, detail="Token is required")
+    t = AccessToken(name=data.name, token=clean_token, provider=data.provider or "github")
     db.add(t)
     db.commit()
     db.refresh(t)
@@ -939,6 +942,24 @@ def delete_token(tid: int, db: Session = Depends(get_db), user: str = Depends(re
     db.commit()
     AuditService.log(db, "token_delete", target=t.name, user=user)
     return {"ok": True}
+
+@router.post("/tokens/{tid}/test")
+def test_token(tid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    t = db.query(AccessToken).filter(AccessToken.id == tid).first()
+    if not t:
+        raise HTTPException(status_code=404, detail="Token not found")
+    token_str = str(t.token or "").strip()
+    if not token_str:
+        return {"ok": False, "login": None, "scopes": [], "error": "Token is empty"}
+    try:
+        data, scopes = _github_get_with_headers("https://api.github.com/user", token_str)
+        scope_list = [s.strip() for s in (scopes or "").split(",") if s.strip()]
+        return {"ok": True, "login": data.get("login"), "scopes": scope_list, "error": None}
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")[:500]
+        return {"ok": False, "login": None, "scopes": [], "error": f"HTTP {e.code}: {body}"}
+    except Exception as e:
+        return {"ok": False, "login": None, "scopes": [], "error": str(e)[:500]}
 
 # ---------- Audit ----------
 
