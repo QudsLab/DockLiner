@@ -31,29 +31,23 @@ if exist "%INSTALL_DIR%\.git" (
     cd /d "%INSTALL_DIR%"
 )
 
-REM 3. Create venv
-if not exist "%INSTALL_DIR%\venv" (
-    echo ==^> Creating Python virtual environment
-    python -m venv "%INSTALL_DIR%\venv"
-)
-
-REM 4. Install dependencies
+REM 3. Install dependencies
 echo ==^> Installing Python dependencies
-"%INSTALL_DIR%\venv\Scripts\python.exe" -m pip install --upgrade pip
-"%INSTALL_DIR%\venv\Scripts\pip.exe" install -r "%INSTALL_DIR%\requirements.txt"
+python -m pip install --upgrade pip
+python -m pip install -r "%INSTALL_DIR%\requirements.txt"
 
-REM 5. Ensure .env exists
+REM 4. Ensure .env exists
 if not exist "%INSTALL_DIR%\.env" (
     echo ==^> Creating default .env
-    "%INSTALL_DIR%\venv\Scripts\python.exe" -c "from app.env_maker import refine_env; print(refine_env(''))" > "%INSTALL_DIR%\.env"
+    python -c "from app.env_maker import refine_env; print(refine_env(''))" > "%INSTALL_DIR%\.env"
 )
 
-REM 6. Ensure dirs exist
+REM 5. Ensure dirs exist
 mkdir "%INSTALL_DIR%\projects" 2>NUL
 mkdir "%INSTALL_DIR%\downloads" 2>NUL
 mkdir "%INSTALL_DIR%\logs" 2>NUL
 
-REM 7. Start hint
+REM 6. Start hint
 for /f "tokens=2 delims==" %%a in ('findstr /B "DOCKLINER_PORT=" "%INSTALL_DIR%\.env"') do set "WEB_PORT=%%a"
 if "%WEB_PORT%"=="" set "WEB_PORT=50021"
 
@@ -66,4 +60,4 @@ echo Service     : %SERVICE_NAME%
 echo Web UI      : http://127.0.0.1:%WEB_PORT%
 echo Default user: root / qwer.1234
 echo ===============================================
-echo To start manually: "%INSTALL_DIR%\venv\Scripts\python.exe" "%INSTALL_DIR%\main.py"
+echo To start manually: python "%INSTALL_DIR%\main.py"
