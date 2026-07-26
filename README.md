@@ -115,7 +115,9 @@ A lightweight, self-hosted deployment manager for personal Docker-based projects
 
 ## One-run setup (recommended)
 
-Install or update DockLiner, dependencies, systemd service, and default `.env` with one command:
+Install or update DockLiner on Linux/macOS, Windows, or Windows Command Prompt with the included scripts. The logo is in `app/static/img/logo_dark.svg`.
+
+### Linux / macOS / WSL
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | bash
@@ -123,7 +125,19 @@ curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | b
 # curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.sh | DOCKLINER_INSTALL_DIR=/data/dockliner bash
 ```
 
-After setup the service runs on `http://<server-ip>:8080`. Default credentials are `root` / `qwer.1234` — change them in **Settings → Config** after first login.
+### Windows (PowerShell)
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.ps1" -OutFile "$env:TEMP\setup.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\setup.ps1"
+```
+
+### Windows (Command Prompt)
+
+```batch
+curl -fsSL https://raw.githubusercontent.com/QudsLab/DockLiner/main/setup.bat -o %TEMP%\setup.bat && %TEMP%\setup.bat
+```
+
+After setup the service runs on `http://<server-ip>:50021`. Default credentials are `root` / `qwer.1234` — change them in **Settings → Config** after first login.
 
 ## Manual setup
 
