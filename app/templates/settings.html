@@ -128,21 +128,23 @@
 
 <!-- Access Tokens -->
 <div class="settings-view" data-view="tokens" id="tokens">
-  <div class="card" id="tokens">
+  <div class="card">
     <h2 class="section-title">Access Tokens</h2>
-    <form onsubmit="return createToken(this)" style="margin-top:12px;">
+    <form id="tokenForm" style="margin-top:12px;">
       <div class="form-row">
-        <div class="form-col"><label>Name</label><input class="input" name="name" required placeholder="github-pat-1"></div>
-        <div class="form-col"><label>Token</label><input class="input" name="token" required type="password" placeholder="ghp_..."></div>
-        <div class="form-col" style="align-self:end;"><button class="btn btn-primary has-icon"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Token</button></div>
+        <div class="form-col"><label>Name</label><input class="input" id="tokenName" name="name" required placeholder="github-pat-1"></div>
+        <div class="form-col"><label>Token</label><input class="input" id="tokenValue" name="token" required type="password" placeholder="ghp_..."></div>
+        <div class="form-col" style="align-self:end;"><button type="button" class="btn btn-primary has-icon" id="tokenAddBtn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Token</button></div>
       </div>
     </form>
+    <div id="tokenAddStatus" style="margin-top:8px;font-size:13px;"></div>
+    <noscript><p style="color:var(--error);font-size:13px;">JavaScript is required to add tokens securely.</p></noscript>
     {% if tokens %}
     <table class="table" style="margin-top:16px;">
-      <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Provider</th><th>Created</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
       {% for t in tokens %}
-        <tr><td>{{ t.name }}</td><td>GitHub</td><td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><button class="btn btn-danger btn-sm" onclick="confirmDeleteToken({{ t.id }})">Delete</button></td></tr>
+        <tr data-token-id="{{ t.id }}"><td>{{ t.name }}</td><td>GitHub</td><td>{{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td class="token-status">—</td><td><button type="button" class="btn btn-secondary btn-sm" onclick="testToken({{ t.id }},this)">Test</button> <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteToken({{ t.id }})">Delete</button></td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -197,12 +199,57 @@
 
 {% endblock %}
 {% block scripts %}<script>
+// ---- Token add (button-driven so the form can never submit natively) ----
+(function(){
+  const form = document.getElementById('tokenForm');
+  const btn = document.getElementById('tokenAddBtn');
+  if (form && btn){
+    form.addEventListener('submit', e => { e.preventDefault(); });
+    btn.addEventListener('click', () => createToken(form));
+  }
+})();
+
 function createToken(form){
   const fd=new FormData(form);
-  fetch('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:fd.get('name'),token:fd.get('token'),provider:'github'})})
-    .then(r=>{ if(r.ok) location.reload(); else { r.json().then(d=>showErrorModal('Access token', d.detail || 'Failed')).catch(()=>showErrorModal('Access token','Failed')); } })
-    .catch(e=>showErrorModal('Access token', 'Error: '+e.message));
+  const name = (fd.get('name') || '').toString().trim();
+  const token = (fd.get('token') || '').toString().trim();
+  const statusEl = document.getElementById('tokenAddStatus');
+  if (!token) { statusEl.innerHTML = '<span style="color:var(--error)">Token is required.</span>'; return false; }
+  statusEl.innerHTML = '<span style="color:var(--muted)">Saving...</span>';
+  fetch('/api/tokens',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,token:token,provider:'github'})})
+    .then(async r=>{
+      const d = await r.json().catch(() => ({}));
+      if(r.ok){
+        statusEl.innerHTML = '<span style="color:var(--success)">Token saved. Click <strong>Test</strong> next to it to verify.</span>';
+        setTimeout(() => location.reload(), 600);
+      } else {
+        statusEl.innerHTML = `<span style="color:var(--error)">${escapeHtml(d.detail || 'Failed to save token')}</span>`;
+      }
+    })
+    .catch(e=>{ statusEl.innerHTML = `<span style="color:var(--error)">Error: ${escapeHtml(e.message)}</span>`; });
   return false;
+}
+
+async function testToken(id, btn){
+  const row = btn.closest('tr');
+  const cell = row && row.querySelector('.token-status');
+  if (cell) cell.innerHTML = '<span style="color:var(--muted)">testing...</span>';
+  try {
+    const r = await fetch(`/api/tokens/${id}/test`, {method:'POST'});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (cell) cell.innerHTML = `<span style="color:var(--error)">HTTP ${r.status}</span>`;
+      return;
+    }
+    if (d.ok) {
+      const scopes = (d.scopes || []).join(', ') || 'no scopes header';
+      if (cell) cell.innerHTML = `<span style="color:var(--success)">✓ ${escapeHtml(d.login || 'ok')} (${escapeHtml(scopes)})</span>`;
+    } else {
+      if (cell) cell.innerHTML = `<span style="color:var(--error)">✗ ${escapeHtml(d.error || 'invalid')}</span>`;
+    }
+  } catch (e) {
+    if (cell) cell.innerHTML = `<span style="color:var(--error)">✗ ${escapeHtml(e.message)}</span>`;
+  }
 }
 
 function loadAppearance(){
