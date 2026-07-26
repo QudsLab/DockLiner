@@ -1,64 +1,170 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 REPO="https://github.com/QudsLab/DockLiner.git"
 INSTALL_DIR="/opt/dockliner"
 SERVICE_NAME="dockliner"
 
 # Allow override from environment
-if [ -n "$DOCKLINER_INSTALL_DIR" ]; then
-  INSTALL_DIR="$DOCKLINER_INSTALL_DIR"
-fi
+INSTALL_DIR="${DOCKLINER_INSTALL_DIR:-$INSTALL_DIR}"
 
-echo "==> DockLiner one-run setup"
-echo "Install dir: $INSTALL_DIR"
-
-# 1. Ensure dependencies
-echo "==> Checking dependencies"
-if ! command -v git &>/dev/null; then
-  echo "git is required. Install it first (e.g. apt install git / yum install git)."
-  exit 1
-fi
-
-if ! command -v python3 &>/dev/null; then
-  echo "python3 is required. Install it first (e.g. apt install python3 python3-venv python3-pip)."
-  exit 1
-fi
-
-# 2. Clone or update
-if [ -d "$INSTALL_DIR/.git" ]; then
-  echo "==> Updating existing repo at $INSTALL_DIR"
-  cd "$INSTALL_DIR"
-  git pull origin main
+# --- terminal-aware colors ---------------------------------------------------
+if [ -t 1 ] || [ "${CLICOLOR_FORCE:-0}" = "1" ]; then
+  BOLD=$(printf '%b' '\e[1m')
+  GREEN=$(printf '%b' '\e[0;32m')
+  YELLOW=$(printf '%b' '\e[0;33m')
+  RED=$(printf '%b' '\e[0;31m')
+  CYAN=$(printf '%b' '\e[0;36m')
+  DIM=$(printf '%b' '\e[0;90m')
+  RESET=$(printf '%b' '\e[0m')
+  CHECK='✓'
+  CROSS='✗'
+  INFO='•'
 else
-  echo "==> Cloning $REPO into $INSTALL_DIR"
-  git clone "$REPO" "$INSTALL_DIR"
+  BOLD='' GREEN='' YELLOW='' RED='' CYAN='' DIM='' RESET=''
+  CHECK='[OK]' CROSS='[ERR]' INFO='[i]'
+fi
+
+# --- helpers -----------------------------------------------------------------
+log()     { printf "%b%s%b\n" "$DIM" "$1" "$RESET"; }
+info()    { printf "%b%s%b %s\n" "$CYAN" "$INFO" "$RESET" "$1"; }
+ok()      { printf "%b%s%b %s\n" "$GREEN" "$CHECK" "$RESET" "$1"; }
+warn()    { printf "%b%s%b %s\n" "$YELLOW" "!" "$RESET" "$1"; }
+fail()    { printf "%b%s%b %s\n" "$RED" "$CROSS" "$RESET" "$1" >&2; }
+header()  { printf "\n%b==>%b %s\n" "$BOLD" "$RESET" "$1"; }
+
+# Print a line and run a command; show status on failure
+run() {
+  local msg="$1"
+  shift
+  info "$msg"
+  if "$@"; then
+    ok "$msg"
+  else
+    fail "$msg"
+    return 1
+  fi
+}
+
+# Run apt-get non-interactively if present
+apt_install() {
+  local pkgs="$*"
+  DEBIAN_FRONTEND=noninteractive apt-get update -y >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $pkgs >/dev/null
+}
+
+# Detect package manager
+has_pkg_manager() {
+  command -v apt-get &>/dev/null || command -v dnf &>/dev/null || command -v yum &>/dev/null
+}
+
+# Try to install missing packages; prints instructions and exits if impossible
+try_install() {
+  local bin="$1"
+  local pkg="$2"
+  shift 2
+
+  if command -v "$bin" &>/dev/null; then
+    return 0
+  fi
+
+  warn "$bin not found"
+
+  if [ "$(id -u)" -ne 0 ]; then
+    fail "Need root to install system packages. Run as root, or install $pkg manually."
+    exit 1
+  fi
+
+  if command -v apt-get &>/dev/null; then
+    run "Installing $pkg via apt" apt_install "$pkg"
+  elif command -v dnf &>/dev/null; then
+    run "Installing $pkg via dnf" dnf install -y "$pkg"
+  elif command -v yum &>/dev/null; then
+    run "Installing $pkg via yum" yum install -y "$pkg"
+  else
+    fail "No supported package manager found. Please install $pkg manually."
+    exit 1
+  fi
+}
+
+# Resolve the python3-venv package for the default python3 version
+python_venv_pkg() {
+  local pyver
+  pyver="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+  echo "python${pyver}-venv"
+}
+
+# ------------------------------------------------------------------------------
+header "DockLiner one-run setup"
+info "Install dir: $INSTALL_DIR"
+
+# --- 1. Ensure dependencies ----------------------------------------------------
+header "Checking dependencies"
+
+try_install git git
+
+try_install python3 python3
+
+# python3 is present, but venv module may be split out
+if ! python3 -m venv --help &>/dev/null; then
+  warn "python3 venv module is missing"
+  if [ "$(id -u)" -ne 0 ]; then
+    fail "Need root to install python3-venv. Run as root or install it manually."
+    exit 1
+  fi
+  if command -v apt-get &>/dev/null; then
+    VENV_PKG="$(python_venv_pkg)"
+    run "Installing $VENV_PKG via apt" apt_install "$VENV_PKG"
+  else
+    fail "python3 venv module missing and auto-install only supported on apt systems."
+    exit 1
+  fi
+fi
+
+ok "git is installed"
+ok "python3 + venv are ready"
+
+# --- 2. Clone or update -------------------------------------------------------
+if [ -d "$INSTALL_DIR/.git" ]; then
+  header "Updating existing repo at $INSTALL_DIR"
+  cd "$INSTALL_DIR"
+  run "Pulling latest changes" git pull origin main
+else
+  header "Cloning $REPO into $INSTALL_DIR"
+  run "Cloning repository" git clone "$REPO" "$INSTALL_DIR"
   cd "$INSTALL_DIR"
 fi
 
-# 3. Create Python virtual environment
+# --- 3. Create Python virtual environment -------------------------------------
 if [ ! -d "$INSTALL_DIR/venv" ]; then
-  echo "==> Creating Python virtual environment"
-  python3 -m venv "$INSTALL_DIR/venv"
+  header "Creating Python virtual environment"
+  run "Creating venv" python3 -m venv "$INSTALL_DIR/venv"
+else
+  ok "Virtual environment exists"
 fi
 
-# 4. Install / upgrade Python dependencies
-echo "==> Installing Python dependencies"
-"$INSTALL_DIR/venv/bin/pip" install --upgrade pip
-"$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
+# --- 4. Install / upgrade Python dependencies ---------------------------------
+header "Installing Python dependencies"
+run "Upgrading pip" "$INSTALL_DIR/venv/bin/pip" install --upgrade pip
+run "Installing requirements" "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
-# 5. Ensure .env exists (env-driven config)
+# --- 5. Ensure .env exists (env-driven config) -------------------------------
 if [ ! -f "$INSTALL_DIR/.env" ]; then
-  echo "==> Creating default .env"
-  "$INSTALL_DIR/venv/bin/python" -c "from app.env_maker import refine_env; print(refine_env(''))" > "$INSTALL_DIR/.env"
+  header "Creating default .env"
+  run "Generating default environment" "$INSTALL_DIR/venv/bin/python" -c \
+    "from app.env_maker import refine_env; print(refine_env(''))" \> "$INSTALL_DIR/.env"
+else
+  ok "Environment file exists"
 fi
 
-# 6. Ensure required directories exist
-mkdir -p "$INSTALL_DIR/projects" "$INSTALL_DIR/downloads" "$INSTALL_DIR/logs"
+# --- 6. Ensure required directories exist -------------------------------------
+header "Preparing directories"
+run "Creating projects/downloads/logs directories" \
+  mkdir -p "$INSTALL_DIR/projects" "$INSTALL_DIR/downloads" "$INSTALL_DIR/logs"
 
-# 7. Create systemd service if systemd is available
+# --- 7. Create systemd service if systemd is available ------------------------
 if command -v systemctl &>/dev/null; then
-  echo "==> Installing systemd service: $SERVICE_NAME"
+  header "Installing systemd service: $SERVICE_NAME"
   cat > "/tmp/$SERVICE_NAME.service" <<EOF
 [Unit]
 Description=DockLiner deployment manager
@@ -79,29 +185,28 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
-  mv "/tmp/$SERVICE_NAME.service" "/etc/systemd/system/$SERVICE_NAME.service"
-  systemctl daemon-reload
-  systemctl enable "$SERVICE_NAME"
-  echo "==> Starting service"
-  systemctl restart "$SERVICE_NAME" || true
+  run "Installing service file" mv "/tmp/$SERVICE_NAME.service" "/etc/systemd/system/$SERVICE_NAME.service"
+  run "Reloading systemd" systemctl daemon-reload
+  run "Enabling $SERVICE_NAME" systemctl enable "$SERVICE_NAME"
+  info "Starting service"
+  systemctl restart "$SERVICE_NAME" || warn "Service start failed; check 'systemctl status $SERVICE_NAME'"
 else
-  echo "==> systemd not detected; skipping service installation"
-  echo "    To start manually: $INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py"
+  warn "systemd not detected; skipping service installation"
+  info "To start manually: $INSTALL_DIR/venv/bin/python $INSTALL_DIR/main.py"
 fi
 
-# 8. Done
-echo ""
-echo "==============================================="
-echo "DockLiner setup complete."
-echo "Install dir : $INSTALL_DIR"
-echo "Config file : $INSTALL_DIR/.env"
-echo "Service     : $SERVICE_NAME"
+# --- 8. Done ------------------------------------------------------------------
+printf "\n%b===============================================%b\n" "$BOLD" "$RESET"
+ok "DockLiner setup complete"
+info "Install dir : $INSTALL_DIR"
+info "Config file : $INSTALL_DIR/.env"
+info "Service     : $SERVICE_NAME"
 if command -v systemctl &>/dev/null; then
-  echo "Status      : systemctl status $SERVICE_NAME"
-  echo "Logs        : journalctl -u $SERVICE_NAME -f"
+  info "Status      : systemctl status $SERVICE_NAME"
+  info "Logs        : journalctl -u $SERVICE_NAME -f"
 fi
 WEB_PORT=$(grep -E '^DOCKLINER_PORT=' "$INSTALL_DIR/.env" | cut -d'=' -f2 || echo "50021")
-echo "Web UI      : http://$(hostname -I | awk '{print $1}'):$WEB_PORT"
-echo "Default user: root / qwer.1234"
-echo "==============================================="
-echo "Change the default password in Settings → Config after first login."
+info "Web UI      : http://$(hostname -I | awk '{print $1}'):$WEB_PORT"
+info "Default user: root / qwer.1234"
+printf "%b===============================================%b\n" "$BOLD" "$RESET"
+warn "Change the default password in Settings → Config after first login."
