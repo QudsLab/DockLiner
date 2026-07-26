@@ -130,14 +130,18 @@
 <div class="settings-view" data-view="tokens" id="tokens">
   <div class="card">
     <h2 class="section-title">Access Tokens</h2>
-    <form id="tokenForm" style="margin-top:12px;">
+    <form id="tokenForm" action="/api/tokens/web" method="POST" style="margin-top:12px;">
       <div class="form-row">
-        <div class="form-col"><label>Name</label><input class="input" id="tokenName" name="name" required placeholder="github-pat-1"></div>
+        <div class="form-col"><label>Name</label><input class="input" id="tokenName" name="name" required placeholder="github-pat-1" value="{{ request.query_params.get('name','') }}"></div>
         <div class="form-col"><label>Token</label><input class="input" id="tokenValue" name="token" required type="password" placeholder="ghp_..."></div>
-        <div class="form-col" style="align-self:end;"><button type="button" class="btn btn-primary has-icon" id="tokenAddBtn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Token</button></div>
+        <div class="form-col" style="align-self:end;"><button type="submit" class="btn btn-primary has-icon" id="tokenAddBtn"><svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Token</button></div>
       </div>
     </form>
-    <div id="tokenAddStatus" style="margin-top:8px;font-size:13px;"></div>
+    <div id="tokenAddStatus" style="margin-top:8px;font-size:13px;">
+      {% if request.query_params.get('token_ok') %}<span style="color:var(--success)">Token saved. Click <strong>Test</strong> next to it to verify.</span>
+      {% elif request.query_params.get('token_error') %}<span style="color:var(--error)">Failed to save token: {{ request.query_params.get('token_error') }}</span>
+      {% endif %}
+    </div>
     <noscript><p style="color:var(--error);font-size:13px;">JavaScript is required to add tokens securely.</p></noscript>
     {% if tokens %}
     <table class="table" style="margin-top:16px;">
@@ -199,13 +203,15 @@
 
 {% endblock %}
 {% block scripts %}<script>
-// ---- Token add (button-driven so the form can never submit natively) ----
+// ---- Token add: progressive enhancement. Form POSTs to /api/tokens/web if JS fails or is disabled. ----
 (function(){
   const form = document.getElementById('tokenForm');
   const btn = document.getElementById('tokenAddBtn');
   if (form && btn){
-    form.addEventListener('submit', e => { e.preventDefault(); });
-    btn.addEventListener('click', () => createToken(form));
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      createToken(form);
+    });
   }
 })();
 
