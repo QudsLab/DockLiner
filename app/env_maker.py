@@ -43,8 +43,8 @@ SECTIONS: List[Tuple[str, str, Optional[str], bool]] = [
             (
                 "ALLOWED_PORTS",
                 "50021,50023,50033,50047,50051,50053,50069,50077,50087,50093,50101,50111,50119,50123",
-                "Prime fallback ports when PORT_SELECTION=auto",
-                True,
+                "Prime fallback ports when PORT_SELECTION=auto; ignored when PORT_SELECTION=strict",
+                False,
             ),
             ("SERVICE", "dockliner", "systemd / Windows service name for Save & Restart", True),
         ],
