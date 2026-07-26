@@ -179,7 +179,7 @@ DOCKLINER_DATABASE_URL=postgresql+psycopg2://dockliner:secret@localhost/dockline
 ```
 
 3. Install dependencies: `pip install -r requirements.txt`.
-4. Run: `$INSTALL_DIR/venv/bin/python main.py` (or use `setup.sh` to create a systemd service).
+4. Run: `python3 main.py` (or use `setup.sh` to create a systemd service).
 5. Open `http://localhost:8080` and log in.
 
 ## Uninstall
