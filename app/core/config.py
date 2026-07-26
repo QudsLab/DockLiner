@@ -383,11 +383,28 @@ validate_db_config()
 # Parse users JSON
 def _load_users():
     import json
+    default_root = [{"user":"root","hash":"9aa0a2b0f48247f8be3983b37fdbc13a4128da84d4a68ff6690d0202d8883c926f258640f9d8fad34f4b625043195da367307f04274618e734f7b5bf5641a663"}]
+    raw = settings.USERS
+    if not raw or not raw.strip():
+        _log_stuck("DOCKLINER_USERS is empty; falling back to default root user")
+        return default_root
     try:
-        return json.loads(settings.USERS)
-    except Exception:
-        _log_stuck(f"Could not parse DOCKLINER_USERS JSON: {settings.USERS[:80]}")
-        return []
+        parsed = json.loads(raw)
+        if isinstance(parsed, list) and parsed:
+            # Ensure every entry has both user and hash
+            cleaned = []
+            for entry in parsed:
+                if isinstance(entry, dict) and entry.get("user") and entry.get("hash"):
+                    cleaned.append(entry)
+            if cleaned:
+                return cleaned
+            _log_stuck(f"DOCKLINER_USERS entries missing user/hash; falling back to default root user")
+            return default_root
+        _log_stuck(f"DOCKLINER_USERS is not a non-empty list; falling back to default root user")
+        return default_root
+    except Exception as e:
+        _log_stuck(f"Could not parse DOCKLINER_USERS JSON: {raw[:80]}... Error: {e}; falling back to default root user")
+        return default_root
 
 ALLOWED_USERS = _load_users()
 
