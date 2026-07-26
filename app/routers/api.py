@@ -2,7 +2,7 @@ import threading
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Form
 from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from pathlib import Path
@@ -932,6 +932,24 @@ def create_token(data: AccessTokenCreate, db: Session = Depends(get_db), user: s
     db.refresh(t)
     AuditService.log(db, "token_create", target=t.name, user=user)
     return t
+
+@router.post("/tokens/web")
+def create_token_web(
+    name: str = Form(...),
+    token: str = Form(...),
+    provider: str = Form("github"),
+    db: Session = Depends(get_db),
+    user: str = Depends(require_auth)
+):
+    clean_token = (token or "").strip()
+    if not clean_token:
+        return RedirectResponse(url="/settings?token_error=empty#tokens", status_code=303)
+    t = AccessToken(name=name, token=clean_token, provider=provider or "github")
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    AuditService.log(db, "token_create", target=t.name, user=user)
+    return RedirectResponse(url="/settings?token_ok=1#tokens", status_code=303)
 
 @router.delete("/tokens/{tid}")
 def delete_token(tid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
