@@ -184,6 +184,54 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
     AuditService.log(db, "project_create", target=p.name, user=user)
     return p
 
+class QuickCreatePayload(BaseModel):
+    download_id: int
+    name: Optional[str] = None
+
+@router.post("/projects/quick-create", response_model=ProjectOut)
+def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    """Create a project directly from a download — no editor step."""
+    dl = db.query(Download).filter(Download.id == data.download_id).first()
+    if not dl or not dl.extracted_path:
+        raise HTTPException(status_code=404, detail="Download not ready")
+    src = Path(dl.extracted_path)
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Source path missing")
+
+    name = data.name or dl.repo or src.name
+    existing = db.query(Project).filter(Project.name == name).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Project name exists")
+
+    deploy_path = str(Path(settings.PROJECTS_DIR) / name)
+    free = find_free_ports(25600, 1)
+    port = free[0] if free else 25600
+
+    p = Project(
+        name=name,
+        github_repo_url=f"https://github.com/{dl.owner}/{dl.repo}.git" if dl.owner and dl.repo else "",
+        branch=dl.ref or "main",
+        deploy_path=deploy_path,
+        compose_file="docker-compose.yml",
+        port=port,
+        deploy_method="compose",
+        command_mode="compose",
+        source_type="github",
+        source_path=str(src),
+    )
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+
+    # Copy all files from download to project
+    ppath = Path(deploy_path)
+    if ppath.exists():
+        shutil.rmtree(ppath, ignore_errors=True)
+    shutil.copytree(src, ppath)
+
+    AuditService.log(db, "project_quick_create", target=p.name, user=user)
+    return p
+
 @router.get("/projects/{pid}", response_model=ProjectOut)
 def get_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
