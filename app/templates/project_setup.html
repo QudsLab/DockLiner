@@ -116,7 +116,7 @@ function populatePicker(id, files, kind, selectedPath){
     const lower=f.toLowerCase();
     if(kind==='compose') return lower.endsWith('compose.yml')||lower.endsWith('compose.yaml')||lower.endsWith('docker-compose.yml')||lower.endsWith('docker-compose.yaml');
     if(kind==='dockerfile') return lower==='dockerfile' || lower.endsWith('/dockerfile');
-    if(kind==='env') return lower==='.env' || lower==='env' || lower.endsWith('/.env') || lower.endsWith('/env');
+    if(kind==='env') return lower==='.env' || lower==='env' || lower.endsWith('/.env') || lower.endsWith('/env') || lower==='.env.example' || lower.endsWith('/.env.example') || lower==='.env.sample' || lower.endsWith('/.env.sample') || lower==='.env.template' || lower.endsWith('/.env.template');
     return false;
   });
   if(candidates.length===0){

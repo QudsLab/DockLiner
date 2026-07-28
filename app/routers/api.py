@@ -159,22 +159,16 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
     ppath = Path(str(p.deploy_path))
     ppath.mkdir(parents=True, exist_ok=True)
 
-    # If created from an existing local/download source, mirror it first.
-    if p.source_type == "download" and p.source_path:
+    # If created from an existing source, mirror it first.
+    if p.source_path:
         src = Path(p.source_path)
         if src.exists():
             if ppath.exists():
                 shutil.rmtree(ppath, ignore_errors=True)
             shutil.copytree(src, ppath)
-        else:
+        elif p.source_type in ("download", "local"):
             p.status = "error"
             p.error_message = f"Source path missing: {src}"
-    elif p.source_type == "local" and p.source_path:
-        src = Path(p.source_path)
-        if src.exists():
-            if ppath.exists():
-                shutil.rmtree(ppath, ignore_errors=True)
-            shutil.copytree(src, ppath)
 
     # Overwrite with editor-provided content.
     env_txt = str(p.env_content or "")

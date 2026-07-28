@@ -115,7 +115,10 @@ def _build_file_map(root: str, files: list) -> dict:
             lower.endswith("compose.yml") or lower.endswith("compose.yaml") or
             lower.endswith("docker-compose.yml") or lower.endswith("docker-compose.yaml") or
             lower == "dockerfile" or lower.endswith("/dockerfile") or
-            lower == ".env" or lower == "env" or lower.endswith("/.env") or lower.endswith("/env")
+            lower == ".env" or lower == "env" or lower.endswith("/.env") or lower.endswith("/env") or
+            lower == ".env.example" or lower.endswith("/.env.example") or
+            lower == ".env.sample" or lower.endswith("/.env.sample") or
+            lower == ".env.template" or lower.endswith("/.env.template")
         )
         if not is_candidate:
             continue
