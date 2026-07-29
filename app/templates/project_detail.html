@@ -178,11 +178,20 @@
       <h3>Deploy Logs</h3>
       <button class="modal-close" onclick="closeModal('logs')">×</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body log-modal-body">
+      <div class="log-toolbar">
+        <input type="search" class="input log-search" id="deployLogSearch" placeholder="Search deploy logs..." oninput="filterDeployLogs()">
+        <div class="log-filters">
+          <button class="btn btn-secondary btn-xs active" data-filter="all" onclick="setDeployFilter('all')">All</button>
+          <button class="btn btn-secondary btn-xs" data-filter="error" onclick="setDeployFilter('error')">Errors</button>
+          <button class="btn btn-secondary btn-xs" data-filter="build" onclick="setDeployFilter('build')">Build</button>
+          <button class="btn btn-secondary btn-xs" data-filter="docker" onclick="setDeployFilter('docker')">Docker</button>
+        </div>
+      </div>
       <div id="deployLogs" class="log-window">Loading...</div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="loadDeployLogs()">Refresh</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadDeployLogs(true)">Refresh</button>
       <button class="btn btn-secondary btn-sm" onclick="closeModal('logs')">Close</button>
     </div>
   </div>
@@ -195,11 +204,19 @@
       <h3>Runtime Logs</h3>
       <button class="modal-close" onclick="closeModal('runtime')">×</button>
     </div>
-    <div class="modal-body">
+    <div class="modal-body log-modal-body">
+      <div class="log-toolbar">
+        <input type="search" class="input log-search" id="runtimeLogSearch" placeholder="Search runtime logs..." oninput="filterRuntimeLogs()">
+        <div class="log-filters">
+          <button class="btn btn-secondary btn-xs active" data-filter="all" onclick="setRuntimeFilter('all')">All</button>
+          <button class="btn btn-secondary btn-xs" data-filter="error" onclick="setRuntimeFilter('error')">Errors</button>
+          <button class="btn btn-secondary btn-xs" data-filter="info" onclick="setRuntimeFilter('info')">Info</button>
+        </div>
+      </div>
       <div id="runtimeLogs" class="log-window">Loading...</div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary btn-sm" onclick="loadRuntimeLogs()">Refresh</button>
+      <button class="btn btn-secondary btn-sm" onclick="loadRuntimeLogs(true)">Refresh</button>
       <button class="btn btn-secondary btn-sm" onclick="closeModal('runtime')">Close</button>
     </div>
   </div>
@@ -276,31 +293,124 @@ function runQdeployFromModal(){
   saveDeployCommands().then(()=>{ doAction('deploy'); closeModal('qdeploy'); });
 }
 
-async function loadDeployLogs(){
-  const r=await fetch(`/api/projects/${pid}/deploy-logs`);
-  const logs=await r.json();
-  const box=document.getElementById('deployLogs');
-  if(!logs.length){ box.innerHTML='<div class="empty">No deploy logs yet.</div>'; return; }
-  box.innerHTML=logs.map(l=>{
-    const date=new Date(l.timestamp).toLocaleString();
-    return `<div class="deploy-entry" style="border:1px solid var(--hairline);border-radius:8px;padding:10px 12px;background:var(--surface-soft);margin-bottom:8px">
-      <div style="display:flex;gap:10px;font-size:12px;color:var(--muted);margin-bottom:6px"><span>#${l.id}</span><span>${date}</span><span class="status-${l.status}" style="font-weight:600">${l.status}</span></div>
-      <pre style="margin:0;font-family:var(--font-mono);font-size:12px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(l.logs||'No output')}</pre>
-    </div>`;
+function openModal(id){
+  document.getElementById('modal-'+id).classList.add('active');
+  if(id==='qdeploy') renderQdeployPreview();
+  if(id==='logs'){ loadDeployLogs(true); startLogTimer(); }
+  if(id==='runtime'){ loadRuntimeLogs(true); startLogTimer(); }
+}
+function closeModal(id){
+  document.getElementById('modal-'+id).classList.remove('active');
+  if(id==='logs' || id==='runtime') stopLogTimer();
+}
+
+let logTimer=null;
+function startLogTimer(){ if(logTimer) return; logTimer=setInterval(()=>{ loadDeployLogs(false); loadRuntimeLogs(false); }, 3000); }
+function stopLogTimer(){ if(logTimer){ clearInterval(logTimer); logTimer=null; } }
+
+function formatLogLines(text){
+  if(!text) return '\u003cdiv class="log-line info">No output\u003c/div>';
+  return text.split('\n').map(line=>{
+    let cls='info';
+    const upper = line.toUpperCase();
+    if(/ERROR|FAIL|FATAL|EXCEPTION|TRACE/.test(upper)) cls='error';
+    else if(/WARN/.test(upper)) cls='warn';
+    else if(/DONE|SUCCESS|CACHED|PASSED/.test(upper)) cls='success';
+    else if(/^\[BUILD\]/.test(line)) cls='build';
+    else if(/^\[DEBUG\]/.test(line)) cls='debug';
+    else if(/^#/.test(line) || /docker|compose/i.test(line)) cls='docker';
+    return `\u003cdiv class="log-line ${cls}"\u003e${escapeHtml(line)}\u003c/div>`;
   }).join('');
 }
 
-async function loadRuntimeLogs(){
+let deployFilter='all', deploySearch='';
+let runtimeFilter='all', runtimeSearch='';
+
+async function loadDeployLogs(scroll=true){
+  const r=await fetch(`/api/projects/${pid}/deploy-logs`);
+  const logs=await r.json();
+  const box=document.getElementById('deployLogs');
+  if(!logs.length){ box.innerHTML='\u003cdiv class="empty">No deploy logs yet.\u003c/div>'; return; }
+  const oldScroll = box.scrollTop, oldHeight = box.scrollHeight;
+  box.innerHTML=logs.map(l=>{
+    const date=new Date(l.timestamp).toLocaleString();
+    return `\u003cdiv class="deploy-entry" data-id="${l.id}">
+      \u003cdiv class="deploy-entry-header"\u003e\u003cspan\u003e#${l.id}\u003c/span\u003e\u003cspan\u003e${date}\u003c/span\u003e\u003cspan class="status-${l.status}"\u003e${l.status}\u003c/span\u003e\u003c/div>
+      \u003cdiv class="deploy-entry-logs"\u003e${formatLogLines(l.logs||'')}\u003c/div>
+    \u003c/div>`;
+  }).join('');
+  applyDeployFilters();
+  if(scroll) box.scrollTop = box.scrollHeight;
+  else box.scrollTop = oldScroll + (box.scrollHeight - oldHeight);
+}
+
+function setDeployFilter(f){
+  deployFilter=f;
+  document.querySelectorAll('#modal-logs .log-filters button').forEach(b=>{ b.classList.toggle('active', b.dataset.filter===f); });
+  applyDeployFilters();
+}
+function filterDeployLogs(){
+  deploySearch = document.getElementById('deployLogSearch').value.trim().toLowerCase();
+  applyDeployFilters();
+}
+function applyDeployFilters(){
+  const box=document.getElementById('deployLogs'); if(!box) return;
+  box.querySelectorAll('.deploy-entry').forEach(entry=>{
+    const lines = entry.querySelectorAll('.log-line');
+    let any=false;
+    lines.forEach(line=>{
+      const txt = line.textContent.toLowerCase();
+      const classes = Array.from(line.classList);
+      let visible=true;
+      if(deployFilter==='error' && !classes.includes('error')) visible=false;
+      if(deployFilter==='build' && !classes.includes('build') && !classes.includes('debug')) visible=false;
+      if(deployFilter==='docker' && !classes.includes('docker')) visible=false;
+      if(deploySearch && !txt.includes(deploySearch)) visible=false;
+      line.classList.toggle('hidden', !visible);
+      if(visible) any=true;
+    });
+    entry.style.display = any ? '' : 'none';
+  });
+}
+
+async function loadRuntimeLogs(scroll=true){
   const r=await fetch(`/api/projects/${pid}/logs`);
   const d=await r.json();
-  document.getElementById('runtimeLogs').textContent=d.logs||'No runtime logs.';
+  const box=document.getElementById('runtimeLogs');
+  const oldScroll = box.scrollTop, oldHeight = box.scrollHeight;
+  box.innerHTML = formatLogLines(d.logs||'No runtime logs.');
+  applyRuntimeFilters();
+  if(scroll) box.scrollTop = box.scrollHeight;
+  else box.scrollTop = oldScroll + (box.scrollHeight - oldHeight);
+}
+
+function setRuntimeFilter(f){
+  runtimeFilter=f;
+  document.querySelectorAll('#modal-runtime .log-filters button').forEach(b=>{ b.classList.toggle('active', b.dataset.filter===f); });
+  applyRuntimeFilters();
+}
+function filterRuntimeLogs(){
+  runtimeSearch = document.getElementById('runtimeLogSearch').value.trim().toLowerCase();
+  applyRuntimeFilters();
+}
+function applyRuntimeFilters(){
+  const box=document.getElementById('runtimeLogs'); if(!box) return;
+  box.querySelectorAll('.log-line').forEach(line=>{
+    const classes = Array.from(line.classList);
+    const txt = line.textContent.toLowerCase();
+    let visible=true;
+    if(runtimeFilter==='error' && !classes.includes('error')) visible=false;
+    if(runtimeFilter==='info' && classes.includes('error')) visible=false;
+    if(runtimeSearch && !txt.includes(runtimeSearch)) visible=false;
+    line.classList.toggle('hidden', !visible);
+  });
 }
 
 async function doAction(action){
   const r=await fetch(`/api/projects/${pid}/${action}`,{method:'POST'});
   const d=await r.json().catch(()=>({}));
   showToast(d.status||action, r.ok?'success':'error');
-  if(r.ok && (action==='build'||action==='deploy')) loadDeployLogs();
+  if(r.ok && (action==='build'||action==='deploy')) loadDeployLogs(true);
 }
 
 function dismissQdeployHint(){

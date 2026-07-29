@@ -405,7 +405,7 @@ async function pollDownload(){
     if(data.status==='done'){
       clearInterval(pollTimer); localStorage.removeItem(DL_KEY);
       showToast('Clone complete','success');
-      location.href='/projects/setup?source=github&download_id='+currentDownloadId;
+      directCreate('github', currentDownloadId);
     }else if(data.status==='error'){
       clearInterval(pollTimer); localStorage.removeItem(DL_KEY);
       document.getElementById('dlError').textContent=data.error_message||'Clone failed'; document.getElementById('dlError').style.display='block';
@@ -432,7 +432,7 @@ function humanSize(n){ if(!n && n!==0) return '0 B'; const units=['B','KB','MB',
 function continueLocal(){
   const path=document.getElementById('localPath').value.trim();
   if(!path){ showErrorModal('Missing path', 'Enter a directory path'); return; }
-  location.href='/projects/setup?source=local&path='+encodeURIComponent(path);
+  directCreate('local', null, path);
 }
 
 // ---- Existing download picker ----
@@ -444,7 +444,7 @@ async function loadDownloadsPicker(){
     const done=rows.filter(d=>d.status==='done' && d.extracted_path);
     if(!done.length){ list.innerHTML='<div class="empty">No completed downloads yet.</div>'; return; }
     list.innerHTML=done.map(d=>`
-      <div class="dl-card" onclick="location.href='/projects/setup?source=download&download_id=${d.id}'">
+      <div class="dl-card" onclick="directCreate('download', ${d.id})">
         <div class="left">
           <div class="name">${escapeHtml(d.owner)}/${escapeHtml(d.repo)} @ ${escapeHtml(d.ref)}</div>
           <div class="meta">${humanSize(d.size_bytes||0)} · ${d.compose_file?'compose':''}${d.compose_file && d.dockerfile_exists?', ':''}${d.dockerfile_exists?'dockerfile':''}</div>
@@ -452,6 +452,25 @@ async function loadDownloadsPicker(){
         <div class="right"><span class="tag">Use / containerize</span></div>
       </div>`).join('');
   }catch(e){ list.innerHTML='<div class="empty">Could not load downloads.</div>'; }
+}
+
+async function directCreate(source, downloadId, path){
+  const body = {source: source};
+  if(downloadId) body.download_id = downloadId;
+  if(path) body.path = path;
+  try{
+    const res = await fetch('/api/projects/direct-create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.detail || 'Create failed');
+    showToast('Project created: '+data.name, 'success');
+    location.href = '/projects/'+data.id;
+  }catch(e){
+    showErrorModal('Create failed', e.message);
+  }
 }
 
 function escapeHtml(t){ return t.replace(/&/g,'\u0026amp;').replace(/\u003c/g,'\u0026lt;').replace(/\u003e/g,'\u0026gt;').replace(/"/g,'\u0026quot;'); }

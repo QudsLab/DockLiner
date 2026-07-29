@@ -137,12 +137,10 @@ function renderCard(el, d){
       buttons += ` <span class="tag">${tags}</span>`;
     }
   }
-  const deleteTarget = isUntracked(d) ? escapeHtml(d.folder_name||d.repo||'') : d.id;
+  const deleteTarget = isUntracked(d) ? (d.folder_name||d.repo||'') : d.id;
   const deleteLabel = isUntracked(d) ? 'Remove folder' : 'Delete';
-  const deleteCall = isUntracked(d)
-    ? `deleteDownload('${deleteTarget.replace(/'/g, "\\'")}', true)`
-    : `deleteDownload(${deleteTarget}, false)`;
-  buttons += ` <button class="btn btn-danger btn-sm" onclick="${deleteCall}">${deleteLabel}</button>`;
+  const safeTarget = escapeHtml(deleteTarget);
+  buttons += ` <button class="btn btn-danger btn-sm" data-delete-target="${safeTarget}" data-is-folder="${isUntracked(d)}" onclick="deleteDownload(this.dataset.deleteTarget, this.dataset.isFolder==='true')">${deleteLabel}</button>`;
   const hashes = (d.md5_hash || d.sha256_hash) ? `<div class="hashes">
     <div class="hash-row md5" title="MD5"><span class="hash-label">MD5:</span> ${escapeHtml(d.md5_hash||'-')}</div>
     <div class="hash-row sha256" title="SHA256"><span class="hash-label">SHA256:</span> ${escapeHtml(d.sha256_hash||'-')}</div>
@@ -168,11 +166,14 @@ let pendingDeleteId = null;
 function showConfirm(target){
   pendingDeleteId = target;
   const modal = document.getElementById('dl-confirm-modal');
+  modal.classList.add('active');
   modal.style.display = 'flex';
 }
 function hideConfirm(){
   pendingDeleteId = null;
-  document.getElementById('dl-confirm-modal').style.display = 'none';
+  const modal = document.getElementById('dl-confirm-modal');
+  modal.classList.remove('active');
+  modal.style.display = 'none';
 }
 document.getElementById('dl-confirm-modal').addEventListener('click', e => {
   if(e.target.id === 'dl-confirm-modal') hideConfirm();

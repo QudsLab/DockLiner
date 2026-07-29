@@ -46,6 +46,12 @@ class ProjectUpdate(BaseModel):
     source_path: Optional[str] = None
     deploy_commands: Optional[List[str]] = None
 
+class DirectCreatePayload(BaseModel):
+    source: str
+    download_id: Optional[int] = None
+    path: Optional[str] = None
+    name: Optional[str] = None
+
 class ProjectFileUpdate(BaseModel):
     content: str
 

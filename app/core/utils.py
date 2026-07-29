@@ -1,7 +1,7 @@
 import socket
 from typing import List, Optional
 
-def find_free_ports(start: int = 25600, count: int = 2) -> List[int]:
+def find_free_ports(start: int = 30000, count: int = 2) -> List[int]:
     found = []
     port = start
     while len(found) < count and port < 65000:

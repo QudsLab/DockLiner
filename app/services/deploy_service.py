@@ -137,19 +137,6 @@ class DeployService:
             shutil.copytree(src, deploy_path)
 
     @staticmethod
-    def _write_env(project) -> None:
-        deploy_path = Path(project.deploy_path)
-        env_path = deploy_path / ".env"
-        env_data = dict(project.env_vars or {})
-        env_data["DOCKLINER_HOST"] = os.getenv("DOCKLINER_HOST", os.getenv("HOSTNAME", "dockliner"))
-        env_data["PROJECT_NAME"] = project.name
-        if project.port:
-            env_data["PORT"] = str(project.port)
-        if env_data:
-            lines = [f"{k}={v}" for k, v in env_data.items()]
-            env_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    @staticmethod
     def _persist_edited_files(project) -> None:
         deploy_path = Path(project.deploy_path)
         deploy_path.mkdir(parents=True, exist_ok=True)
@@ -213,7 +200,6 @@ class DeployService:
         try:
             DeployService._sync_source(project, token)
             DeployService._persist_edited_files(project)
-            DeployService._write_env(project)
         except Exception as e:
             logs.append(f"[DEBUG] prepare error: {type(e).__name__}: {e}")
             raise

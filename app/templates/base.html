@@ -213,6 +213,9 @@
       <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}nav-link-active{% endif %}" title="Settings">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings
       </a>
+      <button class="nav-link" onclick="showLogoutModal()" title="Logout" style="background:none;border:none;cursor:pointer;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Logout
+      </button>
       <label class="theme-switch" title="Toggle theme">
         <input type="checkbox" id="themeCheckbox" onchange="toggleTheme(this.checked)">
         <span class="theme-slider"></span>
@@ -241,6 +244,10 @@
     <a href="/settings" id="bottomNavSettings" class="bottom-link {% if request.url.path == '/settings' %}active{% endif %}">
       <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       <span>Settings</span>
+    </a>
+    <a href="#" class="bottom-link" onclick="event.preventDefault(); showLogoutModal();">
+      <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
+      <span>Logout</span>
     </a>
   </div>
 
@@ -444,7 +451,7 @@
       const infoTitle = document.getElementById('info-modal-title');
       const infoText = document.getElementById('info-modal-text');
       const infoOk = document.getElementById('info-modal-ok');
-      const hideInfoModal = () => infoModal.style.display = 'none';
+      const hideInfoModal = () => { infoModal.classList.remove('active'); infoModal.style.display = 'none'; };
       infoOk.addEventListener('click', hideInfoModal);
       infoModal.addEventListener('click', e => { if(e.target === infoModal) hideInfoModal(); });
       document.addEventListener('keydown', e => { if(e.key === 'Escape' && infoModal.style.display === 'flex') hideInfoModal(); });
@@ -453,7 +460,7 @@
       const errorTitle = document.getElementById('error-modal-title');
       const errorText = document.getElementById('error-modal-text');
       const errorOk = document.getElementById('error-modal-ok');
-      const hideErrorModal = () => errorModal.style.display = 'none';
+      const hideErrorModal = () => { errorModal.classList.remove('active'); errorModal.style.display = 'none'; };
       errorOk.addEventListener('click', hideErrorModal);
       errorModal.addEventListener('click', e => { if(e.target === errorModal) hideErrorModal(); });
       document.addEventListener('keydown', e => { if(e.key === 'Escape' && errorModal.style.display === 'flex') hideErrorModal(); });
@@ -464,7 +471,7 @@
       const confirmOk = document.getElementById('confirm-modal-ok');
       const confirmCancel = document.getElementById('confirm-modal-cancel');
       let confirmCallback = null;
-      const hideConfirmModal = () => { confirmCallback = null; confirmModal.style.display = 'none'; };
+      const hideConfirmModal = () => { confirmCallback = null; confirmModal.classList.remove('active'); confirmModal.style.display = 'none'; };
       confirmCancel.addEventListener('click', hideConfirmModal);
       confirmOk.addEventListener('click', () => { if(confirmCallback) confirmCallback(); hideConfirmModal(); });
       confirmModal.addEventListener('click', e => { if(e.target === confirmModal) hideConfirmModal(); });
@@ -473,11 +480,13 @@
       window.showInfoModal = function(title, text){
         infoTitle.textContent = title || 'Info';
         infoText.textContent = text || '';
+        infoModal.classList.add('active');
         infoModal.style.display = 'flex';
       };
       window.showErrorModal = function(title, text){
         errorTitle.textContent = title || 'Error';
         errorText.textContent = text || '';
+        errorModal.classList.add('active');
         errorModal.style.display = 'flex';
       };
       window.showConfirmModal = function(title, text, okText, okClass, callback){
@@ -486,6 +495,7 @@
         confirmOk.textContent = okText || 'Confirm';
         confirmOk.className = 'btn ' + (okClass || 'btn-danger');
         confirmCallback = callback;
+        confirmModal.classList.add('active');
         confirmModal.style.display = 'flex';
       };
     })();

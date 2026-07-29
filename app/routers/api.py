@@ -19,6 +19,7 @@ from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectOut,
     DeploymentOut, AccessTokenCreate, AccessTokenOut,
     ProjectFileUpdate, ProjectFilesOut, DeployLogOut,
+    DirectCreatePayload,
 )
 from app.schemas.monitoring import (
     HealthCheckCreate, HealthCheckUpdate, HealthCheckOut,
@@ -30,12 +31,25 @@ from app.services.github_download_service import GitHubDownloadService
 from app.services.log_service import LogService
 from app.services.terminal_service import TerminalService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
-from app.services.file_scanner import scan_downloaded_repo
+from app.services.file_scanner import scan_downloaded_repo, scan_local_dir
 from app.services.error_log_service import ErrorLogService
 import yaml, urllib.parse, shutil
+import re
 
 
 from app.env_maker import refine_env, validate_env_content
+
+
+def _sanitize_project_name(name: str) -> str:
+    """Turn a repo/branch/path string into a safe unique-ish project name."""
+    if not name:
+        return ""
+    # Replace separators and risky chars with underscores.
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
+    # Collapse multiple underscores and strip ends.
+    cleaned = re.sub(r"_+", "_", cleaned).strip("._-")
+    return cleaned[:100]
+
 
 def _extract_host_port_from_compose(content: str) -> Optional[int]:
     """Parse compose YAML and return the first host port found in services.*.ports."""
@@ -128,8 +142,8 @@ def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str
     if port is None:
         port = _extract_host_port_from_compose(data.compose_content or "")
     if port is None:
-        free = find_free_ports(25600, 1)
-        port = free[0] if free else 25600
+        free = find_free_ports(30000, 1)
+        port = free[0] if free else 30000
     p = Project(
         name=data.name,
         github_repo_url=data.github_repo_url,
@@ -204,8 +218,8 @@ def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db)
         raise HTTPException(status_code=409, detail="Project name exists")
 
     deploy_path = str(Path(settings.PROJECTS_DIR) / name)
-    free = find_free_ports(25600, 1)
-    port = free[0] if free else 25600
+    free = find_free_ports(30000, 1)
+    port = free[0] if free else 30000
 
     p = Project(
         name=name,
@@ -230,6 +244,120 @@ def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db)
     shutil.copytree(src, ppath)
 
     AuditService.log(db, "project_quick_create", target=p.name, user=user)
+    return p
+
+class DirectCreatePayload(BaseModel):
+    source: str
+    download_id: Optional[int] = None
+    path: Optional[str] = None
+    name: Optional[str] = None
+
+@router.post("/projects/direct-create", response_model=ProjectOut)
+def direct_create_project(data: DirectCreatePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    """Create a project by copying a source as-is. No compose/env editing step."""
+    source = data.source
+    src_path = None
+    github_url = ""
+    branch = "main"
+    release_tag = None
+    token_id = None
+    suggested_name = (data.name or "").strip()
+    dl = None
+
+    if source == "download":
+        dl = db.query(Download).filter(Download.id == data.download_id).first() if data.download_id else None
+        if not dl or not dl.extracted_path:
+            raise HTTPException(status_code=404, detail="Download not ready")
+        src_path = dl.extracted_path
+        suggested_name = suggested_name or (f"{dl.owner}_{dl.repo}_{dl.ref}" if dl.owner and dl.repo else dl.repo or Path(src_path).name)
+        github_url = f"https://github.com/{dl.owner}/{dl.repo}.git" if dl.owner and dl.repo else ""
+        branch = dl.ref or "main"
+        token_id = dl.token_id
+    elif source == "local":
+        decoded_path = urllib.parse.unquote(data.path or "")
+        if not decoded_path:
+            raise HTTPException(status_code=400, detail="Path required")
+        src = Path(decoded_path)
+        if not src.exists():
+            raise HTTPException(status_code=400, detail="Directory does not exist")
+        src_path = str(src)
+        suggested_name = suggested_name or src.name
+    elif source == "github":
+        dl = db.query(Download).filter(Download.id == data.download_id).first() if data.download_id else None
+        if not dl or not dl.extracted_path:
+            raise HTTPException(status_code=404, detail="Download not ready")
+        src_path = dl.extracted_path
+        suggested_name = suggested_name or (f"{dl.owner}_{dl.repo}_{dl.ref}" if dl.owner and dl.repo else dl.repo or Path(src_path).name)
+        github_url = f"https://github.com/{dl.owner}/{dl.repo}.git" if dl.owner and dl.repo else ""
+        branch = dl.ref or "main"
+        token_id = dl.token_id
+    else:
+        raise HTTPException(status_code=400, detail="Invalid source")
+
+    name = _sanitize_project_name(suggested_name)
+    if not name:
+        raise HTTPException(status_code=400, detail="Could not determine project name")
+
+    existing = db.query(Project).filter(Project.name == name).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Project name exists")
+
+    deploy_path = str(Path(settings.PROJECTS_DIR) / name)
+
+    # Auto-detect command mode from source files; do not modify any file.
+    scan = scan_local_dir(src_path)
+    compose_file = scan.get("compose_file") or "docker-compose.yml"
+    compose_exists = bool(scan.get("compose_exists"))
+    dockerfile_exists = bool(scan.get("dockerfile_exists"))
+    if compose_exists:
+        command_mode = "compose"
+        deploy_method = "compose"
+    elif dockerfile_exists:
+        command_mode = "dockerfile"
+        deploy_method = "build"
+    else:
+        command_mode = "direct"
+        deploy_method = "direct"
+
+    port = _extract_host_port_from_compose(scan.get("compose", ""))
+    if port is None:
+        free = find_free_ports(30000, 1)
+        port = free[0] if free else 30000
+
+    p = Project(
+        name=name,
+        github_repo_url=github_url,
+        branch=branch,
+        deploy_path=deploy_path,
+        compose_file=compose_file,
+        env_vars={},
+        env_content="",
+        example_env_content="",
+        dockerfile_content="",
+        compose_content="",
+        labels="",
+        token_id=token_id,
+        port=port,
+        deploy_method=deploy_method,
+        release_tag=release_tag,
+        command_mode=command_mode,
+        raw_mode=False,
+        direct_command="",
+        source_type=source,
+        source_path=src_path,
+        deploy_commands=[],
+    )
+    db.add(p)
+    db.commit()
+    db.refresh(p)
+
+    # Copy source as-is; never edit files automatically.
+    ppath = Path(deploy_path)
+    if ppath.exists():
+        shutil.rmtree(ppath, ignore_errors=True)
+    shutil.copytree(src_path, ppath)
+
+    AuditService.log(db, "project_direct_create", target=p.name, user=user)
     return p
 
 @router.get("/projects/{pid}", response_model=ProjectOut)

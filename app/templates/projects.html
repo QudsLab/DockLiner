@@ -23,7 +23,7 @@
         <td data-label="Port">{{ p.port or '-' }}</td>
         <td data-label="Actions">
           <a class="btn btn-primary btn-xs" href="/projects/{{ p.id }}">Manage</a>
-          <button class="btn btn-danger btn-xs" onclick="showConfirmModal('Delete project?', 'Delete {{ p.name | e }}? This cannot be undone.', 'Delete', 'btn-danger', ()=>{ fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload()); })">Delete</button>
+          <button class="btn btn-danger btn-xs" onclick='deleteProject({{ p.id }}, {{ p.name | tojson }})'>Delete</button>
         </td>
       </tr>
     {% endfor %}
@@ -58,7 +58,7 @@
       </div>
       <div class="project-card-actions">
         <a class="btn btn-primary" href="/projects/{{ p.id }}">Manage</a>
-        <button class="btn btn-danger" onclick="showConfirmModal('Delete project?', 'Delete {{ p.name | e }}? This cannot be undone.', 'Delete', 'btn-danger', ()=>{ fetch('/api/projects/{{ p.id }}',{method:'DELETE'}).then(()=>location.reload()); })">Delete</button>
+        <button class="btn btn-danger" onclick='deleteProject({{ p.id }}, {{ p.name | tojson }})'>Delete</button>
       </div>
     </div>
     {% endfor %}
@@ -73,6 +73,49 @@
   </div>
   {% endif %}
 </div>
+
+{% if orphan_projects %}
+<style>
+.orphan-card{padding:12px 14px;border:1px solid var(--hairline);border-radius:var(--radius-md);background:var(--surface-card);margin-bottom:10px;display:flex;align-items:center;gap:12px}
+.orphan-card .name{font-weight:600;font-size:14px;color:var(--ink);flex:1}
+.orphan-card .path{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.orphan-card .size{flex-shrink:0;font-family:var(--font-mono);font-size:13px;color:var(--ink)}
+.orphan-card input[type=checkbox]{width:16px;height:16px}
+</style>
+
+<h2 class="section-title" style="margin-top:28px;">Unregistered project folders</h2>
+<p class="section-subtitle">These folders exist on disk but are not tracked by the system.</p>
+
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+  <button class="btn btn-secondary btn-sm" onclick="selectAllOrphans(true)">Select all</button>
+  <button class="btn btn-ghost btn-sm" onclick="selectAllOrphans(false)">Deselect all</button>
+  <button class="btn btn-danger btn-sm" onclick="deleteSelectedOrphans()">Delete selected</button>
+</div>
+
+{% for o in orphan_projects %}
+<div class="orphan-card">
+  <input type="checkbox" class="orphan-chk" data-name="{{ o.name }}" data-type="{{ o.type }}">
+  <div style="flex:1;min-width:0;">
+    <div class="name">{{ o.name }}</div>
+    <div class="path">{{ o.path }}</div>
+  </div>
+  <div class="size">{{ o.size }}</div>
+</div>
+{% endfor %}
+
+<script>
+function deleteProject(id, name){
+  showConfirmModal('Delete project?', 'Delete ' + name + '? This cannot be undone.', 'Delete', 'btn-danger', async ()=>{
+    const r = await fetch('/api/projects/'+id, {method:'DELETE'});
+    const d = await r.json().catch(()=>({}));
+    if(r.ok){
+      showToast('Project deleted', 'success');
+      location.reload();
+    } else {
+      showToast('Delete failed: '+(d.detail||r.statusText), 'error');
+    }
+  });
+}
 
 {% if orphan_projects %}
 <style>

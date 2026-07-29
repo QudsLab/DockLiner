@@ -9,3 +9,6 @@
 /github-cache
 *.log
 *.db
+/app/templates_new
+/app/templates_old
+/app/templates - Copy
