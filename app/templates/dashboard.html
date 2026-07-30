@@ -1,17 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — DockLiner{% endblock %}
 {% block content %}
-<!-- Install prompt -->
-<div id="install-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100;background:var(--primary);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;text-align:center;font-size:14px;font-weight:500;box-shadow:0 2px 8px rgba(0,0,0,0.25);">
-  Add DockLiner to your home screen for the best app experience
-  <button id="install-btn" style="margin-left:12px;background:#fff;color:var(--primary);border:none;border-radius:12px;padding:6px 12px;font-weight:600;cursor:pointer;">Install</button>
-  <button onclick="localStorage.setItem('dockliner-install-dismissed','1');document.getElementById('install-banner').style.display='none'" style="margin-left:8px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:12px;padding:6px 10px;cursor:pointer;">✕</button>
-</div>
-
 <h1 class="hero-title">Dashboard</h1>
 <p class="section-subtitle">Overview of projects, containers, and images.</p>
 
-<div class="grid grid-3" style="margin-bottom:24px;">
+<div class="grid grid-4" style="margin-bottom:24px;">
 <div class="card stat-card">
   <div class="form-col">
     <span class="stat-label">Projects</span>
@@ -30,12 +23,18 @@
     <div class="stat-value">{{ images|length }}</div>
   </div>
 </div>
+<div class="card stat-card">
+  <div class="form-col">
+    <span class="stat-label">Orphan Downloads</span>
+    <div class="stat-value">{{ orphan_downloads|length }}</div>
+  </div>
+</div>
 </div>
 
 <!-- Docker status + resources -->
 <div class="card" style="margin-bottom:24px;">
   <h2 class="section-title">Docker</h2>
-  <div class="grid grid-3" style="margin-bottom:16px;">
+  <div class="grid grid-5" style="margin-bottom:16px;">
     <div class="card">
       <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Engine</label>
       <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">
@@ -65,6 +64,14 @@
       <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
       <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ images|length }}</div>
     </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Running</label>
+      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ running_count }}</div>
+    </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Offline</label>
+      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ offline_count }}</div>
+    </div>
   </div>
 
   {% if not docker_installed %}
@@ -79,133 +86,19 @@
 </div>
 
 <div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Containers</h2>
-  {% if containers %}
-  <table class="table">
-    <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>Ports</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for c in containers %}
-      <tr>
-        <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.Ports or '-' }}</td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
-          <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
-          <button class="btn btn-ghost btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/ports').then(r=>r.json()).then(d=>showInfoModal('Container ports', JSON.stringify(d,null,2)))">Ports</button>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p style="color:var(--muted)">No containers.</p>{% endif %}
-</div>
-
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Images</h2>
-  {% if images %}
-  <table class="table">
-    <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for i in images %}
-      <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p style="color:var(--muted)">No images.</p>{% endif %}
-</div>
-
-<div class="grid grid-2" style="margin-bottom:24px;">
-  <div class="card">
-    <h2 class="section-title">Networks</h2>
-    {% if networks %}
-    <table class="table"><thead><tr><th>Name</th><th>ID</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-      {% for n in networks %}<tr><td>{{ n.Name }}</td><td>{{ n.ID[:12] }}</td><td>{{ n.Driver }}</td><td>{{ n.Scope }}</td></tr>{% endfor %}
-    </tbody></table>
-    {% else %}<p style="color:var(--muted)">No networks.</p>{% endif %}
-  </div>
-  <div class="card">
-    <h2 class="section-title">Volumes</h2>
-    {% if volumes %}
-    <table class="table"><thead><tr><th>Name</th><th>Driver</th><th>Scope</th></tr></thead><tbody>
-      {% for v in volumes %}<tr><td>{{ v.Name }}</td><td>{{ v.Driver }}</td><td>{{ v.Scope }}</td></tr>{% endfor %}
-    </tbody></table>
-    {% else %}<p class="muted">No volumes.</p>{% endif %}
+  <h2 class="section-title">Host</h2>
+  <div class="grid grid-2" style="margin-bottom:0;">
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Public IP</label>
+      <div style="font-size:22px;font-family:var(--font-mono);color:var(--ink);margin-top:6px;">{{ ips.public }}</div>
+    </div>
+    <div class="card">
+      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Private IP</label>
+      <div style="font-size:22px;font-family:var(--font-mono);color:var(--ink);margin-top:6px;">{{ ips.private }}</div>
+    </div>
   </div>
 </div>
 
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Projects</h2>
-  {% if projects %}
-  <table class="table">
-    <thead><tr><th>Name</th><th>Status</th><th>Port</th><th>Last Deployed</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for p in projects %}
-      <tr>
-        <td><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
-        <td><span class="status-pill status-{{ p.status }}">{{ p.status }}</span></td>
-        <td>{{ p.port or '-' }}</td>
-        <td>{{ p.last_deployed.strftime('%Y-%m-%d %H:%M') if p.last_deployed else '-' }}</td>
-        <td>
-          <a class="btn btn-primary btn-sm" href="/api/projects/{{ p.id }}/build" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Build</a>
-          <a class="btn btn-secondary btn-sm" href="/api/projects/{{ p.id }}/start" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Start</a>
-          <a class="btn btn-secondary btn-sm" href="/api/projects/{{ p.id }}/stop" onclick="event.preventDefault();fetch(this.href,{method:'POST'}).then(()=>location.reload())">Stop</a>
-          <a class="btn btn-secondary btn-sm" href="/projects/{{ p.id }}/logs">Logs</a>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div style="text-align:center;padding:48px 20px;">
-    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" style="opacity:.6;margin-bottom:12px;">
-      <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/><circle cx="17" cy="6.5" r=".8" fill="currentColor"/><circle cx="14" cy="6.5" r=".8" fill="currentColor"/>
-    </svg>
-    <p class="empty-state">No projects yet.</p>
-    <a class="btn btn-primary has-icon" href="/projects/add" style="text-decoration:none;display:inline-flex;">
-      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
-      Add Project
-    </a>
-  </div>
-  {% endif %}
-</div>
-
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Running Containers</h2>
-  {% if containers %}
-  <table class="table">
-    <thead><tr><th>ID</th><th>Image</th><th>Names</th><th>Status</th><th>Ports</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for c in containers %}
-      <tr>
-        <td>{{ c.ID[:12] }}</td><td>{{ c.Image }}</td><td>{{ c.Names }}</td><td>{{ c.Status }}</td><td>{{ c.Ports or '-' }}</td>
-        <td>
-          <button class="btn btn-secondary btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/stop',{method:'POST'}).then(()=>location.reload())">Stop</button>
-          <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/containers/{{ c.ID }}/remove?force=true',{method:'POST'}).then(()=>location.reload())">Remove</button>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="empty-state">No containers running.</p>
-  {% endif %}
-</div>
-
-<div class="card">
-  <h2 class="section-title">Images</h2>
-  {% if images %}
-  <table class="table">
-    <thead><tr><th>Repository</th><th>Tag</th><th>ID</th><th>Size</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for i in images %}
-      <tr><td>{{ i.Repository }}</td><td>{{ i.Tag }}</td><td>{{ i.ID[:12] }}</td><td>{{ i.Size }}</td><td><button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/images/{{ i.ID }}/remove',{method:'POST'}).then(()=>location.reload())">Remove</button></td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  {% else %}<p class="empty-state">No images found.</p>
-{% endif %}
-</div>
 <script>
 // Dashboard-only install prompt
 (function(){

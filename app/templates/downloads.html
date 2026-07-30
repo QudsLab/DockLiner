@@ -55,6 +55,19 @@
   </div>
 </div>
 
+<!-- Create project name modal -->
+<div id="create-project-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-box">
+    <h3 class="modal-title">Name the project</h3>
+    <p class="modal-text">A project will be created from this download.</p>
+    <input id="create-project-input" class="input" type="text" placeholder="project-name" onkeydown="if(event.key==='Enter')submitCreateProject()" style="width:100%;margin-bottom:16px;">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeCreateProjectModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCreateProject()">Create</button>
+    </div>
+  </div>
+</div>
+
 <button class="dl-fab" onclick="location.href='/projects/add'" title="Add project">+</button>
 
 <script>
@@ -131,7 +144,7 @@ function renderCard(el, d){
   }
   let buttons = '';
   if(!isUntracked(d) && d.status==='done'){
-    buttons += `<a href="/projects/setup?source=download&download_id=${d.id}" class="btn btn-primary btn-sm" style="text-decoration:none;">Create project</a>`;
+    buttons += `<button class="btn btn-primary btn-sm" onclick="startCreateProject(${d.id}, '${escapeHtml(d.repo||d.folder_name||'project')}')">Create project</button>`;
     if(d.compose_file || d.dockerfile_exists){
       const tags = [d.compose_file?'compose':'', d.dockerfile_exists?'dockerfile':''].filter(Boolean).join(', ');
       buttons += ` <span class="tag">${tags}</span>`;
@@ -209,6 +222,46 @@ document.getElementById('dl-confirm-ok').addEventListener('click', async () => {
     if(card) card.classList.remove('deleting');
     showToast(`Delete failed: ${e.message}`);
   }
+});
+
+let pendingCreateDownloadId = null;
+function startCreateProject(downloadId, defaultName){
+  pendingCreateDownloadId = downloadId;
+  const input = document.getElementById('create-project-input');
+  input.value = defaultName ? defaultName.replace(/[^a-zA-Z0-9_\-.]/g, '_') : '';
+  const modal = document.getElementById('create-project-modal');
+  modal.style.display = 'flex';
+  modal.classList.add('active');
+  input.focus();
+  input.select();
+}
+function closeCreateProjectModal(){
+  pendingCreateDownloadId = null;
+  const modal = document.getElementById('create-project-modal');
+  modal.style.display = 'none';
+  modal.classList.remove('active');
+}
+async function submitCreateProject(){
+  const name = document.getElementById('create-project-input').value.trim();
+  const downloadId = pendingCreateDownloadId;
+  if(!name || !downloadId) return;
+  closeCreateProjectModal();
+  try {
+    const r = await fetch('/api/projects/quick-create', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({download_id: downloadId, name: name})
+    });
+    const d = await r.json().catch(() => ({}));
+    if(r.ok) location.href = '/projects';
+    else showToast(d.detail || 'Create failed');
+  } catch(e) { showToast('Create failed: ' + e.message); }
+}
+document.getElementById('create-project-modal').addEventListener('click', e => {
+  if(e.target.id === 'create-project-modal') closeCreateProjectModal();
+});
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && pendingCreateDownloadId !== null) closeCreateProjectModal();
 });
 
 async function deleteDownload(id, isFolder=false){

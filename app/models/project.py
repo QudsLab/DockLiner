@@ -24,7 +24,6 @@ class Project(Base):
     compose_content = Column(Text, default="")
     labels = Column(String, default="")
     token_id = Column(Integer, ForeignKey("access_tokens.id"), nullable=True)
-    port = Column(Integer, nullable=True)
     deploy_method = Column(String, default="compose")
     release_tag = Column(String, nullable=True)
     command_mode = Column(String, default="compose")  # compose|dockerfile|direct
@@ -52,7 +51,6 @@ class Project(Base):
             "compose_content": self.compose_content or "",
             "labels": self.labels or "",
             "token_id": self.token_id,
-            "port": self.port,
             "deploy_method": self.deploy_method or "compose",
             "release_tag": self.release_tag,
             "command_mode": self.command_mode or "compose",

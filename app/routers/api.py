@@ -10,7 +10,6 @@ import io, zipfile, json, os, urllib.request, urllib.error, subprocess, time, sy
 from app.core.db import get_db, SessionLocal
 from app.core.config import settings, log_login_attempt, log_login_success, log_login_failure
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
-from app.core.utils import find_free_ports
 from app.models.project import (
     Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
     HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog, SystemLog
@@ -51,10 +50,12 @@ def _sanitize_project_name(name: str) -> str:
     return cleaned[:100]
 
 
-def _extract_host_port_from_compose(content: str) -> Optional[int]:
-    """Parse compose YAML and return the first host port found in services.*.ports."""
+def _extract_host_port_from_compose(content: str, env: Optional[dict] = None) -> Optional[int]:
+    """Parse compose YAML and return the first host port found in services.*.ports.
+    Resolves simple ${VAR:-default} variable substitution using provided env dict."""
     if not content:
         return None
+    env = env or {}
     try:
         doc = yaml.safe_load(content)
     except Exception:
@@ -64,6 +65,22 @@ def _extract_host_port_from_compose(content: str) -> Optional[int]:
     services = doc.get("services") or {}
     if not isinstance(services, dict):
         return None
+    var_re = re.compile(r"\$\{([^}]+)\}")
+
+    def resolve_value(value):
+        if not isinstance(value, str):
+            return value
+        def repl(match):
+            expr = match.group(1)
+            if ":-" in expr:
+                var, default = expr.split(":-", 1)
+            elif "-" in expr:
+                var, default = expr.split("-", 1)
+            else:
+                var, default = expr, ""
+            return str(env.get(var, default))
+        return var_re.sub(repl, value)
+
     for svc in services.values():
         if not isinstance(svc, dict):
             continue
@@ -74,17 +91,37 @@ def _extract_host_port_from_compose(content: str) -> Optional[int]:
             if isinstance(entry, int):
                 return entry
             if isinstance(entry, str):
-                host_part = entry.split(":")[-2] if entry.count(":") >= 2 else entry.split(":")[0]
+                resolved = resolve_value(entry)
+                host_part = resolved.split(":")[-2] if resolved.count(":") >= 2 else resolved.split(":")[0]
                 host_part = host_part.split("/")[0].strip()
                 if host_part.isdigit():
                     return int(host_part)
             if isinstance(entry, dict):
                 published = entry.get("published") or entry.get("target")
+                if isinstance(published, (int, str)):
+                    published = resolve_value(published)
                 if isinstance(published, int):
                     return published
                 if isinstance(published, str) and published.isdigit():
                     return int(published)
     return None
+
+
+def _load_env_dict(path: Path) -> dict:
+    env = {}
+    if not path.exists():
+        return env
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"\'')
+    except Exception:
+        pass
+    return env
 
 
 
@@ -134,55 +171,58 @@ def list_projects(db: Session = Depends(get_db), user: str = Depends(require_aut
 
 @router.post("/projects", response_model=ProjectOut)
 def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    existing = db.query(Project).filter(Project.name == data.name).first()
+    """Create a new project from GitHub or local/download source."""
+    name = data.name or data.repo
+    if not name:
+        raise HTTPException(status_code=400, detail="Project name required")
+    existing = db.query(Project).filter(Project.name == name).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Project name exists")
-    deploy_path = str(Path(settings.PROJECTS_DIR) / data.name)
-    port = data.port
-    if port is None:
-        port = _extract_host_port_from_compose(data.compose_content or "")
-    if port is None:
-        free = find_free_ports(30000, 1)
-        port = free[0] if free else 30000
+        raise HTTPException(status_code=409, detail="Project name already exists")
+
+    deploy_path = str(Path(settings.PROJECTS_DIR) / name)
     p = Project(
-        name=data.name,
-        github_repo_url=data.github_repo_url,
+        name=name,
+        github_repo_url=f"https://github.com/{data.owner}/{data.repo}.git" if data.owner and data.repo else "",
         branch=data.branch or "main",
         deploy_path=deploy_path,
         compose_file=data.compose_file or "docker-compose.yml",
+        deploy_method="compose",
+        command_mode="compose",
+        source_type=data.source or "github",
+        source_path=data.local_path or "",
         env_vars=data.env_vars or {},
         env_content=data.env_content or "",
-        example_env_content=data.example_env_content or "",
-        dockerfile_content=data.dockerfile_content or "",
         compose_content=data.compose_content or "",
-        labels=data.labels or "",
+        dockerfile_content=data.dockerfile_content or "",
         token_id=data.token_id,
-        port=port,
-        deploy_method=data.deploy_method or "compose",
-        release_tag=data.release_tag,
-        command_mode=data.command_mode or "compose",
-        raw_mode=data.raw_mode or False,
-        direct_command=data.direct_command or "",
-        source_type=data.source_type or "github",
-        source_path=data.source_path,
+        labels=data.labels or "",
     )
     db.add(p)
     db.commit()
     db.refresh(p)
-    # Persist files
-    ppath = Path(str(p.deploy_path))
-    ppath.mkdir(parents=True, exist_ok=True)
 
-    # If created from an existing source, mirror it first.
-    if p.source_path:
-        src = Path(p.source_path)
-        if src.exists():
-            if ppath.exists():
-                shutil.rmtree(ppath, ignore_errors=True)
-            shutil.copytree(src, ppath)
-        elif p.source_type in ("download", "local"):
-            p.status = "error"
-            p.error_message = f"Source path missing: {src}"
+    # Copy source files into deploy path.
+    src = Path(p.source_path) if p.source_path else None
+    ppath = Path(deploy_path)
+    if ppath.exists():
+        shutil.rmtree(ppath, ignore_errors=True)
+    if data.source == "github" and data.owner and data.repo:
+        GithubCacheService.download_and_extract(p, db)
+    elif src and src.exists():
+        shutil.copytree(src, ppath)
+        # If source was a download, normalize the nested folder structure.
+        if p.source_type == "download":
+            top = next((x for x in ppath.iterdir() if x.is_dir()), None)
+            if top and (top / "docker-compose.yml").exists():
+                for f in top.iterdir():
+                    dest = ppath / f.name
+                    if dest.exists():
+                        if dest.is_dir(): shutil.rmtree(dest)
+                        else: dest.unlink()
+                    shutil.move(str(f), str(dest))
+                shutil.rmtree(top)
+    else:
+        ppath.mkdir(parents=True, exist_ok=True)
 
     # Overwrite with editor-provided content.
     env_txt = str(p.env_content or "")
@@ -204,7 +244,7 @@ class QuickCreatePayload(BaseModel):
 
 @router.post("/projects/quick-create", response_model=ProjectOut)
 def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    """Create a project directly from a download — no editor step."""
+    """Create a project directly from a download — no editor step, no DockLiner config edits."""
     dl = db.query(Download).filter(Download.id == data.download_id).first()
     if not dl or not dl.extracted_path:
         raise HTTPException(status_code=404, detail="Download not ready")
@@ -218,16 +258,12 @@ def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db)
         raise HTTPException(status_code=409, detail="Project name exists")
 
     deploy_path = str(Path(settings.PROJECTS_DIR) / name)
-    free = find_free_ports(30000, 1)
-    port = free[0] if free else 30000
-
     p = Project(
         name=name,
         github_repo_url=f"https://github.com/{dl.owner}/{dl.repo}.git" if dl.owner and dl.repo else "",
         branch=dl.ref or "main",
         deploy_path=deploy_path,
         compose_file="docker-compose.yml",
-        port=port,
         deploy_method="compose",
         command_mode="compose",
         source_type="github",
@@ -237,7 +273,7 @@ def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db)
     db.commit()
     db.refresh(p)
 
-    # Copy all files from download to project
+    # Copy all files from download to project without editing.
     ppath = Path(deploy_path)
     if ppath.exists():
         shutil.rmtree(ppath, ignore_errors=True)
@@ -245,6 +281,7 @@ def quick_create_project(data: QuickCreatePayload, db: Session = Depends(get_db)
 
     AuditService.log(db, "project_quick_create", target=p.name, user=user)
     return p
+
 
 class DirectCreatePayload(BaseModel):
     source: str
@@ -321,8 +358,7 @@ def direct_create_project(data: DirectCreatePayload, db: Session = Depends(get_d
 
     port = _extract_host_port_from_compose(scan.get("compose", ""))
     if port is None:
-        free = find_free_ports(30000, 1)
-        port = free[0] if free else 30000
+        raise HTTPException(status_code=400, detail="No host port declared in docker-compose.yml. Add a ports mapping like '50021:3000'.")
 
     p = Project(
         name=name,
@@ -337,7 +373,6 @@ def direct_create_project(data: DirectCreatePayload, db: Session = Depends(get_d
         compose_content="",
         labels="",
         token_id=token_id,
-        port=port,
         deploy_method=deploy_method,
         release_tag=release_tag,
         command_mode=command_mode,
@@ -373,6 +408,7 @@ def update_project(pid: int, data: ProjectUpdate, db: Session = Depends(get_db),
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
     payload = data.model_dump(exclude_unset=True)
+    payload.pop("port", None)
     new_name = payload.pop("name", None)
     for k, v in payload.items():
         setattr(p, k, v)
@@ -554,6 +590,32 @@ def move_project_file(pid: int, payload: MoveFilePayload, db: Session = Depends(
     AuditService.log(db, "project_file_move", target=f"{p.name}: {payload.source} -> {payload.destination}", user=user)
     return {"ok": True}
 
+@router.post("/projects/{pid}/files/copy")
+def copy_project_file(pid: int, payload: MoveFilePayload, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    root = Path(p.deploy_path).resolve()
+    src = (Path(p.deploy_path) / payload.source).resolve()
+    dst = (Path(p.deploy_path) / payload.destination).resolve()
+    try:
+        src.relative_to(root)
+        dst.relative_to(root)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="Source not found")
+    if dst.exists():
+        raise HTTPException(status_code=409, detail="Destination already exists")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    import shutil
+    if src.is_dir():
+        shutil.copytree(src, dst)
+    else:
+        shutil.copy2(src, dst)
+    AuditService.log(db, "project_file_copy", target=f"{p.name}: {payload.source} -> {payload.destination}", user=user)
+    return {"ok": True}
+
 @router.get("/projects/{pid}/files/{path:path}")
 def read_project_file(pid: int, path: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
@@ -592,7 +654,7 @@ def update_project_file(pid: int, path: str, data: ProjectFileUpdate, db: Sessio
         p.compose_file = path
         parsed_port = _extract_host_port_from_compose(data.content)
         if parsed_port is not None:
-            p.port = parsed_port
+            pass  # DockLiner no longer stores ports from compose; container runtime is the source of truth.
     elif lower == "dockerfile":
         p.dockerfile_content = data.content
     elif lower in (".env", "env"):
@@ -1553,3 +1615,40 @@ def run_migrations(body: MigrationRunBody, user: str = Depends(require_auth)):
             raise HTTPException(status_code=400, detail="SQL does not match pending migration")
     result = MigrationService.run_ops([{"sql": s} for s in body.sql])
     return result
+
+# ---------- Docker explorer ----------
+
+from app.services.docker_service import DockerService
+
+@router.get("/docker/containers")
+def docker_containers(user: str = Depends(require_auth)):
+    return {"containers": DockerService.list_containers()}
+
+@router.get("/docker/images")
+def docker_images(user: str = Depends(require_auth)):
+    return {"images": DockerService.list_images()}
+
+@router.get("/docker/containers/{container_id}/logs")
+def docker_container_logs(container_id: str, tail: int = 200, user: str = Depends(require_auth)):
+    return {"logs": DockerService.container_logs_by_project(container_id, tail=tail)}
+
+@router.post("/docker/containers/{container_id}/stop")
+def docker_stop_container(container_id: str, user: str = Depends(require_auth)):
+    rc, out = DockerService.stop_container(container_id)
+    if rc != 0:
+        raise HTTPException(status_code=500, detail=out)
+    return {"ok": True, "output": out}
+
+@router.delete("/docker/containers/{container_id}")
+def docker_remove_container(container_id: str, force: bool = False, user: str = Depends(require_auth)):
+    rc, out = DockerService.remove_container(container_id, force=force)
+    if rc != 0:
+        raise HTTPException(status_code=500, detail=out)
+    return {"ok": True, "output": out}
+
+@router.delete("/docker/images/{image_id}")
+def docker_remove_image(image_id: str, force: bool = False, user: str = Depends(require_auth)):
+    rc, out = DockerService.remove_image(image_id, force=force)
+    if rc != 0:
+        raise HTTPException(status_code=500, detail=out)
+    return {"ok": True, "output": out}

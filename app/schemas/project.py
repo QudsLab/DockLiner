@@ -81,9 +81,9 @@ class ProjectOut(BaseModel):
     env_vars: Optional[Dict[str, Any]]
     labels: Optional[str]
     token_id: Optional[int]
-    port: Optional[int]
-    deploy_method: Optional[str]
-    release_tag: Optional[str]
+    port: Optional[int] = None
+    deploy_method: Optional[str] = "compose"
+    release_tag: Optional[str] = None
     command_mode: Optional[str]
     raw_mode: Optional[bool]
     direct_command: Optional[str]

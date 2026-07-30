@@ -190,7 +190,7 @@ class DeployService:
             compose_file = project.compose_file or "compose.yml"
             cmds.append(f"docker compose -f {compose_file} up -d --build")
         elif method == "dockerfile":
-            cmds.append(f"docker run -d -p {project.port or 0}:{project.port or 0} --name {project.name} {project.name}")
+            cmds.append(f"docker run -d --name {project.name} {project.name}")
         # direct: run command is already the whole deploy, no separate up
         return cmds
 
@@ -251,7 +251,7 @@ class DeployService:
         elif method == "compose":
             rc, out = DockLinerService.compose_up(str(deploy_path), project.compose_file)
         else:
-            rc, out = DockLinerService.run_image(project.name, project.port or 0)
+            rc, out = DockLinerService.run_image(project.name, 0)
         logs.append(out)
         DeployService._debug(logs, f"deploy rc={rc}")
         if rc != 0:

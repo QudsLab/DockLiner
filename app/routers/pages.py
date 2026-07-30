@@ -6,6 +6,7 @@ from app.core.db import get_db
 from app.core.auth import require_auth
 from app.models.project import Project, Deployment, AccessToken, Download, SystemLog
 from app.services.dockliner_service import DockLinerService
+from app.services.docker_service import DockerService
 from app.services.file_scanner import scan_local_dir
 from app.services.log_service import LogService
 from pathlib import Path
@@ -19,17 +20,44 @@ templates = Jinja2Templates(directory="app/templates")
 def login_page(request: Request):
     return templates.TemplateResponse(request, "login.html", {"request": request})
 
+import socket
+import urllib.request
+
+def _get_ips():
+    public = None
+    private = None
+    try:
+        with urllib.request.urlopen('https://api.ipify.org?format=json', timeout=5) as r:
+            public = json.loads(r.read().decode()).get('ip')
+    except Exception:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2)
+        s.connect(("8.8.8.8", 53))
+        private = s.getsockname()[0]
+        s.close()
+    except Exception:
+        pass
+    return {"public": public or "-", "private": private or "-"}
+
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     projects = db.query(Project).all()
+    from app.services.cleanup_service import CleanupService
+    scan = CleanupService.scan(db)
     containers = DockLinerService.list_containers()
     images = DockLinerService.list_images()
-    networks = DockLinerService.list_networks()
-    volumes = DockLinerService.list_volumes()
+    running = sum(1 for c in containers if str(c.get('State','')).lower() == 'running')
+    offline = len(containers) - running
+    ips = _get_ips()
     tokens = db.query(AccessToken).all()
     return templates.TemplateResponse(request, "dashboard.html", {
-        "request": request, "projects": projects, "containers": containers,
-        "images": images, "networks": networks, "volumes": volumes,
+        "request": request, "projects": projects,
+        "containers": containers, "images": images,
+        "running_count": running, "offline_count": offline,
+        "orphan_downloads": scan["downloads"],
+        "ips": ips,
         "tokens": tokens,
         "docker_installed": DockLinerService.docker_installed(),
         "docker_running": DockLinerService.docker_running(),
@@ -41,9 +69,11 @@ def projects_page(request: Request, db: Session = Depends(get_db), user: str = D
     from app.services.cleanup_service import CleanupService
     registered = db.query(Project).all()
     scan = CleanupService.scan(db)
+    show_ports = False  # DockLiner no longer stores project ports in DB; ports come from Docker runtime only.
     return templates.TemplateResponse(request, "projects.html", {
         "request": request, "projects": registered, "tokens": db.query(AccessToken).all(),
         "orphan_projects": scan["projects"], "orphan_downloads": scan["downloads"],
+        "show_ports": show_ports,
     })
 
 @router.get("/projects/add", response_class=HTMLResponse)
@@ -179,6 +209,17 @@ def logs_page(request: Request, pid: int, db: Session = Depends(get_db), user: s
 def system_logs_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     groups = LogService.grouped_by_day(limit_days=30)
     return templates.TemplateResponse(request, "system_logs.html", {"request": request, "groups": groups})
+
+@router.get("/hub", response_class=HTMLResponse)
+def hub_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    containers = DockerService.list_containers()
+    images = DockerService.list_images()
+    return templates.TemplateResponse(request, "hub.html", {
+        "request": request, "containers": containers, "images": images,
+        "docker_installed": DockLinerService.docker_installed(),
+        "docker_running": DockLinerService.docker_running(),
+        "docker_version": DockLinerService.docker_version(),
+    })
 
 @router.get("/projects/{pid}", response_class=HTMLResponse)
 def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):

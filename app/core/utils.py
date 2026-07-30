@@ -1,10 +1,25 @@
 import socket
 from typing import List, Optional
+from app.core.config import settings
 
-def find_free_ports(start: int = 30000, count: int = 2) -> List[int]:
+def find_free_ports(start: int = None, count: int = 1) -> List[int]:
+    """Return `count` free ports starting from `start` if given, otherwise
+    from the configured DOCKLINER_ALLOWED_PORTS whitelist.
+    """
+    candidates = []
+    if start is not None:
+        candidates = list(range(start, 65000))
+    else:
+        # Use the configured allowed port whitelist (50xxx primes by default).
+        raw = (settings.ALLOWED_PORTS or "50021,50023,50033,50047,50051,50053,50069,50077,50087,50093,50101,50111,50119,50123")
+        for part in raw.split(","):
+            part = part.strip()
+            if part.isdigit():
+                candidates.append(int(part))
     found = []
-    port = start
-    while len(found) < count and port < 65000:
+    for port in candidates:
+        if len(found) >= count:
+            break
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.bind(("0.0.0.0", port))
@@ -13,7 +28,6 @@ def find_free_ports(start: int = 30000, count: int = 2) -> List[int]:
             pass
         finally:
             s.close()
-        port += 1
     return found
 
 def is_port_free(port: int) -> bool:

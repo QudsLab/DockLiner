@@ -50,9 +50,11 @@
       padding-bottom:80px;
     }
     .grid { display:grid; gap:16px; }
-    .grid-3 { grid-template-columns:repeat(3,1fr); }
     .grid-2 { grid-template-columns:repeat(2,1fr); }
-    @media (max-width:900px){ .grid-3,.grid-2 { grid-template-columns:1fr; } }
+    .grid-3 { grid-template-columns:repeat(3,1fr); }
+    .grid-4 { grid-template-columns:repeat(4,1fr); }
+    .grid-5 { grid-template-columns:repeat(5,1fr); }
+    @media (max-width:900px){ .grid-2,.grid-3,.grid-4,.grid-5 { grid-template-columns:1fr; } }
     .logo-wrap { display:flex; align-items:center; gap:8px; }
     .logo-wrap img.logo { height:28px; width:auto; display:block; }
     .logo-wrap .logo-m { margin-right:8px; }
@@ -201,6 +203,9 @@
       <a href="/" class="nav-link {% if request.url.path == '/' %}nav-link-active{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard
       </a>
+      <a href="/hub" class="nav-link {% if request.url.path.startswith('/hub') %}nav-link-active{% endif %}" title="Hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Hub
+      </a>
       <a href="/projects" class="nav-link {% if request.url.path.startswith('/projects') %}nav-link-active{% endif %}">
         <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>Projects
       </a>
@@ -213,9 +218,6 @@
       <a href="/settings" class="nav-link {% if request.url.path == '/settings' %}nav-link-active{% endif %}" title="Settings">
         <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>Settings
       </a>
-      <button class="nav-link" onclick="showLogoutModal()" title="Logout" style="background:none;border:none;cursor:pointer;">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>Logout
-      </button>
       <label class="theme-switch" title="Toggle theme">
         <input type="checkbox" id="themeCheckbox" onchange="toggleTheme(this.checked)">
         <span class="theme-slider"></span>
@@ -228,6 +230,10 @@
     <a href="/" class="bottom-link {% if request.url.path == '/' %}active{% endif %}">
       <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
       <span>Dashboard</span>
+    </a>
+    <a href="/hub" class="bottom-link {% if request.url.path.startswith('/hub') %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      <span>Hub</span>
     </a>
     <a href="/projects" class="bottom-link {% if request.url.path.startswith('/projects') %}active{% endif %}">
       <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
@@ -244,10 +250,6 @@
     <a href="/settings" id="bottomNavSettings" class="bottom-link {% if request.url.path == '/settings' %}active{% endif %}">
       <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       <span>Settings</span>
-    </a>
-    <a href="#" class="bottom-link" onclick="event.preventDefault(); showLogoutModal();">
-      <svg viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/></svg>
-      <span>Logout</span>
     </a>
   </div>
 

@@ -150,8 +150,10 @@ class DockerService:
         return (r.returncode, r.stdout + (err if r.returncode != 0 else ""))
 
     @staticmethod
-    def run_image(image_name: str, port: int) -> tuple:
-        cmd = ["docker", "run", "-d", "--name", image_name, "-p", f"{port}:{port}", image_name]
+    def run_image(image_name: str, port: int = 0) -> tuple:
+        cmd = ["docker", "run", "-d", "--name", image_name, image_name]
+        if port:
+            cmd.extend(["-p", f"{port}:{port}"])
         r = DockerService._with_preflight(cmd)
         err = getattr(r, "_dockliner_diag", r.stderr)
         return (r.returncode, r.stdout + (err if r.returncode != 0 else ""))
