@@ -99,28 +99,31 @@ function closeLogModal(){
   hideModal(document.getElementById('log-modal'));
 }
 async function stopContainer(id){
-  if(!confirm('Stop this container?')) return;
-  try{
-    const r = await fetch('/api/docker/containers/' + encodeURIComponent(id) + '/stop', {method:'POST'});
-    if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Stop failed', 'error'); }
-    else { showToast('Container stopped', 'success'); location.reload(); }
-  }catch(e){ showToast('Stop failed: ' + e.message, 'error'); }
+  showConfirmModal('Stop this container?', 'The container will be stopped.', 'Stop', 'btn-warning', async ()=>{
+    try{
+      const r = await fetch('/api/docker/containers/' + encodeURIComponent(id) + '/stop', {method:'POST'});
+      if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Stop failed', 'error'); }
+      else { showToast('Container stopped', 'success'); location.reload(); }
+    }catch(e){ showToast('Stop failed: ' + e.message, 'error'); }
+  });
 }
 async function removeContainer(id){
-  if(!confirm('Remove this container?')) return;
-  try{
-    const r = await fetch('/api/docker/containers/' + encodeURIComponent(id), {method:'DELETE'});
-    if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Remove failed', 'error'); }
-    else { showToast('Container removed', 'success'); location.reload(); }
-  }catch(e){ showToast('Remove failed: ' + e.message, 'error'); }
+  showConfirmModal('Remove this container?', 'This cannot be undone.', 'Remove', 'btn-danger', async ()=>{
+    try{
+      const r = await fetch('/api/docker/containers/' + encodeURIComponent(id), {method:'DELETE'});
+      if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Remove failed', 'error'); }
+      else { showToast('Container removed', 'success'); location.reload(); }
+    }catch(e){ showToast('Remove failed: ' + e.message, 'error'); }
+  });
 }
 async function removeImage(id){
-  if(!confirm('Remove this image?')) return;
-  try{
-    const r = await fetch('/api/docker/images/' + encodeURIComponent(id), {method:'DELETE'});
-    if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Remove failed', 'error'); }
-    else { showToast('Image removed', 'success'); location.reload(); }
-  }catch(e){ showToast('Remove failed: ' + e.message, 'error'); }
+  showConfirmModal('Remove this image?', 'This cannot be undone.', 'Remove', 'btn-danger', async ()=>{
+    try{
+      const r = await fetch('/api/docker/images/' + encodeURIComponent(id), {method:'DELETE'});
+      if(!r.ok){ const d = await r.json().catch(()=>({})); showToast(d.detail || 'Remove failed', 'error'); }
+      else { showToast('Image removed', 'success'); location.reload(); }
+    }catch(e){ showToast('Remove failed: ' + e.message, 'error'); }
+  });
 }
 
 document.getElementById('log-modal').addEventListener('click', e => {

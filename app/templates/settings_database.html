@@ -93,17 +93,19 @@ function renderDiff(ops){
 }
 
 async function applyMigrations(){
-  if (!confirm('Apply all pending migrations? Low-risk ops add tables/columns. High-risk ops drop columns/tables and cause data loss.')) return;
-  const ops = window.currentOps || [];
-  if (!ops.length) { showToast('No migrations to apply', 'info'); return; }
-  const r = await fetch('/api/migrations/run', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({sql: ops.map(o => o.sql)})
+  const warning = 'Apply all pending migrations? Low-risk ops add tables/columns. High-risk ops drop columns/tables and cause data loss.';
+  showConfirmModal('Apply migrations?', warning, 'Apply', 'btn-danger', async ()=>{
+    const ops = window.currentOps || [];
+    if (!ops.length) { showToast('No migrations to apply', 'info'); return; }
+    const r = await fetch('/api/migrations/run', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({sql: ops.map(o => o.sql)})
+    });
+    const d = await r.json();
+    showToast(d.message || (r.ok ? 'Done' : 'Failed'), r.ok ? 'success' : 'error');
+    if (r.ok) { loadInfo(); loadMigrations(); }
   });
-  const d = await r.json();
-  showToast(d.message || (r.ok ? 'Done' : 'Failed'), r.ok ? 'success' : 'error');
-  if (r.ok) { loadInfo(); loadMigrations(); }
 }
 
 function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }

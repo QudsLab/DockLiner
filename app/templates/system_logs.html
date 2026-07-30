@@ -119,9 +119,10 @@ function filterLogs(){
 }
 
 async function clearLogs(){
-  if (!confirm('Clear all system logs?')) return;
-  const r = await fetch('/api/logs', { method: 'DELETE' });
-  if (r.ok) renderGroups({});
+  showConfirmModal('Clear all system logs?', 'This cannot be undone.', 'Clear', 'btn-danger', async ()=>{
+    const r = await fetch('/api/logs', { method: 'DELETE' });
+    if (r.ok) renderGroups({});
+  });
 }
 
 function escapeHtml(s){
