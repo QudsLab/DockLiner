@@ -163,6 +163,11 @@ def api_logout(response: Response, request: Request, db: Session = Depends(get_d
         response.set_cookie(k, v, httponly=True, samesite="lax")
     return {"ok": True}
 
+@router.get("/version")
+def api_version(user: str = Depends(require_auth)):
+    from app.services.version_service import VersionService
+    return VersionService.check()
+
 # ---------- Projects ----------
 
 @router.get("/projects", response_model=List[ProjectOut])

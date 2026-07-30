@@ -174,9 +174,8 @@ def downloads_page(request: Request, db: Session = Depends(get_db), user: str = 
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     tokens = db.query(AccessToken).all()
-    sec = DockLinerService.security_summary()
-    from app.services.version_service import VersionService
-    version = VersionService.check()
+    sec = {"containers_checked": 0, "issues": [], "score": 100}
+    version = {"current": "", "latest": "", "has_update": False, "url": None}
     return templates.TemplateResponse(request, "settings.html", {
         "request": request, "tokens": tokens,
         "sec": sec, "version": version,
@@ -212,13 +211,22 @@ def system_logs_page(request: Request, db: Session = Depends(get_db), user: str 
 
 @router.get("/hub", response_class=HTMLResponse)
 def hub_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    containers = DockerService.list_containers()
-    images = DockerService.list_images()
+    containers = []
+    images = []
+    docker_version = ""
+    docker_running = False
+    try:
+        containers = DockerService.list_containers()
+        images = DockerService.list_images()
+        docker_version = DockerService.installed_version()
+        docker_running = DockerService.is_running()
+    except Exception:
+        pass
     return templates.TemplateResponse(request, "hub.html", {
         "request": request, "containers": containers, "images": images,
-        "docker_installed": DockLinerService.docker_installed(),
-        "docker_running": DockLinerService.docker_running(),
-        "docker_version": DockLinerService.docker_version(),
+        "docker_installed": DockerService.is_installed(),
+        "docker_running": docker_running,
+        "docker_version": docker_version,
     })
 
 @router.get("/projects/{pid}", response_class=HTMLResponse)

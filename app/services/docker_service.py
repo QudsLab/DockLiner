@@ -228,7 +228,7 @@ class DockerService:
     @staticmethod
     def list_containers() -> List[Dict[str, Any]]:
         cmd = ["docker", "ps", "-a", "--format", "json"]
-        r = DockerService._with_preflight(cmd)
+        r = DockerService._run(cmd, timeout=10)
         if r.returncode != 0:
             return []
         out = []
@@ -243,7 +243,7 @@ class DockerService:
     @staticmethod
     def list_images() -> List[Dict[str, Any]]:
         cmd = ["docker", "images", "--format", "json"]
-        r = DockerService._with_preflight(cmd)
+        r = DockerService._run(cmd, timeout=10)
         if r.returncode != 0:
             return []
         out = []
