@@ -11,6 +11,23 @@ class DockerService:
     """Cross-platform Docker CLI wrapper with clear, actionable error messages."""
     _docker_exe: Optional[str] = None
     _docker_ready: Optional[bool] = None
+    _cache: Dict[str, Any] = {}
+    _cache_ttl: float = 3.0  # seconds; short enough to stay fresh, long enough to avoid repeated CLI hits
+
+    @classmethod
+    def _cache_get(cls, key: str) -> Any:
+        entry = cls._cache.get(key)
+        if entry and (time.time() - entry[0]) < cls._cache_ttl:
+            return entry[1]
+        return None
+
+    @classmethod
+    def _cache_set(cls, key: str, value: Any) -> None:
+        cls._cache[key] = (time.time(), value)
+
+    @classmethod
+    def clear_cache(cls) -> None:
+        cls._cache.clear()
 
     @staticmethod
     def _find_docker() -> Optional[str]:
@@ -227,6 +244,9 @@ class DockerService:
 
     @staticmethod
     def list_containers() -> List[Dict[str, Any]]:
+        cache = DockerService._cache_get('list_containers')
+        if cache is not None:
+            return cache
         cmd = ["docker", "ps", "-a", "--format", "json"]
         r = DockerService._run(cmd, timeout=10)
         if r.returncode != 0:
@@ -238,10 +258,14 @@ class DockerService:
                     out.append(json.loads(line))
                 except Exception:
                     pass
+        DockerService._cache_set('list_containers', out)
         return out
 
     @staticmethod
     def list_images() -> List[Dict[str, Any]]:
+        cache = DockerService._cache_get('list_images')
+        if cache is not None:
+            return cache
         cmd = ["docker", "images", "--format", "json"]
         r = DockerService._run(cmd, timeout=10)
         if r.returncode != 0:
@@ -253,6 +277,7 @@ class DockerService:
                     out.append(json.loads(line))
                 except Exception:
                     pass
+        DockerService._cache_set('list_images', out)
         return out
 
     @staticmethod
@@ -282,6 +307,9 @@ class DockerService:
 
     @staticmethod
     def list_networks() -> List[Dict[str, Any]]:
+        cache = DockerService._cache_get('list_networks')
+        if cache is not None:
+            return cache
         cmd = ["docker", "network", "ls", "--format", "json"]
         r = DockerService._with_preflight(cmd)
         if r.returncode != 0:
@@ -293,10 +321,14 @@ class DockerService:
                     out.append(json.loads(line))
                 except Exception:
                     pass
+        DockerService._cache_set('list_networks', out)
         return out
 
     @staticmethod
     def list_volumes() -> List[Dict[str, Any]]:
+        cache = DockerService._cache_get('list_volumes')
+        if cache is not None:
+            return cache
         cmd = ["docker", "volume", "ls", "--format", "json"]
         r = DockerService._with_preflight(cmd)
         if r.returncode != 0:
@@ -308,21 +340,8 @@ class DockerService:
                     out.append(json.loads(line))
                 except Exception:
                     pass
+        DockerService._cache_set('list_volumes', out)
         return out
-
-    @staticmethod
-    def rsync_delete(src: str, dst: str) -> tuple:
-        src_p = Path(src)
-        dst_p = Path(dst)
-        if not src_p.exists():
-            return (1, f"Source path does not exist: {src}")
-        try:
-            if dst_p.exists():
-                shutil.rmtree(dst_p)
-            shutil.copytree(src_p, dst_p)
-            return (0, "synced")
-        except Exception as e:
-            return (1, f"sync failed: {e}")
 
     @staticmethod
     def inspect_container_ports(container_id: str) -> List[Dict[str, Any]]:
@@ -372,7 +391,38 @@ class DockerService:
         return {"processes": [], "error": r.stderr}
 
     @staticmethod
+    def container_resource_stats(project) -> Dict[str, Any]:
+        """Return real container resource numbers with units (CPU%, RAM usage/limit, Block I/O, PIDs)."""
+        from app.services.project_status_service import ProjectStatusService
+        result: Dict[str, Any] = {"cpu": None, "ram": None, "ram_total": None, "disk": None, "disk_write": None, "pids": None}
+        state = ProjectStatusService.container_state(project)
+        if not state["exists"] or state["state"] != "running":
+            return result
+
+        cid = state["container"].get("ID", "")
+        all_stats = DockerService.system_stats()
+        stats = next((s for s in all_stats if s.get("Container") == cid or s.get("ID") == cid), None)
+        if not stats:
+            return result
+
+        result["cpu"] = stats.get("CPUPerc")
+        mem_usage = stats.get("MemUsage") or ""
+        if "/" in mem_usage:
+            parts = mem_usage.split("/", 1)
+            result["ram"] = parts[0].strip()
+            result["ram_total"] = parts[1].strip()
+        else:
+            result["ram"] = mem_usage.strip()
+        result["disk"] = stats.get("BlockIO")  # Docker format: "1.2MB / 0B"
+        result["pids"] = stats.get("PIDs")
+        result["net"] = stats.get("NetIO")
+        return result
+
+    @staticmethod
     def system_stats() -> List[Dict[str, Any]]:
+        cache = DockerService._cache_get('system_stats')
+        if cache is not None:
+            return cache
         cmd = ["docker", "stats", "--no-stream", "--format", "json"]
         r = DockerService._with_preflight(cmd)
         if r.returncode != 0:
@@ -384,6 +434,7 @@ class DockerService:
                     out.append(json.loads(line))
                 except Exception:
                     pass
+        DockerService._cache_set('system_stats', out)
         return out
 
     @staticmethod
@@ -399,11 +450,16 @@ class DockerService:
 
     @staticmethod
     def docker_info() -> Dict[str, Any]:
+        cache = DockerService._cache_get('docker_info')
+        if cache is not None:
+            return cache
         cmd = ["docker", "info", "--format", "json"]
         r = DockerService._run(cmd)
         if r.returncode == 0 and r.stdout.strip():
             try:
-                return json.loads(r.stdout.strip())
+                data = json.loads(r.stdout.strip())
+                DockerService._cache_set('docker_info', data)
+                return data
             except Exception:
                 pass
         return {}

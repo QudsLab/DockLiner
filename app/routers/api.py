@@ -1,10 +1,12 @@
 import threading
-from datetime import datetime
+import uuid
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Form
 from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from pathlib import Path
 import io, zipfile, json, os, urllib.request, urllib.error, subprocess, time, sys
 from app.core.db import get_db, SessionLocal
@@ -12,7 +14,8 @@ from app.core.config import settings, log_login_attempt, log_login_success, log_
 from app.core.auth import verify, login_user, logout_user, get_session_user, require_auth
 from app.models.project import (
     Project, Deployment, AccessToken, GithubCache, SavedOrg, Download,
-    HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog, SystemLog
+    HealthCheck, Metric, AuditLog, Webhook, Notification, ErrorLog, SystemLog,
+    OperationLog,
 )
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectOut,
@@ -30,6 +33,8 @@ from app.services.github_download_service import GitHubDownloadService
 from app.services.log_service import LogService
 from app.services.terminal_service import TerminalService
 from app.services.monitoring_service import MonitoringService, AuditService, RateLimitService
+from app.services.system_resources_service import SystemResourcesService
+from app.services.project_status_service import ProjectStatusService
 from app.services.file_scanner import scan_downloaded_repo, scan_local_dir
 from app.services.error_log_service import ErrorLogService
 import yaml, urllib.parse, shutil
@@ -168,11 +173,161 @@ def api_version(user: str = Depends(require_auth)):
     from app.services.version_service import VersionService
     return VersionService.check()
 
+@router.post("/projects/{pid}/build-stream")
+def build_stream(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    tok = None
+    if p.token_id:
+        tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
+    if not tok:
+        tok = db.query(AccessToken).first()
+    op_key = str(uuid.uuid4())[:8]
+    thread = threading.Thread(target=DeployService.build_stream, args=(p, op_key, tok.token if tok else None), daemon=True)
+    thread.start()
+    return {'op_key': op_key, 'op_type': 'build'}
+
+@router.post("/projects/{pid}/deploy-stream")
+def deploy_stream(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    tok = None
+    if p.token_id:
+        tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
+    if not tok:
+        tok = db.query(AccessToken).first()
+    op_key = str(uuid.uuid4())[:8]
+    thread = threading.Thread(target=DeployService.quick_deploy_stream, args=(p, op_key, tok.token if tok else None), daemon=True)
+    thread.start()
+    return {'op_key': op_key, 'op_type': 'deploy'}
+
+@router.post("/projects/{pid}/pull")
+def pull_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    tok = None
+    if p.token_id:
+        tok = db.query(AccessToken).filter(AccessToken.id == p.token_id).first()
+    if not tok:
+        tok = db.query(AccessToken).first()
+    try:
+        DeployService._sync_source(p, tok.token if tok else None)
+        DeployService._persist_edited_files(p)
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
+    AuditService.log(db, "pull", target=p.name, user=user, ip=request.client.host if request.client else "")
+    return {"status": "success"}
+
+@router.get("/projects/{pid}/current-build")
+def current_build(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    row = db.query(OperationLog).filter(
+        OperationLog.project_id == pid, OperationLog.op_type == "build"
+    ).order_by(OperationLog.id.desc()).first()
+    if not row:
+        return {"exists": False}
+    lines = db.query(OperationLog).filter(OperationLog.project_id == pid, OperationLog.op_key == row.op_key).count()
+    return {
+        "exists": True,
+        "op_key": row.op_key,
+        "status": row.status,
+        "last_at": row.created_at.isoformat() if row.created_at else None,
+        "line_count": lines,
+    }
+
+@router.get("/projects/{pid}/op-log")
+def op_log_stream(pid: int, op_key: str, last_id: int = 0):
+    def generate():
+        from app.core.db import SessionLocal
+        cur_last = last_id
+        while True:
+            db = SessionLocal()
+            try:
+                rows = db.query(OperationLog).filter(
+                    OperationLog.project_id == pid,
+                    OperationLog.op_key == op_key,
+                    OperationLog.id > cur_last
+                ).order_by(OperationLog.id).all()
+                for row in rows:
+                    yield f"id: {row.id}\ndata: {json.dumps({'line': row.line, 'status': row.status})}\n\n"
+                    cur_last = row.id
+                # check finished
+                final = db.query(OperationLog).filter(
+                    OperationLog.project_id == pid,
+                    OperationLog.op_key == op_key,
+                    OperationLog.status.in_(['success', 'error'])
+                ).order_by(OperationLog.id.desc()).first()
+                if final and final.id <= cur_last:
+                    yield f"id: {cur_last}\ndata: {json.dumps({'line': '', 'status': final.status, 'done': True})}\n\n"
+                    break
+            finally:
+                db.close()
+            time.sleep(0.5)
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+@router.get("/projects/{pid}/operations")
+def list_operations(pid: int, limit: int = 30, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    try:
+        rows = db.query(
+            OperationLog.op_key,
+            OperationLog.op_type,
+            func.max(OperationLog.id).label('last_id'),
+            func.max(OperationLog.created_at).label('last_at'),
+            func.count(OperationLog.id).label('line_count'),
+        ).filter(OperationLog.project_id == pid, OperationLog.op_key != None).group_by(
+            OperationLog.op_key, OperationLog.op_type
+        ).order_by(func.max(OperationLog.id).desc()).limit(limit).all()
+    except Exception:
+        return []
+    out = []
+    for r in rows:
+        status = db.query(OperationLog.status).filter(OperationLog.op_key == r.op_key).order_by(OperationLog.id.desc()).first()
+        out.append({
+            'op_key': r.op_key,
+            'op_type': r.op_type,
+            'last_at': r.last_at.isoformat() if r.last_at else None,
+            'line_count': r.line_count,
+            'status': status[0] if status else 'unknown',
+        })
+    return out
+
+@router.get("/projects/{pid}/operations/{op_key}")
+def get_operation(pid: int, op_key: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    try:
+        rows = db.query(OperationLog).filter(OperationLog.project_id == pid, OperationLog.op_key == op_key).order_by(OperationLog.id).all()
+    except Exception:
+        rows = []
+    if not rows:
+        raise HTTPException(status_code=404, detail='Not found')
+    final = rows[-1].status if rows else 'unknown'
+    return {
+        'op_key': op_key,
+        'op_type': rows[0].op_type,
+        'status': final,
+        'line_count': len(rows),
+        'lines': [{'id': r.id, 'line': r.line, 'status': r.status, 'created_at': r.created_at.isoformat() if r.created_at else None} for r in rows],
+    }
+
 # ---------- Projects ----------
 
 @router.get("/projects", response_model=List[ProjectOut])
 def list_projects(db: Session = Depends(get_db), user: str = Depends(require_auth)):
-    return db.query(Project).all()
+    projects = db.query(Project).all()
+    for p in projects:
+        ProjectStatusService.sync_status(db, p, commit=False)
+    db.commit()
+    return projects
 
 @router.post("/projects", response_model=ProjectOut)
 def create_project(data: ProjectCreate, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -482,53 +637,137 @@ def deploy_preview(pid: int, db: Session = Depends(get_db), user: str = Depends(
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail='Not found')
-    return {'commands': p.deploy_commands or DeployService.preview_commands(p)}
+    return {'commands': p.deploy_commands or DeployService.preview_commands(p, mode='deploy')}
 
-@router.post("/projects/{pid}/run")
-def run_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+@router.get("/projects/{pid}/build-preview")
+def build_preview(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail='Not found')
-    dep = DeployService.up(p)
-    db_dep = Deployment(project_id=p.id, status="success" if dep else "error", logs="\n".join(dep))
-    db.add(db_dep)
-    db.commit()
-    db.refresh(db_dep)
-    return {'deployment_id': db_dep.id, 'status': db_dep.status}
+    return {'commands': p.build_commands or DeployService.preview_commands(p, mode='build')}
+
+@router.get("/migration/pending")
+def migration_pending(user: str = Depends(require_auth)):
+    from app.core.db import PENDING_MIGRATION_OPS
+    return {"count": len(PENDING_MIGRATION_OPS), "ops": PENDING_MIGRATION_OPS}
+
+@router.post("/migration/apply")
+def migration_apply(user: str = Depends(require_auth)):
+    if user != "root":
+        raise HTTPException(status_code=403, detail="Only root can apply migrations")
+    from app.core.db import PENDING_MIGRATION_OPS
+    if not PENDING_MIGRATION_OPS:
+        return {"applied": 0}
+    from app.services.migration_service import MigrationService
+    result = MigrationService.run_ops(PENDING_MIGRATION_OPS)
+    PENDING_MIGRATION_OPS.clear()
+    return result
 
 @router.post("/projects/{pid}/start")
 def start_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
     rc, out = DockLinerService.compose_up(str(p.deploy_path), p.compose_file)
-    p.status = "running" if rc == 0 else "error"
-    db.commit()
+    statuses = ProjectStatusService.sync_status(db, p, commit=True)
     AuditService.log(db, "start", target=p.name, user=user, ip=request.client.host if request.client else "")
-    return {"status": p.status, "output": out}
+    return {"status": statuses["container_status"], "build_status": statuses["build_status"], "output": out}
+
+@router.post("/projects/{pid}/start-stream")
+def start_stream(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    op_key = str(uuid.uuid4())[:8]
+    thread = threading.Thread(target=DockLinerService.compose_up_stream, args=(p, op_key, p.compose_file), daemon=True)
+    thread.start()
+    AuditService.log(db, "start_stream", target=p.name, user=user)
+    return {"op_key": op_key, "op_type": "start"}
 
 @router.post("/projects/{pid}/stop")
 def stop_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
     rc, out = DockLinerService.compose_down(str(p.deploy_path), p.compose_file)
-    p.status = "stopped" if rc == 0 else "error"
-    db.commit()
+    statuses = ProjectStatusService.sync_status(db, p, commit=True)
     AuditService.log(db, "stop", target=p.name, user=user, ip=request.client.host if request.client else "")
-    return {"status": p.status, "output": out}
+    return {"status": statuses["container_status"], "build_status": statuses["build_status"], "output": out}
 
 @router.post("/projects/{pid}/restart")
 def restart_project(pid: int, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
     DockLinerService.compose_down(str(p.deploy_path), p.compose_file)
     rc, out = DockLinerService.compose_up(str(p.deploy_path), p.compose_file)
-    p.status = "running" if rc == 0 else "error"
-    db.commit()
+    statuses = ProjectStatusService.sync_status(db, p, commit=True)
     AuditService.log(db, "restart", target=p.name, user=user, ip=request.client.host if request.client else "")
-    return {"status": p.status, "output": out}
+    return {"status": statuses["container_status"], "build_status": statuses["build_status"], "output": out}
+
+@router.post("/projects/{pid}/restart-stream")
+def restart_stream(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail='Not found')
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    op_key = str(uuid.uuid4())[:8]
+    thread = threading.Thread(target=DockLinerService.compose_up_stream, args=(p, op_key, p.compose_file), kwargs={"down_first": True}, daemon=True)
+    thread.start()
+    AuditService.log(db, "restart_stream", target=p.name, user=user)
+    return {"op_key": op_key, "op_type": "restart"}
+
+@router.post("/projects/{pid}/lock")
+def lock_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    p.locked = True
+    db.commit()
+    return {"locked": True}
+
+@router.post("/projects/{pid}/unlock")
+def unlock_project(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    p.locked = False
+    db.commit()
+    return {"locked": False}
+
+@router.post("/projects/{pid}/exec")
+def exec_in_container(pid: int, cmd: str = Form(...), db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    if p.locked:
+        raise HTTPException(status_code=423, detail="Project is locked")
+    stats = DockerService.container_stats_for_project(str(p.deploy_path), p.compose_file or "docker-compose.yml")
+    if not stats:
+        raise HTTPException(status_code=400, detail="No running container for this project")
+    cid = stats[0].get("ID") or stats[0].get("Container")
+    if not cid:
+        raise HTTPException(status_code=400, detail="Could not identify container")
+    rc, out = DockLinerService.run_docker_exec(cid, cmd)
+    return {"rc": rc, "output": out}
+
+@router.delete("/projects/{pid}/operations/{op_key}")
+def delete_operation(pid: int, op_key: str, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.query(OperationLog).filter(OperationLog.project_id == pid, OperationLog.op_key == op_key).delete()
+    db.commit()
+    return {"ok": True}
 
 @router.get("/projects/{pid}/logs")
 def project_logs(pid: int, tail: int = 200, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -536,6 +775,30 @@ def project_logs(pid: int, tail: int = 200, db: Session = Depends(get_db), user:
     if not p:
         raise HTTPException(status_code=404, detail="Not found")
     return {"logs": DockLinerService.compose_logs(str(p.deploy_path), p.compose_file, tail=tail)}
+
+@router.get("/projects/{pid}/stats")
+def project_stats(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        stats_list = DockerService.container_stats_for_project(str(p.deploy_path), p.compose_file or "docker-compose.yml")
+        if not stats_list:
+            return {"containers": []}
+        out = []
+        for s in stats_list:
+            st = s.get("stats", {})
+            out.append({
+                "name": s.get("container", {}).get("Names", ""),
+                "cpu": st.get("CPUPerc", "N/A"),
+                "mem": st.get("MemUsage", "N/A"),
+                "mem_pct": st.get("MemPerc", "N/A"),
+                "net_io": st.get("NetIO", "N/A"),
+                "block_io": st.get("BlockIO", "N/A"),
+            })
+        return {"containers": out}
+    except Exception:
+        return {"containers": []}
 
 @router.get("/projects/{pid}/deployments", response_model=List[DeploymentOut])
 def list_deployments(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -731,6 +994,13 @@ def project_health(pid: int, db: Session = Depends(get_db), user: str = Depends(
     if not hc:
         return {"enabled": False}
     return {"enabled": hc.enabled, "last_status": hc.last_status, "last_check": hc.last_check, "latency_ms": hc.last_latency_ms}
+
+@router.get("/projects/{pid}/resources")
+def project_resources(pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
+    p = db.query(Project).filter(Project.id == pid).first()
+    if not p:
+        raise HTTPException(status_code=404, detail="Not found")
+    return DockerService.container_resource_stats(p)
 
 @router.get("/projects/{pid}/metrics")
 def project_metrics(pid: int, metric_type: str = "cpu_percent", db: Session = Depends(get_db), user: str = Depends(require_auth)):

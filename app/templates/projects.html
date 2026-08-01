@@ -19,7 +19,10 @@
         <td data-label="Name"><strong>{{ p.name }}</strong><br><span class="tag">{{ p.labels or 'no-label' }}</span></td>
         <td data-label="Repo">{{ p.github_repo_url or '-' }}</td>
         <td data-label="Branch">{{ p.branch or 'default' }}</td>
-        <td data-label="Status"><span class="status-pill status-{{ p.status }}">{{ p.status }}</span></td>
+        <td data-label="Status">
+          <span class="status-pill status-{{ p.status }}">{{ p.status }}</span>
+          <span class="status-pill status-{{ p.build_status }}">{{ p.build_status }}</span>
+        </td>
         <td data-label="Actions">
           <a class="btn btn-primary btn-xs" href="/projects/{{ p.id }}">Manage</a>
           <button class="btn btn-danger btn-xs" onclick='deleteProject({{ p.id }}, {{ p.name | tojson }})'>Delete</button>
@@ -50,6 +53,7 @@
       <div class="project-card-row">
         <span class="label">STATUS</span>
         <span class="status-pill status-{{ p.status }}">{{ p.status }}</span>
+        <span class="status-pill status-{{ p.build_status }}">{{ p.build_status }}</span>
       </div>
       <div class="project-card-row">
         <span class="label">PORT</span>

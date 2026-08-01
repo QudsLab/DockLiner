@@ -165,13 +165,16 @@
     .mobile-top-bar .logo-wrap .brand-text { font-family:var(--ui-font-family,var(--font-display)) !important; }
     .nav-link, .nav-link span, .bottom-nav a span { font-family:var(--ui-font-family,var(--font-body)) !important; }
     .hero-title { font-size:3.5rem; }
-    .section-title { font-size:1.95rem; }
-    .section-subtitle, .empty-state, .stat-label { font-family:var(--ui-font-family,var(--font-body)); }
-    /* Dashboard stat cards / empty states / labels */
-    .stat-card { text-align:left; }
-    .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); }
-    .stat-value { font-size:2.55rem; font-family:var(--ui-font-family,var(--font-display)); color:var(--ink); margin-top:6px; }
+    @media (max-width:768px){
+      .grid-2,.grid-3,.grid-4,.grid-5 { grid-template-columns:1fr; }
+    }
+    .stat-card { background:transparent; border:none; box-shadow:none; padding:16px; }
+    .stat-label { font-size:12px; text-transform:uppercase; letter-spacing:1.2px; color:var(--muted); font-weight:600; }
+    .stat-value { font-size:3rem; font-family:var(--ui-font-family,var(--font-display)); color:var(--ink); margin-top:8px; line-height:1; }
     .empty-state { color:var(--muted); font-size:1rem; }
+    /* Dashboard blocks */
+    .dash-block { padding:20px; border-radius:var(--radius-lg); border:1px solid var(--hairline); background:var(--surface-card); }
+    .dash-block h2 { margin:0 0 18px; font-size:1.35rem; }
     @media (max-width:768px){
       .hero-title { font-size:2.15rem !important; }
       .section-title { font-size:1.45rem !important; }

@@ -1,2 +1,715 @@
-[2026-07-25 22:46:50] Generated new DOCKLINER_SECRET_KEY and wrote it to .env
-[2026-07-25 23:34:17] Generated new DOCKLINER_SECRET_KEY and wrote it to .env
+INFO:     Will watch for changes in these directories: ['C:\\Users\\Ahmad Bin Haque\\Github\\DockLiner']
+INFO:     Uvicorn running on http://0.0.0.0:50021 (Press CTRL+C to quit)
+INFO:     Started reloader process [134824] using WatchFiles
+INFO:     Started server process [129992]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\services\deploy_service.py'. Reloading...
+ INFO:     127.0.0.1:58780 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58780 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55754 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58934 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "POST /api/projects/1/health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:60725 - "POST /api/projects/1/health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:60725 - "POST /api/projects/1/health HTTP/1.1" 405 Method Not Allowed
+INFO:     127.0.0.1:60725 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58767 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58767 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54324 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61027 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54324 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60725 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62870 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65336 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50933 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54630 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62869 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54630 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62869 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56983 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56983 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56983 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56983 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56983 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62869 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54630 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56777 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54630 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54630 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56777 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60903 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58915 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58915 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58915 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58915 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57282 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56635 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59311 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60197 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54503 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54428 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54428 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57795 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51512 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61643 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56824 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57409 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60403 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65066 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60403 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60403 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65066 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55427 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55427 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49974 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49974 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53257 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53257 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53259 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53259 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53259 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52186 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52186 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52186 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65381 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65381 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65381 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50935 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55877 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54257 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55877 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55513 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55513 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55513 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56050 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51515 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51515 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56050 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52005 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58214 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58214 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60636 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64339 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64339 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64339 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60636 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60636 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51617 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60636 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51617 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58166 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51513 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58166 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58166 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59878 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57979 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57979 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57979 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59878 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58790 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59878 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50398 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59878 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55504 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56587 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56587 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64534 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56587 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56587 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64534 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55504 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58496 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58496 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:58496 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60786 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:64534 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60786 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64534 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61315 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50499 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61315 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50985 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63034 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50985 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50499 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50985 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53610 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54622 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54622 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49383 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50985 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50985 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54765 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51512 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49383 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52891 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54765 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50985 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52097 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49383 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54765 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50944 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61064 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59931 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59931 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59931 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56096 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53530 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:54765 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56096 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:56238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54765 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:49238 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58376 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56238 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49238 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51514 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51514 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51514 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51516 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51514 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64987 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51514 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51516 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'projects\PayRouter\app\database\cache.py', 'projects\PayRouter\app\database\models\gateway.py', 'projects\PayRouter\app\database\initiator.py', 'projects\PayRouter\app\lib\vendor\kyber_py\kyber\default_parameters.py', 'projects\PayRouter\app\lib\base_schema.py', 'projects\PayRouter\app\bot\telegram.py', 'projects\PayRouter\app\payrouter.py', 'projects\PayRouter\app\lib\registry.py', 'projects\PayRouter\app\lib\vendor\kyber_py\utilities\utils.py', 'projects\PayRouter\scripts\test_db.py', 'projects\PayRouter\app\lib\vendor\kyber_py\ml_kem\default_parameters.py', 'projects\PayRouter\app\database\models\balance_link.py', 'projects\PayRouter\tests\__init__.py', 'projects\PayRouter\app\middleware\rate_limit_middleware.py', 'projects\PayRouter\main.py', 'projects\PayRouter\app\database\models\user.py', 'projects\PayRouter\app\logging_config.py', 'projects\PayRouter\tests\test_cart.py', 'projects\PayRouter\app\lib\circuit_breaker.py', 'projects\PayRouter\app\lib\vendor\kyber_py\kyber\kyber.py', 'projects\PayRouter\app\cache\hot.py', 'projects\PayRouter\app\database\models\vendor_webhook.py', 'projects\PayRouter\app\ui\i18n.py', 'projects\PayRouter\app\middleware\waf.py', 'projects\PayRouter\app\middleware\security.py', 'projects\PayRouter\app\logic\__init__.py', 'projects\PayRouter\app\lib\vendor\kyber_py\ml_kem\__init__.py', 'projects\PayRouter\app\logic\db_state.py', 'projects\PayRouter\app\database\models\webhook_event.py', 'projects\PayRouter\app\lib\engine.py', 'projects\PayRouter\test.py', 'projects\PayRouter\tests\test_vendor_webhook.py', 'projects\PayRouter\app\database\migrate.py', 'projects\PayRouter\app\lib\metrics.py', 'projects\PayRouter\app\lib\vendor\kyber_py\drbg\__init__.py', 'projects\PayRouter\app\lib\sslcommerz\schema.py', 'projects\PayRouter\tests\test_state_machine.py', 'projects\PayRouter\app\config.py', 'projects\PayRouter\app\database\models\payment.py', 'projects\PayRouter\tests\factories.py', 'projects\PayRouter\tests\test_gateway_schema.py', 'projects\PayRouter\app\logic\auth.py', 'projects\PayRouter\tests\test_secret_rotation.py', 'app\routers\api.py', 'projects\PayRouter\app\lib\sslcommerz\__init__.py', 'projects\PayRouter\tests\test_rate_limit.py', 'projects\PayRouter\app\database\connect.py', 'projects\PayRouter\app\database\models\administrator.py', 'projects\PayRouter\app\lib\vendor\kyber_py\drbg\aes256_ctr_drbg.py', 'projects\PayRouter\app\logic\db_health.py', 'projects\PayRouter\app\lib\vendor\kyber_py\kyber\__init__.py', 'projects\PayRouter\app\database\models\vendor.py', 'projects\PayRouter\app\database\models\cart.py', 'projects\PayRouter\app\database\security.py', 'projects\PayRouter\tests\test_api_health.py', 'projects\PayRouter\app\database\models\security.py', 'projects\PayRouter\app\middleware\__init__.py', 'projects\PayRouter\app\lib\vendor\kyber_py\modules\modules.py', 'projects\PayRouter\live.py', 'projects\PayRouter\app\lib\vendor\kyber_py\ml_kem\pkcs.py', 'projects\PayRouter\app\lib\vendor\kyber_py\polynomials\polynomials.py', 'projects\PayRouter\app\lib\vendor\kyber_py\ml_kem\ml_kem.py', 'projects\PayRouter\app\middleware\logging.py', 'projects\PayRouter\app\middleware\cors.py', 'projects\PayRouter\app\lib\retry.py', 'projects\PayRouter\app\lib\vendor\kyber_py\modules\__init__.py', 'projects\PayRouter\app\api\__init__.py', 'projects\PayRouter\app\api\router.py', 'projects\PayRouter\app\lib\vendor\kyber_py\polynomials\polynomials_generic.py', 'projects\PayRouter\tests\test_log_buffer.py', 'projects\PayRouter\app\lib\vendor\kyber_py\polynomials\__init__.py', 'projects\PayRouter\tests\test_metrics.py', 'projects\PayRouter\tests\conftest.py', 'projects\PayRouter\scripts\pqc_mlkem_keybar.py', 'projects\PayRouter\app\lib\sslcommerz\main.py', 'projects\PayRouter\app\lib\vendor\kyber_py\utilities\__init__.py', 'projects\PayRouter\app\lib\vendor\kyber_py\__init__.py', 'projects\PayRouter\app\ui\web.py', 'app\core\db.py', 'projects\PayRouter\app\lib\__init__.py', 'projects\PayRouter\app\database\__init__.py', 'projects\PayRouter\app\database\models\__init__.py', 'projects\PayRouter\tests\test_order_intent.py', 'projects\PayRouter\app\lib\vendor\kyber_py\modules\modules_generic.py', 'projects\PayRouter\app\database\models\order.py', 'projects\PayRouter\app\logic\cart.py', 'projects\PayRouter\tests\test_webhook_replay.py', 'projects\PayRouter\app\database\models\api_key_gateway.py', 'projects\PayRouter\app\middleware\body_limit.py', 'projects\PayRouter\app\middleware\rate_limit.py', 'projects\PayRouter\app\cache\__init__.py', 'projects\PayRouter\app\database\models\subscription.py', 'projects\PayRouter\tests\test_auth.py', 'projects\PayRouter\tests\test_security.py', 'projects\PayRouter\app\database\models\core.py', 'projects\PayRouter\app\database\manager.py', 'projects\PayRouter\tests\test_retry.py', 'projects\PayRouter\app\lib\log_buffer.py', 'projects\PayRouter\app\username.py', 'projects\PayRouter\scripts\test_pqc.py'. Reloading...
+ INFO:     Started server process [173680]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:53707 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55518 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61227 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:53707 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61227 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53707 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55518 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50936 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50285 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50936 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50285 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55518 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54564 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54564 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64017 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /projects/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61223 - "GET /static/css/root.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /static/css/components.css?v=7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /static/img/icon.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /static/img/logo_dark.svg HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /api/projects/1/operations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60905 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51509 - "GET /static/manifest.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55557 - "GET /static/js/common.js?v=2 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61223 - "GET /api/projects/1/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61097 - "GET /api/projects/1/stats HTTP/1.1" 200 OK

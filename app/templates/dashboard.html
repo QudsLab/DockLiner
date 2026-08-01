@@ -1,126 +1,133 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — DockLiner{% endblock %}
 {% block content %}
-<h1 class="hero-title">Dashboard</h1>
-<p class="section-subtitle">Overview of projects, containers, and images.</p>
 
-<div class="grid grid-4" style="margin-bottom:24px;">
-<div class="card stat-card">
-  <div class="form-col">
-    <span class="stat-label">Projects</span>
-    <div class="stat-value">{{ projects|length }}</div>
-  </div>
-</div>
-<div class="card stat-card">
-  <div class="form-col">
-    <span class="stat-label">Containers</span>
-    <div class="stat-value">{{ containers|length }}</div>
-  </div>
-</div>
-<div class="card stat-card">
-  <div class="form-col">
-    <span class="stat-label">Images</span>
-    <div class="stat-value">{{ images|length }}</div>
-  </div>
-</div>
-<div class="card stat-card">
-  <div class="form-col">
-    <span class="stat-label">Orphan Downloads</span>
-    <div class="stat-value">{{ orphan_downloads|length }}</div>
-  </div>
-</div>
-</div>
-
-<!-- Docker status + resources -->
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Docker</h2>
-  <div class="grid grid-5" style="margin-bottom:16px;">
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Engine</label>
-      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">
-        {% if docker_installed and docker_running %}
-          {{ docker_version or 'Running' }}
-        {% elif docker_installed and not docker_running %}
-          <span style="color:var(--error);">Stopped</span>
-        {% else %}
-          <span style="color:var(--error);">Not installed</span>
-        {% endif %}
-      </div>
-      {% if docker_installed %}
-      <div style="margin-top:10px;">
-        {% if docker_running %}
-          <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/stop-daemon',{method:'POST'}).then(()=>location.reload())">Turn Off Daemon</button>
-        {% else %}
-          <button class="btn btn-success btn-sm" onclick="fetch('/api/docker/start-daemon',{method:'POST'}).then(()=>location.reload())">Turn On Daemon</button>
-        {% endif %}
-      </div>
-      {% endif %}
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Containers</label>
-      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ containers|length }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Images</label>
-      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ images|length }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Running</label>
-      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ running_count }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Offline</label>
-      <div style="font-size:28px;font-family:var(--ui-font-family,var(--font-display));color:var(--ink);margin-top:6px;">{{ offline_count }}</div>
-    </div>
-  </div>
-
-  {% if not docker_installed %}
-  <div style="padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-    Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.
-  </div>
-  {% elif docker_installed and not docker_running %}
-  <div style="padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;">
-    Docker is installed but the daemon is not running.
-  </div>
-  {% endif %}
-</div>
-
-<div class="card" style="margin-bottom:24px;">
-  <h2 class="section-title">Host</h2>
-  <div class="grid grid-2" style="margin-bottom:0;">
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Public IP</label>
-      <div style="font-size:22px;font-family:var(--font-mono);color:var(--ink);margin-top:6px;">{{ ips.public }}</div>
-    </div>
-    <div class="card">
-      <label style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Private IP</label>
-      <div style="font-size:22px;font-family:var(--font-mono);color:var(--ink);margin-top:6px;">{{ ips.private }}</div>
-    </div>
-  </div>
-</div>
-
-<script>
-// Dashboard-only install prompt
-(function(){
-  let deferredPrompt;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredPrompt = e;
-    const banner = document.getElementById('install-banner');
-    if (banner && !window.matchMedia('(display-mode: standalone)').matches && !localStorage.getItem('dockliner-install-dismissed')) {
-      banner.style.display = 'block';
-    }
-  });
-  const installBtn = document.getElementById('install-btn');
-  if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      document.getElementById('install-banner').style.display = 'none';
-    });
+<style>
+  .dash-wrap{max-width:1100px}
+  .dash-hero{margin-bottom:18px}
+  .dash-hero h1{margin:0;font-size:2.4rem;font-weight:700}
+  .dash-hero p{margin:4px 0 0;color:var(--muted);font-size:.95rem}
+  .dash-section{background:var(--surface-card);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px}
+  .dash-section h2{margin:0 0 14px;font-size:1.15rem;font-weight:700;color:var(--ink)}
+  .dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .dash-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .dash-card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:var(--radius-md);padding:14px;min-height:90px}
+  .dash-card .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700;margin-bottom:8px}
+  .dash-card .value{font-size:2.4rem;font-family:var(--font-mono);color:var(--ink);line-height:1}
+  .dash-card .value-sm{font-size:1.7rem}
+  .dash-card .sub{font-size:11px;color:var(--muted);margin-top:8px}
+  .dash-card .btn{margin-top:10px;font-size:11px;padding:5px 10px;min-height:28px}
+  @media (max-width:900px){
+    .dash-grid{grid-template-columns:repeat(2,1fr)}
+    .dash-grid-3{grid-template-columns:1fr}
+    .dash-hero h1{font-size:1.9rem}
   }
-})();
-</script>
+  @media (max-width:520px){
+    .dash-grid{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="dash-wrap">
+  <div class="dash-hero">
+    <h1>Dashboard</h1>
+    <p>Overview of projects, containers, and images.</p>
+  </div>
+
+  <section class="dash-section">
+    <h2>Overview</h2>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="label">Projects</div>
+        <div class="value">{{ projects|length }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Containers</div>
+        <div class="value">{{ containers|length }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Images</div>
+        <div class="value">{{ images|length }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Orphan Downloads</div>
+        <div class="value">{{ orphan_downloads|length }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash-section">
+    <h2>Docker</h2>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="label">Containers</div>
+        <div class="value">{{ containers|length }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Images</div>
+        <div class="value">{{ images|length }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Running</div>
+        <div class="value">{{ running_count }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Offline</div>
+        <div class="value">{{ offline_count }}</div>
+      </div>
+    </div>
+
+    {% if not docker_installed %}
+    <div style="padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;margin-top:12px;">
+      Docker is not installed. <a href="https://docs.docker.com/engine/install/" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">Install Docker</a>.
+    </div>
+    {% elif docker_installed and not docker_running %}
+    <div style="padding:12px;background:rgba(198,69,69,0.1);border-radius:var(--radius-md);color:var(--error);font-size:13px;margin-top:12px;">
+      Docker is installed but the daemon is not running.
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="dash-section">
+    <h2>System</h2>
+    <div class="dash-grid-3">
+      <div class="dash-card">
+        <div class="label">Engine</div>
+        <div class="value value-sm">
+          {% if docker_installed and docker_running %}
+            {{ docker_version or 'Running' }}
+          {% elif docker_installed and not docker_running %}
+            <span style="color:var(--error);">Stopped</span>
+          {% else %}
+            <span style="color:var(--error);">Not installed</span>
+          {% endif %}
+        </div>
+        {% if docker_installed %}
+        <div class="sub">{% if docker_running %}Daemon is running{% else %}Daemon is stopped{% endif %}</div>
+        {% if docker_running %}
+        <button class="btn btn-danger btn-sm" onclick="fetch('/api/docker/stop-daemon',{method:'POST'}).then(()=>location.reload())">Turn Off Daemon</button>
+        {% else %}
+        <button class="btn btn-success btn-sm" onclick="fetch('/api/docker/start-daemon',{method:'POST'}).then(()=>location.reload())">Turn On Daemon</button>
+        {% endif %}
+        {% endif %}
+      </div>
+
+      <div class="dash-card">
+        <div class="label">Public IP</div>
+        <div class="value value-sm" style="font-family:var(--font-mono)">{{ ips.public }}</div>
+      </div>
+      <div class="dash-card">
+        <div class="label">Private IP</div>
+        <div class="value value-sm" style="font-family:var(--font-mono)">{{ ips.private }}</div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function(){
+    const notice = localStorage.getItem('dockliner_docker_install');
+    if(notice){ localStorage.removeItem('dockliner_docker_install'); }
+  })();
+  </script>
+</div>
+
 {% endblock %}

@@ -1,12 +1,15 @@
 import os
 import shutil
+import subprocess
+import uuid
+import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable
 from urllib.parse import urlparse
 from app.core.config import settings
 from app.services.dockliner_service import DockLinerService
 from app.services.github_download_service import GitHubDownloadService
-from app.models.project import Deployment, Download, AccessToken
+from app.models.project import Deployment, Download, AccessToken, OperationLog
 from app.core.db import SessionLocal
 
 class DeployService:
@@ -150,16 +153,18 @@ class DeployService:
             (deploy_path / "run.sh").write_text(str(project.direct_command), encoding="utf-8")
 
     @staticmethod
-    def preview_commands(project) -> list:
-        """Return the shell commands that Quick Deploy (build + up) will execute."""
-        if project.deploy_commands:
+    def preview_commands(project, mode: str = "deploy") -> list:
+        """Return the shell commands that Quick Deploy (mode='deploy') or Build Image (mode='build') will execute."""
+        if mode == "deploy" and project.deploy_commands:
             return list(project.deploy_commands)
+        if mode == "build" and project.build_commands:
+            return list(project.build_commands)
 
         deploy_path = Path(project.deploy_path)
         method = str(project.command_mode or project.deploy_method or "compose")
         cmds = []
 
-        # Source sync step: project folder is assumed ready, just sync/copy into deploy path.
+        # Source sync step
         if project.source_type == "github":
             cmds.append(f"# sync source to {deploy_path}")
         elif project.source_type in ("download", "local") and project.source_path:
@@ -167,7 +172,6 @@ class DeployService:
         else:
             cmds.append(f"# no source configured; deploy_path left empty")
 
-        # Env step
         cmds.append("# write .env")
 
         # Build step
@@ -185,14 +189,159 @@ class DeployService:
         else:
             cmds.append("# unknown command mode")
 
-        # Up/Run step
+        if mode == "build":
+            return cmds
+
+        # Up/Run step for deploy mode
         if method == "compose":
             compose_file = project.compose_file or "compose.yml"
             cmds.append(f"docker compose -f {compose_file} up -d --build")
         elif method == "dockerfile":
             cmds.append(f"docker run -d --name {project.name} {project.name}")
-        # direct: run command is already the whole deploy, no separate up
         return cmds
+
+    @staticmethod
+    def _make_logger(project_id: int, op_type: str, op_key: str):
+        def _log_line(line: str):
+            db = SessionLocal()
+            try:
+                db.add(OperationLog(project_id=project_id, op_type=op_type, op_key=op_key, status="running", line=line))
+                db.commit()
+            finally:
+                db.close()
+        def _log_status(status: str, line: str = ""):
+            db = SessionLocal()
+            try:
+                db.add(OperationLog(project_id=project_id, op_type=op_type, op_key=op_key, status=status, line=line))
+                db.commit()
+            finally:
+                db.close()
+        return _log_line, _log_status
+
+    @staticmethod
+    def _run_with_stream(cmd: list, cwd: str, log_line: Callable[[str], None]) -> int:
+        process = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+        for raw in process.stdout:
+            for line in raw.rstrip("\n").split("\r"):
+                if line:
+                    log_line(line)
+        process.wait()
+        return process.returncode
+
+    @staticmethod
+    def build_stream(project, op_key: str, token: Optional[str] = None):
+        log_line, log_status = DeployService._make_logger(project.id, "build", op_key)
+        try:
+            log_status("running", "[BUILD] preparing source...")
+            try:
+                DeployService._sync_source(project, token)
+                DeployService._persist_edited_files(project)
+            except Exception as e:
+                log_status("error", f"[DEBUG] prepare error: {type(e).__name__}: {e}")
+                return
+
+            deploy_path = Path(project.deploy_path)
+            method = str(project.command_mode or project.deploy_method or "compose")
+            DeployService._debug([], f"command_mode={method} compose_file={project.compose_file} deploy_path={deploy_path}")
+
+            if project.build_commands:
+                log_status("running", "[BUILD] running custom build commands...")
+                for cmd in project.build_commands:
+                    cmd = str(cmd).strip()
+                    if not cmd or cmd.startswith('#'):
+                        continue
+                    log_line(f"$ {cmd}")
+                    rc = DeployService._run_with_stream(["bash", "-c", cmd], str(deploy_path), log_line)
+                    if rc != 0:
+                        log_status("error", f"command failed: {cmd}")
+                        return
+                log_status("success", "[BUILD] done")
+                return
+
+            rc = 0
+            if method == "direct":
+                log_status("running", "[BUILD] running direct command...")
+                rc = DeployService._run_with_stream(["bash", "-c", str(project.direct_command or "")], str(deploy_path), log_line)
+            elif method == "compose":
+                log_status("running", "[BUILD] docker compose build...")
+                rc = DeployService._run_with_stream(["docker", "compose", "-f", str(project.compose_file or "compose.yml"), "build"], str(deploy_path), log_line)
+            else:
+                log_status("running", "[BUILD] docker build...")
+                rc = DeployService._run_with_stream(["docker", "build", "-t", project.name, "."], str(deploy_path), log_line)
+            if rc != 0:
+                log_status("error", "[BUILD] failed")
+                return
+            log_status("success", "[BUILD] done")
+        except Exception as e:
+            log_status("error", f"[BUILD] unhandled exception: {type(e).__name__}: {e}")
+
+    @staticmethod
+    def quick_deploy_stream(project, op_key: str, token: Optional[str] = None):
+        log_line, log_status = DeployService._make_logger(project.id, "deploy", op_key)
+        try:
+            log_status("running", "[DEPLOY] preparing source...")
+            try:
+                DeployService._sync_source(project, token)
+                DeployService._persist_edited_files(project)
+            except Exception as e:
+                log_status("error", f"[DEBUG] prepare error: {type(e).__name__}: {e}")
+                return
+
+            deploy_path = Path(project.deploy_path)
+            if project.deploy_commands:
+                log_status("running", "[DEPLOY] running quick deploy commands...")
+                for cmd in project.deploy_commands:
+                    cmd = str(cmd).strip()
+                    if not cmd or cmd.startswith('#'):
+                        continue
+                    log_line(f"$ {cmd}")
+                    rc = DeployService._run_with_stream(["bash", "-c", cmd], str(deploy_path), log_line)
+                    if rc != 0:
+                        log_status("error", f"command failed: {cmd}")
+                        return
+                log_status("success", "[DEPLOY] done")
+                return
+
+            log_status("running", "[DEPLOY] starting container...")
+            deploy_path = Path(project.deploy_path)
+            method = str(project.command_mode or project.deploy_method or "compose")
+            rc = 0
+            if method == "direct":
+                rc = DeployService._run_with_stream(["bash", "-c", str(project.direct_command or "")], str(deploy_path), log_line)
+            elif method == "compose":
+                rc = DeployService._run_with_stream(["docker", "compose", "-f", str(project.compose_file or "compose.yml"), "up", "-d", "--build"], str(deploy_path), log_line)
+            else:
+                rc = DeployService._run_with_stream(["docker", "run", "-d", "--name", project.name, project.name], str(deploy_path), log_line)
+            if rc != 0:
+                log_status("error", "[DEPLOY] failed")
+                return
+            log_status("success", "[DEPLOY] container started")
+        except Exception as e:
+            log_status("error", f"[DEPLOY] unhandled exception: {type(e).__name__}: {e}")
+
+    @staticmethod
+    def up_stream(project, op_key: str):
+        log_line, log_status = DeployService._make_logger(project.id, "deploy", op_key)
+        try:
+            if project.deploy_commands:
+                log_status("success", "[DEPLOY] custom deploy commands handled in build step")
+                return
+            log_status("running", "[DEPLOY] starting container...")
+            deploy_path = Path(project.deploy_path)
+            method = str(project.command_mode or project.deploy_method or "compose")
+            rc = 0
+            if method == "direct":
+                rc = DeployService._run_with_stream(["bash", "-c", str(project.direct_command or "")], str(deploy_path), log_line)
+            elif method == "compose":
+                rc = DeployService._run_with_stream(["docker", "compose", "-f", str(project.compose_file or "compose.yml"), "up", "-d", "--build"], str(deploy_path), log_line)
+            else:
+                rc = DeployService._run_with_stream(["docker", "run", "-d", "--name", project.name, project.name], str(deploy_path), log_line)
+            if rc != 0:
+                log_status("error", "[DEPLOY] failed")
+                return
+            log_status("success", "[DEPLOY] container started")
+        except Exception as e:
+            log_status("error", f"[DEPLOY] unhandled exception: {type(e).__name__}: {e}")
 
     @staticmethod
     def build(project, token: Optional[str] = None) -> list:

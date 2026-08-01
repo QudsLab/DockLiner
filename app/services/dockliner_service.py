@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from app.core.config import settings
 from app.services.file_scanner import scan_downloaded_repo
+from app.services.docker_service import DockerService
 
 class DockLinerService:
     """Central service layer: Docker operations + project downloads."""
@@ -350,11 +351,68 @@ class DockLinerService:
         return r.returncode, r.stdout + (err if r.returncode != 0 else "")
 
     @classmethod
+    def compose_up_stream(cls, project, op_key: str, compose_file: Optional[str] = None, *, down_first: bool = False):
+        """Run docker compose up -d streaming lines to OperationLog."""
+        from app.services.deploy_service import DeployService
+        log_line, log_status = DeployService._make_logger(project.id, "start", op_key)
+        try:
+            project_path = str(project.deploy_path)
+            if down_first:
+                log_line("[RESTART] stopping containers...")
+                cmd_down = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["down"]
+                rc = DeployService._run_with_stream(cmd_down, project_path, log_line)
+                if rc != 0:
+                    log_status("error", f"docker compose down exited {rc}")
+                    return
+                log_line("[RESTART] containers stopped")
+            log_line("[START] docker compose up -d...")
+            cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["up", "-d"]
+            rc = DeployService._run_with_stream(cmd, project_path, log_line)
+            if rc != 0:
+                log_status("error", f"docker compose up exited {rc}")
+                return
+            log_line("[START] containers up")
+            # Stream a short tail of compose logs so the user sees the app booting.
+            try:
+                logs = cls.compose_logs(project_path, compose_file, tail=30)
+                if logs:
+                    log_line("--- runtime logs ---")
+                    for line in logs.splitlines()[-30:]:
+                        if line.strip():
+                            log_line(line)
+            except Exception:
+                pass
+            log_status("success", "start complete")
+            DockerService.clear_cache()
+        except Exception as e:
+            log_status("error", f"start failed: {type(e).__name__}: {e}")
+
+    @classmethod
+    def compose_down_stream(cls, project, op_key: str, compose_file: Optional[str] = None):
+        """Run docker compose down streaming lines to OperationLog."""
+        log_line, log_status = DeployService._make_logger(project.id, "stop", op_key)
+        try:
+            log_line("[STOP] docker compose down...")
+            cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["down"]
+            rc = DeployService._run_with_stream(cmd, str(project.deploy_path), log_line)
+            if rc != 0:
+                log_status("error", f"docker compose down exited {rc}")
+            else:
+                log_status("success", "containers stopped")
+            DockerService.clear_cache()
+        except Exception as e:
+            log_status("error", f"stop failed: {type(e).__name__}: {e}")
+
+    @classmethod
     def compose_down(cls, project_path: str, compose_file: Optional[str] = None) -> tuple:
-        cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["down"]
-        r = cls._with_preflight(cmd, cwd=project_path, timeout=120)
-        err = getattr(r, "_dockliner_diag", r.stderr)
-        return r.returncode, r.stdout + (err if r.returncode != 0 else "")
+        try:
+            cmd = ["docker", "compose"] + cls._compose_file_arg(compose_file) + ["down"]
+            r = cls._with_preflight(cmd, cwd=project_path, timeout=120)
+            err = getattr(r, "_dockliner_diag", r.stderr)
+            DockerService.clear_cache()
+            return r.returncode, r.stdout + (err if r.returncode != 0 else "")
+        except Exception as e:
+            return (1, str(e))
 
     @classmethod
     def compose_logs(cls, project_path: str, compose_file: Optional[str] = None, tail: int = 200) -> str:
@@ -385,6 +443,13 @@ class DockLinerService:
         if not command.strip():
             return (1, "No direct command provided")
         r = cls._run(["bash", "-c", command], cwd=project_path, timeout=120)
+        return r.returncode, r.stdout + r.stderr
+
+    @classmethod
+    def run_docker_exec(cls, container_id: str, command: str) -> tuple:
+        if not command.strip():
+            return (1, "No command provided")
+        r = cls._with_preflight(["docker", "exec", container_id, "bash", "-c", command], timeout=60)
         return r.returncode, r.stdout + r.stderr
 
     @classmethod

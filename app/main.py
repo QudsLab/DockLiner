@@ -5,6 +5,7 @@ from app.core.config import settings, resolve_port, resolve_hosts
 from app.core.db import init_db
 from app.core.error_middleware import ErrorLogMiddleware
 from app.core.cache_middleware import NoCacheHTMLMiddleware
+from app.core.migration_middleware import MigrationMiddleware
 from app.routers import api, pages
 from app.services.dockliner_service import DockLinerService
 
@@ -15,6 +16,7 @@ def create_app() -> FastAPI:
     DockLinerService.ensure_dirs()
     app.add_middleware(ErrorLogMiddleware)
     app.add_middleware(NoCacheHTMLMiddleware)
+    app.add_middleware(MigrationMiddleware)
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
     app.include_router(pages.router)
     app.include_router(api.router)

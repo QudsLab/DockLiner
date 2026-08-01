@@ -23,6 +23,8 @@ class ProjectCreate(BaseModel):
     source_type: Optional[str] = "github"  # github|local|download
     source_path: Optional[str] = None
     deploy_commands: Optional[List[str]] = None  # editable command list for Quick Deploy
+    build_commands: Optional[List[str]] = None  # editable command list for Build Image
+    locked: Optional[bool] = None
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -45,6 +47,8 @@ class ProjectUpdate(BaseModel):
     source_type: Optional[str] = None
     source_path: Optional[str] = None
     deploy_commands: Optional[List[str]] = None
+    build_commands: Optional[List[str]] = None
+    locked: Optional[bool] = None
 
 class DirectCreatePayload(BaseModel):
     source: str
@@ -77,6 +81,7 @@ class ProjectOut(BaseModel):
     deploy_path: str
     compose_file: str
     status: str
+    build_status: Optional[str] = None
     last_deployed: Optional[datetime]
     env_vars: Optional[Dict[str, Any]]
     labels: Optional[str]
@@ -90,6 +95,8 @@ class ProjectOut(BaseModel):
     source_type: Optional[str]
     source_path: Optional[str]
     deploy_commands: Optional[List[str]]
+    build_commands: Optional[List[str]]
+    locked: Optional[bool]
     created_at: datetime
     class Config:
         from_attributes = True

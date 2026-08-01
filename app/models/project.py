@@ -32,7 +32,33 @@ class Project(Base):
     source_type = Column(String, default="github")  # github|local|download
     source_path = Column(String, nullable=True)  # local path or download_id
     deploy_commands = Column(JSON, default=list)  # editable command list for Quick Deploy preview
+    build_commands = Column(JSON, default=list)  # editable command list for Build Image
+    locked = Column(Boolean, default=False)  # when true, lifecycle/deploy actions are blocked
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    @property
+    def build_status(self) -> str:
+        """Computed build status: not_built | build_success | build_failed | building."""
+        # Avoid circular import by importing inside the property.
+        from app.core.db import SessionLocal
+        from app.models.project import OperationLog
+        db = SessionLocal()
+        try:
+            row = (
+                db.query(OperationLog)
+                .filter(OperationLog.project_id == self.id, OperationLog.op_type == "build")
+                .order_by(OperationLog.id.desc())
+                .first()
+            )
+            if not row:
+                return "not_built"
+            if row.status == "success":
+                return "build_success"
+            if row.status == "error":
+                return "build_failed"
+            return "building"
+        finally:
+            db.close()
 
     def to_dict(self) -> dict:
         return {
@@ -43,6 +69,7 @@ class Project(Base):
             "deploy_path": self.deploy_path,
             "compose_file": self.compose_file,
             "status": self.status,
+            "build_status": self.build_status,
             "last_deployed": self.last_deployed.isoformat() if self.last_deployed else None,
             "env_vars": self.env_vars or {},
             "env_content": self.env_content or "",
@@ -59,6 +86,8 @@ class Project(Base):
             "source_type": self.source_type or "github",
             "source_path": self.source_path,
             "deploy_commands": self.deploy_commands or [],
+            "build_commands": self.build_commands or [],
+            "locked": self.locked or False,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -90,6 +119,16 @@ class Deployment(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     status = Column(String, default="started")  # started/success/error
     logs = Column(Text, default="")
+
+class OperationLog(Base):
+    __tablename__ = "operation_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False, index=True)
+    op_type = Column(String, nullable=False)        # build | deploy | run | stop | runtime | exec
+    op_key = Column(String, nullable=True, index=True)  # uuid per running op; NULL for runtime rows
+    status = Column(String, default="running")      # running | success | error
+    line = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class AccessToken(Base):
     __tablename__ = "access_tokens"

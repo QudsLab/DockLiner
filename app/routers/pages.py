@@ -7,6 +7,7 @@ from app.core.auth import require_auth
 from app.models.project import Project, Deployment, AccessToken, Download, SystemLog
 from app.services.dockliner_service import DockLinerService
 from app.services.docker_service import DockerService
+from app.services.project_status_service import ProjectStatusService
 from app.services.file_scanner import scan_local_dir
 from app.services.log_service import LogService
 from pathlib import Path
@@ -68,6 +69,9 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: str = Depen
 def projects_page(request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)):
     from app.services.cleanup_service import CleanupService
     registered = db.query(Project).all()
+    for p in registered:
+        ProjectStatusService.sync_status(db, p, commit=False)
+    db.commit()
     scan = CleanupService.scan(db)
     show_ports = False  # DockLiner no longer stores project ports in DB; ports come from Docker runtime only.
     return templates.TemplateResponse(request, "projects.html", {
@@ -234,8 +238,15 @@ def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db
     p = db.query(Project).filter(Project.id == pid).first()
     if not p:
         raise HTTPException(status_code=404, detail="Project not found")
+    statuses = ProjectStatusService.sync_status(db, p, commit=True)
     tokens = db.query(AccessToken).all()
-    return templates.TemplateResponse(request, "project_detail.html", {"request": request, "project": p, "tokens": tokens})
+    return templates.TemplateResponse(request, "project_detail.html", {
+        "request": request,
+        "project": p,
+        "tokens": tokens,
+        "container_status": statuses["container_status"],
+        "build_status": statuses["build_status"],
+    })
 
 @router.get("/projects/{pid}/editor", response_class=HTMLResponse)
 def project_editor_page(request: Request, pid: int, db: Session = Depends(get_db), user: str = Depends(require_auth)):
@@ -250,3 +261,12 @@ def cleanup_page(request: Request, db: Session = Depends(get_db), user: str = De
 @router.get("/logout", response_class=HTMLResponse)
 def logout_page(request: Request):
     return templates.TemplateResponse(request, "login.html", {"request": request})
+
+@router.get("/migration", response_class=HTMLResponse)
+def migration_page(request: Request):
+    from app.core.db import PENDING_MIGRATION_OPS
+    return templates.TemplateResponse(request, "migration.html", {
+        "request": request,
+        "ops": PENDING_MIGRATION_OPS,
+        "count": len(PENDING_MIGRATION_OPS),
+    })

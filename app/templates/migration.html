@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Migration — DockLiner{% endblock %}
+{% block content %}
+
+<style>
+.migration-hero{margin-bottom:24px}
+.migration-hero h1{margin:0 0 8px;font-size:2rem;color:var(--ink)}
+.migration-hero p{margin:0;color:var(--muted);font-size:14px}
+
+.migration-panel{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px}
+.migration-panel h3{margin:0 0 14px;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px}
+.migration-panel h3 .badge{font-size:11px;background:var(--primary);color:#fff;padding:2px 8px;border-radius:999px}
+
+.op-list{display:flex;flex-direction:column;gap:10px}
+.op-item{border:1px solid var(--hairline);border-radius:10px;padding:14px;background:var(--surface-soft)}
+.op-item.low{border-left:3px solid #22c55e}
+.op-item.high{border-left:3px solid #ef4444}
+.op-meta{display:flex;gap:8px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.op-type{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:2px 8px;border-radius:4px;background:rgba(255,115,0,.12);color:var(--primary)}
+.op-item.high .op-type{background:rgba(239,68,68,.12);color:#ef4444}
+.op-message{font-size:13px;color:var(--ink);margin-bottom:8px}
+.op-sql{background:var(--surface-dark);color:var(--on-dark);padding:10px;border-radius:6px;font-family:var(--font-mono);font-size:12px;overflow:auto;white-space:pre}
+
+.manual-section{margin-top:16px}
+.manual-section h4{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.manual-box{background:var(--surface-dark);color:var(--on-dark);padding:14px;border-radius:8px;font-family:var(--font-mono);font-size:12px;overflow:auto;white-space:pre;max-height:300px}
+
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.empty-migration{text-align:center;padding:40px;color:var(--muted)}
+.empty-migration svg{width:64px;height:64px;opacity:.4;margin-bottom:12px}
+</style>
+
+<div class="migration-hero">
+  <h1>Database Migration</h1>
+  <p>The database schema is out of sync with the application. Review the operations below, then run them automatically or copy the SQL and run it manually.</p>
+</div>
+
+{% if count == 0 %}
+<div class="migration-panel empty-migration">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+  <div>No pending migrations. Everything is up to date.</div>
+  <a class="btn btn-primary btn-sm" href="/" style="margin-top:16px">Go to Dashboard</a>
+</div>
+{% else %}
+
+<div class="migration-panel">
+  <h3>Pending operations <span class="badge">{{ count }}</span></h3>
+  <div class="op-list">
+    {% for op in ops %}
+    <div class="op-item {{ op.risk }}">
+      <div class="op-meta">
+        <span class="op-type">{{ op.type }}</span>
+        <span style="color:var(--muted);font-size:12px">{{ op.table }}{% if op.column %}.{{ op.column }}{% endif %}</span>
+      </div>
+      <div class="op-message">{{ op.message }}</div>
+      <pre class="op-sql">{{ op.sql }}</pre>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="manual-section">
+    <h4>Manual SQL — copy and run in your database client</h4>
+    <pre class="manual-box" id="manualSql">{% for op in ops %}{{ op.sql }}
+{% endfor %}</pre>
+    <button class="btn btn-secondary btn-sm" onclick="copySql()">Copy SQL</button>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="autoRunBtn" onclick="runAuto()">Run {{ count }} operation{{ 's' if count != 1 else '' }} automatically</button>
+    <a class="btn btn-secondary" href="/login">Re-login as root</a>
+  </div>
+</div>
+
+<script>
+async function runAuto(){
+  const btn = document.getElementById('autoRunBtn');
+  btn.disabled = true; btn.textContent = 'Running...';
+  const r = await fetch('/api/migration/apply', {method:'POST'});
+  const d = await r.json().catch(()=>({}));
+  if(r.ok){
+    showToast('Migration applied: ' + (d.applied||0) + ' operations', 'success');
+    setTimeout(()=>location.href='/', 600);
+  } else {
+    showErrorModal('Migration failed', d.detail || 'Could not apply migrations');
+    btn.disabled = false; btn.textContent = 'Run automatically';
+  }
+}
+function copySql(){
+  const text = document.getElementById('manualSql').textContent;
+  navigator.clipboard.writeText(text).then(()=>showToast('SQL copied', 'success'));
+}
+</script>
+
+{% endif %}
+
+{% endblock %}
