@@ -20,68 +20,55 @@
 .status-paused{background:rgba(245,158,11,.15);color:#f59e0b}
 .status-restarting{background:rgba(59,130,246,.15);color:#3b82f6}
 
-.control-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;align-items:stretch}
-.control-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:18px;display:flex;flex-direction:column}
-.control-card h3{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
-.control-actions{display:flex;flex-direction:column;gap:10px;flex:1}
-.control-actions .btn{justify-content:flex-start;gap:8px}
+.control-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;align-items:stretch}
+.control-grid > .control-card:nth-child(5){grid-column:span 2}
+.control-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column}
+.control-card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+.control-actions{display:flex;flex-direction:column;gap:8px;flex:1}
+.control-actions .btn{justify-content:flex-start;gap:8px;font-size:13px;padding:9px 12px}
 
-.btn-block{display:flex;align-items:center;gap:8px;justify-content:center}
+@media (max-width:1100px){ .control-grid{grid-template-columns:repeat(2,1fr)} .control-grid > .control-card:nth-child(5){grid-column:span 2} }
+@media (max-width:600px){ .control-grid{grid-template-columns:1fr} .control-grid > .control-card:nth-child(5){grid-column:span 1} .manage-title h1{font-size:1.9rem} }
 
-.lifecycle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.lifecycle-grid .btn{flex-direction:column;gap:4px;padding:14px 8px;height:100%;justify-content:center}
-.lifecycle-grid .btn .material-symbols-outlined{font-size:22px}
-@media (max-width:900px){ .lifecycle-grid{grid-template-columns:1fr} .lifecycle-grid .btn{flex-direction:row;justify-content:center} }
+.manage-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.manage-title h1{margin:0 0 6px;font-size:2rem;font-weight:700;color:var(--ink)}
+.manage-meta{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px}
 
-.stats-row{display:none;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:10px}
-.stats-row.has-data{display:flex}
-.stat-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;font-family:var(--font-mono);border:1px solid transparent}
-.stat-tag.cpu{background:rgba(59,130,246,.12);color:#3b82f6;border-color:rgba(59,130,246,.25)}
-.stat-tag.ram{background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.25)}
-.stat-tag.disk{background:rgba(168,85,247,.12);color:#a855f7;border-color:rgba(168,85,247,.25)}
+.lifecycle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lifecycle-grid .btn{flex-direction:column;gap:4px;padding:12px 6px;height:100%;justify-content:center;font-size:12px}
+.lifecycle-grid .btn .material-symbols-outlined{font-size:20px}
 
-.resource-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;flex:1}
-.resource-box{background:var(--surface-soft);border:1px solid var(--hairline);border-radius:var(--radius-md);padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
-.resource-icon{font-size:22px;color:var(--muted)}
-.resource-value{font-size:18px;font-weight:700;font-family:var(--font-mono);color:var(--ink)}
+.resource-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1}
+.resource-box{background:var(--surface-soft);border:1px solid var(--hairline);border-radius:var(--radius-md);padding:12px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0}
+.resource-icon{font-size:18px;color:var(--muted)}
+.resource-value{font-size:13px;font-weight:700;font-family:var(--font-mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%}
 .resource-value.blank{color:var(--muted)}
-.resource-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.resource-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 
-.live-panel{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);margin-bottom:24px;overflow:hidden;display:none}
+.ports-more{position:absolute;top:6px;right:6px;background:var(--primary);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;display:none}
+.ports-more:hover{filter:brightness(1.1)}
+
+.ports-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.ports-item{display:flex;align-items:center;gap:10px;background:var(--surface-soft);border:1px solid var(--hairline);border-radius:8px;padding:10px 12px;font-family:var(--font-mono);font-size:13px}
+.ports-item .material-symbols-outlined{font-size:18px;color:var(--primary)}
+.ports-empty{color:var(--muted);font-size:13px;text-align:center;padding:20px 0}
+
+.live-panel{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);margin-bottom:16px;overflow:hidden;display:none}
 .live-panel.active{display:block}
-.live-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
-.live-title{display:flex;align-items:center;gap:12px;font-weight:600;font-size:14px;color:var(--ink)}
+.live-header{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--hairline);background:var(--surface-soft)}
+.live-title{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;color:var(--ink)}
 .live-status{padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}
 .live-status.running{background:rgba(255,115,0,.15);color:var(--primary)}
 .live-status.success{background:rgba(34,197,94,.15);color:#22c55e}
 .live-status.error{background:rgba(239,68,68,.15);color:#ef4444}
-.live-body{height:320px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.live-body{height:260px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
 .live-line{display:block;padding:1px 0}
 .live-line.error{color:#ef4444}
 .live-line.warn{color:#f59e0b}
 .live-line.success{color:#22c55e}
 .live-line.build{color:#38bdf8}
 .live-line.docker{color:#a78bfa}
-
-.history-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:18px}
-.history-card h4{margin:0 0 16px;font-size:15px;color:var(--ink);display:flex;align-items:center;gap:10px}
-.history-table{width:100%;border-collapse:collapse;font-size:13px}
-.history-table th{text-align:left;padding:10px;border-bottom:1px solid var(--hairline);color:var(--muted);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
-.history-table td{padding:10px;border-bottom:1px solid var(--hairline);color:var(--ink);vertical-align:middle}
-.history-table tr:last-child td{border-bottom:none}
-.history-table td.action-cell{text-align:right;white-space:nowrap}
-.status-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;border:1px solid transparent}
-.status-tag.success{background:rgba(34,197,94,.12);color:#22c55e;border-color:rgba(34,197,94,.25)}
-.status-tag.error{background:rgba(239,68,68,.12);color:#ef4444;border-color:rgba(239,68,68,.25)}
-.status-tag.running{background:rgba(255,115,0,.12);color:var(--primary);border-color:rgba(255,115,0,.25)}
-.status-tag.idle,.status-tag.unknown{background:rgba(148,163,184,.12);color:#94a3b8;border-color:rgba(148,163,184,.25)}
-.empty-history{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;color:var(--muted);gap:10px}
-.empty-history .material-symbols-outlined{font-size:48px;opacity:.4}
-
-@media (max-width:900px){
-  .control-grid{grid-template-columns:1fr}
-  .manage-title h1{font-size:1.9rem}
-}
+.history-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:14px}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px}
 .modal-overlay.active{display:flex}
@@ -183,6 +170,14 @@
         <span class="material-symbols-outlined">terminal</span>
         Run Command
       </button>
+      <button class="btn btn-secondary btn-block" onclick="startRuntimeStream()">
+        <span class="material-symbols-outlined">description</span>
+        Runtime Logs
+      </button>
+      <button class="btn btn-secondary btn-block" id="lockBtn" onclick="toggleLock()">
+        <span class="material-symbols-outlined" id="lockIcon">{% if project.locked %}lock_open{% else %}lock{% endif %}</span>
+        <span id="lockLabel">{% if project.locked %}Unlock{% else %}Lock{% endif %}</span>
+      </button>
     </div>
   </div>
 
@@ -206,24 +201,21 @@
         <div class="resource-label">DISK I/O</div>
       </div>
       <div class="resource-box">
+        <span class="resource-icon material-symbols-outlined">network_check</span>
+        <div class="resource-value" id="res-net">--</div>
+        <div class="resource-label">NET I/O</div>
+      </div>
+      <div class="resource-box">
         <span class="resource-icon material-symbols-outlined">checklist</span>
         <div class="resource-value" id="res-pids">--</div>
         <div class="resource-label">PIDs</div>
       </div>
-    </div>
-  </div>
-  <!-- F: Live Output -->
-  <div class="control-card">
-    <h3>Live Output</h3>
-    <div class="control-actions">
-      <button class="btn btn-secondary btn-block" onclick="startRuntimeStream()">
-        <span class="material-symbols-outlined">description</span>
-        Runtime Logs
-      </button>
-      <button class="btn btn-secondary btn-block" id="lockBtn" onclick="toggleLock()">
-        <span class="material-symbols-outlined" id="lockIcon">{% if project.locked %}lock_open{% else %}lock{% endif %}</span>
-        <span id="lockLabel">{% if project.locked %}Unlock{% else %}Lock{% endif %}</span>
-      </button>
+      <div class="resource-box" style="position:relative">
+        <span class="resource-icon material-symbols-outlined">usb</span>
+        <div class="resource-value" id="res-ports">--</div>
+        <button class="ports-more" id="portsMoreBtn" style="display:none" onclick="openPortsModal()">View all</button>
+        <div class="resource-label">PORTS</div>
+      </div>
     </div>
   </div>
 </section>
@@ -256,6 +248,24 @@
     </thead>
     <tbody id="historyBody"></tbody>
   </table>
+</div>
+
+<!-- Ports Modal -->
+<div id="modal-ports" class="modal-overlay" onclick="if(event.target===this)closeModal('ports')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3>Container Ports</h3>
+      <button class="modal-close" onclick="closeModal('ports')">×</button>
+    </div>
+    <div class="modal-body">
+      <ul id="portsList" class="ports-list">
+        <li class="ports-empty">No port mappings.</li>
+      </ul>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('ports')">Close</button>
+    </div>
+  </div>
 </div>
 
 <!-- Rename Modal -->
@@ -752,6 +762,15 @@ async function loadStats(){
     diskEl.classList.add('blank');
   }
 
+  const netEl = document.getElementById('res-net');
+  if (d.net){
+    netEl.textContent = d.net;
+    netEl.classList.remove('blank');
+  } else {
+    netEl.textContent = '--';
+    netEl.classList.add('blank');
+  }
+
   const pidsEl = document.getElementById('res-pids');
   if (d.pids !== null && d.pids !== undefined && d.pids !== ''){
     pidsEl.textContent = String(d.pids);
@@ -760,8 +779,37 @@ async function loadStats(){
     pidsEl.textContent = '--';
     pidsEl.classList.add('blank');
   }
+
+  const portsEl = document.getElementById('res-ports');
+  const portsMoreBtn = document.getElementById('portsMoreBtn');
+  window.lastPorts = [];
+  if (Array.isArray(d.ports) && d.ports.length){
+    window.lastPorts = d.ports;
+    portsEl.textContent = d.ports[0];
+    portsEl.classList.remove('blank');
+    if (d.ports.length > 1){
+      portsMoreBtn.textContent = '+' + (d.ports.length - 1) + ' more';
+      portsMoreBtn.style.display = 'inline-block';
+    } else {
+      portsMoreBtn.style.display = 'none';
+    }
+  } else {
+    portsEl.textContent = '--';
+    portsEl.classList.add('blank');
+    portsMoreBtn.style.display = 'none';
+  }
 }
 
+function openPortsModal(){
+  const list = document.getElementById('portsList');
+  const ports = Array.isArray(window.lastPorts) ? window.lastPorts : [];
+  if (ports.length){
+    list.innerHTML = ports.map(p => '<li class="ports-item"><span class="material-symbols-outlined">usb</span> <span>' + escapeHtml(p) + '</span></li>').join('');
+  } else {
+    list.innerHTML = '<li class="ports-empty">No port mappings.</li>';
+  }
+  openModal('ports');
+}
 function escapeHtml(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function showToast(msg,type='info'){
   const div=document.createElement('div');
