@@ -392,9 +392,9 @@ class DockerService:
 
     @staticmethod
     def container_resource_stats(project) -> Dict[str, Any]:
-        """Return real container resource numbers with units (CPU%, RAM usage/limit, Block I/O, PIDs)."""
+        """Return real container resource numbers with units (CPU%, RAM usage/limit, Block I/O, Net I/O, PIDs, Ports)."""
         from app.services.project_status_service import ProjectStatusService
-        result: Dict[str, Any] = {"cpu": None, "ram": None, "ram_total": None, "disk": None, "disk_write": None, "pids": None}
+        result: Dict[str, Any] = {"cpu": None, "ram": None, "ram_total": None, "disk": None, "net": None, "pids": None, "ports": []}
         state = ProjectStatusService.container_state(project)
         if not state["exists"] or state["state"] != "running":
             return result
@@ -414,9 +414,61 @@ class DockerService:
         else:
             result["ram"] = mem_usage.strip()
         result["disk"] = stats.get("BlockIO")  # Docker format: "1.2MB / 0B"
-        result["pids"] = stats.get("PIDs")
         result["net"] = stats.get("NetIO")
+        result["pids"] = stats.get("PIDs")
+        result["ports"] = DockerService.container_ports_for_project(project)
         return result
+
+    @staticmethod
+    def container_ports_for_project(project) -> List[str]:
+        """Return host→container port mappings for the project's running container."""
+        from app.services.project_status_service import ProjectStatusService
+        state = ProjectStatusService.container_state(project)
+        if not state["exists"] or state["state"] != "running":
+            return []
+        cid = state["container"].get("ID", "")
+        if not cid:
+            return []
+        return DockerService._format_port_mappings(DockerService.container_ports(cid))
+
+    @staticmethod
+    def _format_port_mappings(mappings: List[Dict[str, Any]]) -> List[str]:
+        out = []
+        for m in mappings:
+            host = m.get("host_port") or ""
+            container = m.get("container_port") or ""
+            if host and container:
+                out.append(f"{host}→{container}")
+            elif container:
+                out.append(container)
+        return out
+
+    @staticmethod
+    def container_ports(cid: str) -> List[Dict[str, Any]]:
+        cmd = ["docker", "inspect", "--format", "json", cid]
+        r = DockerService._with_preflight(cmd)
+        if r.returncode != 0:
+            return []
+        ports = []
+        if r.stdout.strip():
+            try:
+                data = json.loads(r.stdout.strip())
+                if isinstance(data, list) and data:
+                    network = data[0].get("NetworkSettings", {})
+                    pm = network.get("Ports", {})
+                    for container_port, bindings in pm.items():
+                        if bindings:
+                            for b in bindings:
+                                ports.append({
+                                    "container_port": container_port,
+                                    "host_ip": b.get("HostIp", ""),
+                                    "host_port": b.get("HostPort", "")
+                                })
+                        else:
+                            ports.append({"container_port": container_port, "host_ip": "", "host_port": ""})
+            except Exception:
+                pass
+        return ports
 
     @staticmethod
     def system_stats() -> List[Dict[str, Any]]:
