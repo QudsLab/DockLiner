@@ -20,12 +20,15 @@ class MigrationMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         user = get_session_user(request)
+        if not user:
+            # Unauthenticated users must reach /login normally; let auth layer handle it.
+            return await call_next(request)
         if user == "root":
             if path != "/migration":
                 return RedirectResponse(url="/migration", status_code=307)
             return await call_next(request)
 
-        # Non-root users see maintenance.
+        # Non-root authenticated users see maintenance.
         return HTMLResponse(
             content="""<!doctype html>
 <html>
