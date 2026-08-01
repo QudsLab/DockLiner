@@ -240,12 +240,14 @@ def project_detail_page(request: Request, pid: int, db: Session = Depends(get_db
         raise HTTPException(status_code=404, detail="Project not found")
     statuses = ProjectStatusService.sync_status(db, p, commit=True)
     tokens = db.query(AccessToken).all()
+    files_changed = ProjectStatusService.files_changed_since_deploy(p)
     return templates.TemplateResponse(request, "project_detail.html", {
         "request": request,
         "project": p,
         "tokens": tokens,
         "container_status": statuses["container_status"],
         "build_status": statuses["build_status"],
+        "files_changed": files_changed,
     })
 
 @router.get("/projects/{pid}/editor", response_class=HTMLResponse)

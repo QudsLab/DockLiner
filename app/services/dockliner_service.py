@@ -384,6 +384,13 @@ class DockLinerService:
                 pass
             log_status("success", "start complete")
             DockerService.clear_cache()
+            from app.services.project_status_service import ProjectStatusService
+            from app.core.db import SessionLocal
+            db = SessionLocal()
+            try:
+                ProjectStatusService.record_deployed_fingerprint(db, project)
+            finally:
+                db.close()
         except Exception as e:
             log_status("error", f"start failed: {type(e).__name__}: {e}")
 

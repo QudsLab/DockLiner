@@ -61,7 +61,11 @@
 .live-status.running{background:rgba(255,115,0,.15);color:var(--primary)}
 .live-status.success{background:rgba(34,197,94,.15);color:#22c55e}
 .live-status.error{background:rgba(239,68,68,.15);color:#ef4444}
-.live-body{height:260px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.live-body{height:260px;overflow:auto;background:var(--surface-dark);color:var(--on-dark);padding:14px;font-family:var(--font-mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-word;scrollbar-width:thin;scrollbar-color:#424242 #0f172a}
+.live-body::-webkit-scrollbar{width:10px;height:10px}
+.live-body::-webkit-scrollbar-track{background:#0f172a}
+.live-body::-webkit-scrollbar-thumb{background:#424242;border-radius:5px;border:2px solid #0f172a}
+.live-body::-webkit-scrollbar-thumb:hover{background:#4f4f4f}
 .live-line{display:block;padding:1px 0}
 .live-line.error{color:#ef4444}
 .live-line.warn{color:#f59e0b}
@@ -69,6 +73,11 @@
 .live-line.build{color:#38bdf8}
 .live-line.docker{color:#a78bfa}
 .history-card{background:var(--surface-card);border:1px solid var(--hairline);border-radius:var(--radius-lg);padding:14px}
+
+.deploy-warning{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;border-radius:8px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);color:#f59e0b;font-size:13px;font-weight:600}
+.deploy-warning .material-symbols-outlined{font-size:18px}
+
+.btn:disabled,.btn[disabled]{opacity:.45;pointer-events:none;cursor:not-allowed}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px}
 .modal-overlay.active{display:flex}
@@ -95,6 +104,13 @@
   </div>
   <a class="btn btn-secondary btn-sm" href="/projects"><span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>Projects</a>
 </div>
+
+{% if files_changed %}
+<div class="deploy-warning" id="deployWarning">
+  <span class="material-symbols-outlined">update</span>
+  Project files changed since last deploy. Rebuild + restart to deploy the latest version.
+</div>
+{% endif %}
 
 <section class="control-grid">
   <!-- A: Build & Deploy -->
@@ -139,7 +155,7 @@
   <div class="control-card">
     <h3>System Lifecycle</h3>
     <div class="lifecycle-grid">
-      <button class="btn btn-secondary" onclick="startActionStream('start')">
+      <button class="btn btn-secondary" id="btnStart" onclick="startActionStream('start')" {% if container_status == 'running' %}disabled{% endif %}>
         <span class="material-symbols-outlined">play_arrow</span>
         Start
       </button>
@@ -147,7 +163,7 @@
         <span class="material-symbols-outlined">replay</span>
         Restart
       </button>
-      <button class="btn btn-danger" onclick="doAction('stop')">
+      <button class="btn btn-danger" id="btnStop" onclick="doAction('stop')" {% if container_status in ('idle','stopped','exited') %}disabled{% endif %}>
         <span class="material-symbols-outlined">pause</span>
         Stop
       </button>

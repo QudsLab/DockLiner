@@ -433,14 +433,15 @@ class DockerService:
 
     @staticmethod
     def _format_port_mappings(mappings: List[Dict[str, Any]]) -> List[str]:
+        seen = set()
         out = []
         for m in mappings:
             host = m.get("host_port") or ""
             container = m.get("container_port") or ""
-            if host and container:
-                out.append(f"{host}→{container}")
-            elif container:
-                out.append(container)
+            text = f"{host}→{container}" if host and container else container
+            if text and text not in seen:
+                seen.add(text)
+                out.append(text)
         return out
 
     @staticmethod

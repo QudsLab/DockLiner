@@ -54,6 +54,12 @@ main.layout{padding-top:0!important;padding-bottom:0!important;max-width:none!im
 .sidebar-resizer{width:5px;background:transparent;cursor:col-resize;position:absolute;right:-3px;top:0;bottom:0;z-index:10}
 .sidebar-resizer:hover,.sidebar-resizer.resizing{background:#007acc;opacity:.6}
 
+.tree{flex:1;overflow:auto;padding:0;font-size:13px;user-select:none;scrollbar-width:thin;scrollbar-color:#424242 #1e1e1e}
+.tree::-webkit-scrollbar,.tree::-webkit-scrollbar-corner{width:10px;height:10px;background:#1e1e1e}
+.tree::-webkit-scrollbar-track{background:#1e1e1e}
+.tree::-webkit-scrollbar-thumb{background:#424242;border-radius:5px;border:2px solid #1e1e1e}
+.tree::-webkit-scrollbar-thumb:hover{background:#4f4f4f}
+
 /* Custom dark scrollbars */
 .tree::-webkit-scrollbar,.CodeMirror-vscrollbar::-webkit-scrollbar,.CodeMirror-hscrollbar::-webkit-scrollbar{width:10px;height:10px}
 .tree::-webkit-scrollbar-track,.CodeMirror-vscrollbar::-webkit-scrollbar-track,.CodeMirror-hscrollbar::-webkit-scrollbar-track{background:#1e1e1e}

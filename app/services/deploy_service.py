@@ -316,6 +316,13 @@ class DeployService:
                 log_status("error", "[DEPLOY] failed")
                 return
             log_status("success", "[DEPLOY] container started")
+            from app.services.project_status_service import ProjectStatusService
+            from app.core.db import SessionLocal
+            db = SessionLocal()
+            try:
+                ProjectStatusService.record_deployed_fingerprint(db, project)
+            finally:
+                db.close()
         except Exception as e:
             log_status("error", f"[DEPLOY] unhandled exception: {type(e).__name__}: {e}")
 

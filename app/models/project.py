@@ -17,6 +17,8 @@ class Project(Base):
     compose_file = Column(String, default="docker-compose.yml")
     status = Column(String, default="idle")
     last_deployed = Column(DateTime, nullable=True)
+    deployed_hash = Column(String, nullable=True)
+    deployed_size = Column(Integer, nullable=True)
     env_vars = Column(JSON, default=dict)
     env_content = Column(Text, default="")
     example_env_content = Column(Text, default="")
@@ -71,6 +73,8 @@ class Project(Base):
             "status": self.status,
             "build_status": self.build_status,
             "last_deployed": self.last_deployed.isoformat() if self.last_deployed else None,
+            "deployed_hash": self.deployed_hash,
+            "deployed_size": self.deployed_size,
             "env_vars": self.env_vars or {},
             "env_content": self.env_content or "",
             "example_env_content": self.example_env_content or "",

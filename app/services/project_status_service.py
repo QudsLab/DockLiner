@@ -1,4 +1,6 @@
 import datetime
+import hashlib
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -8,6 +10,42 @@ from app.services.system_resources_service import SystemResourcesService
 
 class ProjectStatusService:
     """Single source of truth for project/container/build status."""
+
+    @staticmethod
+    def project_fingerprint(project) -> tuple[str, int]:
+        """Return (hash, size_bytes) for all files under the project deploy path.
+        Uses relative path, size and mtime so any change is detected quickly."""
+        root = Path(str(project.deploy_path)).resolve()
+        total_size = 0
+        entries = []
+        if root.exists():
+            for p in root.rglob("*"):
+                try:
+                    if p.is_file():
+                        rel = p.relative_to(root).as_posix()
+                        st = p.stat()
+                        entries.append((rel, st.st_size, int(st.st_mtime)))
+                        total_size += st.st_size
+                except (OSError, ValueError):
+                    continue
+        entries.sort()
+        digest = hashlib.sha256(str(entries).encode("utf-8")).hexdigest()[:32]
+        return digest, total_size
+
+    @staticmethod
+    def record_deployed_fingerprint(db, project) -> Dict[str, Any]:
+        h, size = ProjectStatusService.project_fingerprint(project)
+        project.deployed_hash = h
+        project.deployed_size = size
+        db.commit()
+        return {"hash": h, "size": size}
+
+    @staticmethod
+    def files_changed_since_deploy(project) -> bool:
+        if not project.deployed_hash:
+            return False
+        h, size = ProjectStatusService.project_fingerprint(project)
+        return h != project.deployed_hash or size != (project.deployed_size or 0)
 
     @staticmethod
     def _project_name_from_path(deploy_path: str) -> str:
